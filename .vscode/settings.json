@@ -1,7 +1,4 @@
 {
-    "C_Cpp.default.compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/Llvm/bin/clang-cl.exe",
-    "C_Cpp.errorSquiggles": "enabled",
-    "files.associations": {
-        "vector": "cpp"
-    }
+    "C_Cpp.default.compilerPath": "/usr/bin/clang++",
+    "C_Cpp.errorSquiggles": "enabled"
 }

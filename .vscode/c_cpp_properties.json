@@ -1,20 +1,13 @@
 {
     "configurations": [
         {
-            "name": "Win32",
-            "includePath": [
-                "d:/workspace/esphome/**",
-                "${workspaceRoot}/**"
-            ],
-            "defines": [
-                "_DEBUG",
-                "UNICODE",
-                "_UNICODE"
-            ],
-            "windowsSdkVersion": "10.0.26100.0",
+            "name": "Mac",
+            "compileCommands": "${workspaceFolder}/compile_commands.json",
+            "compilerPath": "/usr/bin/clang++",
+            "intelliSenseMode": "macos-clang-arm64",
             "cStandard": "c17",
-            "cppStandard": "c++17",
-            "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/Llvm/bin/clang-cl.exe"
+            "cppStandard": "c++20",
+            "configurationProvider": "ms-vscode.cpptools"
         }
     ],
     "version": 4

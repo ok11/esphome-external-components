@@ -1,7 +1,5 @@
 #include "esphome/core/log.h"
 #include "esphome/core/hal.h"
-#include "esphome/components/climate/climate_mode.h"
-#include "esphome/components/climate/climate_traits.h"
 
 #include "climate_ir_woleix.h"
 
@@ -11,6 +9,7 @@ namespace climate_ir_woleix
 {
 
 using ::esphome::climate::ClimateMode;
+using ::esphome::climate::ClimateTraits;
 
 static const char *const TAG = "climate_ir_woleix.climate";
 
@@ -201,11 +200,11 @@ void WoleixClimate::transmit_raw_(const ::std::vector<int32_t> &timings)
   transmit.perform();
 }
 
-::esphome::climate::ClimateTraits WoleixClimate::traits()
+ClimateTraits WoleixClimate::traits()
 {
-  auto traits = ::esphome::climate::ClimateTraits();
-  traits.set_supports_current_temperature(true);
-  traits.set_supports_current_humidity(true);
+  auto traits = ClimateTraits();
+  traits.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE);
+  traits.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_HUMIDITY);
   traits.set_visual_min_temperature(WOLEIX_TEMP_MIN);
   traits.set_visual_max_temperature(WOLEIX_TEMP_MAX);
   traits.set_visual_temperature_step(1.0f);

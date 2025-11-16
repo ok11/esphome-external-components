@@ -3,6 +3,8 @@
 #include <cinttypes>
 #include <vector>
 
+#include "esphome/core/optional.h"
+#include "esphome/components/climate/climate_mode.h"
 #include "esphome/components/climate_ir/climate_ir.h"
 
 namespace esphome {
@@ -11,18 +13,23 @@ namespace climate_ir_woleix {
 const float_t WOLEIX_TEMP_MIN = 15.0f;          // Celsius
 const float_t WOLEIX_TEMP_MAX = 30.0f;          // Celsius
 
-class WoleixClimate : public climate_ir::ClimateIR {
+using esphome::climate_ir::ClimateIR;
+using esphome::climate::ClimateMode;
+using esphome::climate::ClimateFanMode;
+using esphome::climate::ClimateTraits;
+
+class WoleixClimate : public ClimateIR {
 
 public:
-    WoleixClimate::WoleixClimate()
-        : climate_ir::ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX)
+    WoleixClimate()
+        : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX)
     {}
 
 protected :
     // Transmit via IR the state of this climate controller.
     void transmit_state() override;
 
-    climate::ClimateTraits traits() override;
+    ClimateTraits traits() override;
 
     /// Encode power command
     void encode_power_();
@@ -46,9 +53,9 @@ protected :
     void transmit_raw_(const ::std::vector<int32_t>& timings);
     
     /// Store last transmitted state to minimize IR commands
-    optional<climate::ClimateMode> last_mode_{};
+    optional<ClimateMode> last_mode_{};
     optional<float> last_target_temp_{};
-    optional<climate::ClimateFanMode> last_fan_mode_{};
+    optional<ClimateFanMode> last_fan_mode_{};
 };
 
 }
