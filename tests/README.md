@@ -14,6 +14,7 @@ The tests validate the IR command encoding logic and state machine behavior with
 ## What's Being Tested
 
 ### Core Functionality
+
 - **Power On/Off**: Verifies correct power command transmission
 - **Temperature Control**: Tests temperature increase/decrease commands
 - **Mode Changes**: Validates mode switching (cool, heat, etc.)
@@ -21,13 +22,14 @@ The tests validate the IR command encoding logic and state machine behavior with
 - **State Persistence**: Ensures component remembers last state to minimize IR commands
 
 ### IR Protocol Validation
+
 - Correct timing sequences for each command
 - Proper carrier frequency (38.03 kHz)
 - Accurate mark/space durations
 
 ## Project Structure
 
-```
+```text
 tests/
 ├── CMakeLists.txt                    # Build configuration
 ├── climate_ir_woleix_test.cpp        # Test cases
@@ -107,7 +109,7 @@ TEST_F(WoleixClimateTest, YourTestName) {
 
 ## Test Output Example
 
-```
+```text
 [==========] Running 12 tests from 1 test suite.
 [----------] Global test environment set-up.
 [----------] 12 tests from WoleixClimateTest

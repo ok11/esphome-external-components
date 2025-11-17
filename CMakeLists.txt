@@ -8,6 +8,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Enable compile_commands.json generation for IntelliSense
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Default to Debug build if not specified
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
+endif()
+
+# Enable debug symbols and disable optimizations for Debug builds
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0")
+    message(STATUS "Debug build enabled with symbols (-g -O0)")
+endif()
+
 # Platform-specific settings
 if(APPLE)
     set(CMAKE_PREFIX_PATH "/opt/homebrew;/usr/local;${CMAKE_PREFIX_PATH}")

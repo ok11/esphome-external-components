@@ -4,14 +4,4 @@
     "cmake.sourceDirectory": "${workspaceFolder}",
     "cmake.configureOnOpen": true,
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
-
-    // External ESPHome dependencies configuration
-    // RECOMMENDED: Use .env file in project root (see .env.example)
-    // This keeps settings.json portable across different machines
-    //
-    // ALTERNATIVE: Set paths directly here if you prefer
-    // "cmake.configureSettings": {
-    //     "ESPHOME_PATH": "/path/to/your/esphome",
-    //     "PLATFORMIO_LIBDEPS_PATH": "/path/to/your/esphome/.pio/libdeps/esp8266-arduino"
-    // }
 }
