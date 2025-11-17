@@ -40,4 +40,13 @@
 # debug information files
 *.dwo
 
-.vscode/
+# CMake build directory
+build/
+
+# Environment variables (user-specific)
+.env
+
+# VS Code user-specific settings (keep project configs like settings.json, tasks.json, c_cpp_properties.json)
+.vscode/*.log
+.vscode/.cmaketools.json
+.vscode/launch.json

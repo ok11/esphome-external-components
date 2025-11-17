@@ -1,12 +1,1 @@
-[
-  {
-    "directory": "/Users/D032705/Library/CloudStorage/OneDrive-SAPSE/workspace/ok11/esphome-external-components",
-    "command": "clang++ -std=c++20 -I/Users/D032705/Library/CloudStorage/OneDrive-SAPSE/workspace/ok11/esphome -I/Users/D032705/Library/CloudStorage/OneDrive-SAPSE/workspace/ok11/esphome/.pio/libdeps/esp8266-arduino/ArduinoJson/src -c esphome/components/climate_ir_woleix/climate_ir_woleix.cpp",
-    "file": "esphome/components/climate_ir_woleix/climate_ir_woleix.cpp"
-  },
-  {
-    "directory": "/Users/D032705/Library/CloudStorage/OneDrive-SAPSE/workspace/ok11/esphome-external-components",
-    "command": "clang++ -std=c++20 -I/Users/D032705/Library/CloudStorage/OneDrive-SAPSE/workspace/ok11/esphome -I/Users/D032705/Library/CloudStorage/OneDrive-SAPSE/workspace/ok11/esphome/.pio/libdeps/esp8266-arduino/ArduinoJson/src -c esphome/components/climate_ir_woleix/climate_ir_woleix.h",
-    "file": "esphome/components/climate_ir_woleix/climate_ir_woleix.h"
-  }
-]
+/home/user/esphome-external-components/build/compile_commands.json
