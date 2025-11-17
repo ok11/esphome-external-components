@@ -1,5 +1,7 @@
 {
     "C_Cpp.default.compilerPath": "/usr/bin/clang++",
     "C_Cpp.errorSquiggles": "enabled",
-    "cmake.sourceDirectory": "/Users/D032705/Library/CloudStorage/OneDrive-SAPSE/workspace/ok11/esphome-external-components/tests"
+    "cmake.sourceDirectory": "${workspaceFolder}",
+    "cmake.configureOnOpen": true,
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }
