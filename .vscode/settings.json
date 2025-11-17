@@ -3,5 +3,12 @@
     "C_Cpp.errorSquiggles": "enabled",
     "cmake.sourceDirectory": "${workspaceFolder}",
     "cmake.configureOnOpen": true,
-    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+
+    // Configure external ESPHome dependencies
+    // Uncomment and set the path to your ESPHome installation
+    "cmake.configureSettings": {
+        // "ESPHOME_PATH": "/path/to/your/esphome",
+        // "PLATFORMIO_LIBDEPS_PATH": "/path/to/your/esphome/.pio/libdeps/esp8266-arduino"
+    }
 }

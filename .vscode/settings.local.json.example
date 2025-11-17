@@ -1,0 +1,13 @@
+{
+    // Copy this file to settings.json and update the paths for your environment
+    // This is an example showing how to configure external ESPHome dependencies
+
+    "cmake.configureSettings": {
+        // Path to your ESPHome installation (required for IntelliSense)
+        "ESPHOME_PATH": "/Users/YOUR_USERNAME/path/to/esphome",
+
+        // Optional: Direct path to PlatformIO libraries
+        // If not set, CMake will auto-detect from ESPHOME_PATH/.pio/libdeps
+        "PLATFORMIO_LIBDEPS_PATH": "/Users/YOUR_USERNAME/path/to/esphome/.pio/libdeps/esp8266-arduino"
+    }
+}
