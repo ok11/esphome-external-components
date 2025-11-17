@@ -18,9 +18,35 @@ endif()
 # ============================================================================
 # The component needs access to ESPHome core and PlatformIO libraries.
 # These paths can be set via:
-#   1. CMake command line: cmake -DESPHOME_PATH=/path/to/esphome ..
-#   2. Environment variable: export ESPHOME_PATH=/path/to/esphome
-#   3. Auto-detection from common locations
+#   1. .env file in project root (recommended for portability)
+#   2. Environment variables: export ESPHOME_PATH=/path/to/esphome
+#   3. CMake command line: cmake -DESPHOME_PATH=/path/to/esphome ..
+#   4. VS Code settings.json: "cmake.configureSettings"
+#   5. Auto-detection from common locations
+
+# Load .env file if it exists (for portable configuration)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.env")
+    file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/.env" ENV_CONTENTS)
+    foreach(LINE ${ENV_CONTENTS})
+        # Skip comments and empty lines
+        if(NOT LINE MATCHES "^[ \t]*#" AND NOT LINE MATCHES "^[ \t]*$")
+            # Parse KEY=VALUE
+            if(LINE MATCHES "^([A-Za-z_][A-Za-z0-9_]*)=(.*)$")
+                set(ENV_KEY "${CMAKE_MATCH_1}")
+                set(ENV_VALUE "${CMAKE_MATCH_2}")
+
+                # Remove quotes if present
+                string(REGEX REPLACE "^['\"]|['\"]$" "" ENV_VALUE "${ENV_VALUE}")
+
+                # Only set if not already defined (command line takes precedence)
+                if(NOT DEFINED ${ENV_KEY})
+                    set(${ENV_KEY} "${ENV_VALUE}")
+                    message(STATUS "Loaded from .env: ${ENV_KEY}=${ENV_VALUE}")
+                endif()
+            endif()
+        endif()
+    endforeach()
+endif()
 
 # Try to find ESPHome installation path
 if(NOT DEFINED ESPHOME_PATH)
@@ -65,6 +91,12 @@ endif()
 set(EXTERNAL_INCLUDE_PATHS "")
 
 if(DEFINED ESPHOME_PATH)
+    # Convert to absolute path if relative
+    if(NOT IS_ABSOLUTE "${ESPHOME_PATH}")
+        get_filename_component(ESPHOME_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${ESPHOME_PATH}" ABSOLUTE)
+        message(STATUS "Resolved ESPHOME_PATH to absolute: ${ESPHOME_PATH}")
+    endif()
+
     if(EXISTS "${ESPHOME_PATH}")
         list(APPEND EXTERNAL_INCLUDE_PATHS "${ESPHOME_PATH}")
         message(STATUS "Added ESPHome include path: ${ESPHOME_PATH}")
@@ -74,6 +106,12 @@ if(DEFINED ESPHOME_PATH)
 endif()
 
 if(DEFINED PLATFORMIO_LIBDEPS_PATH)
+    # Convert to absolute path if relative
+    if(NOT IS_ABSOLUTE "${PLATFORMIO_LIBDEPS_PATH}")
+        get_filename_component(PLATFORMIO_LIBDEPS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${PLATFORMIO_LIBDEPS_PATH}" ABSOLUTE)
+        message(STATUS "Resolved PLATFORMIO_LIBDEPS_PATH to absolute: ${PLATFORMIO_LIBDEPS_PATH}")
+    endif()
+
     if(EXISTS "${PLATFORMIO_LIBDEPS_PATH}")
         # Add the base libdeps path first
         list(APPEND EXTERNAL_INCLUDE_PATHS "${PLATFORMIO_LIBDEPS_PATH}")

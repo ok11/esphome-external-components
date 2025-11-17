@@ -8,7 +8,45 @@ This project uses CMake to generate `compile_commands.json` for VS Code IntelliS
 
 The component requires access to ESPHome core and PlatformIO libraries. Configure the paths using **one** of these methods:
 
-#### Option A: VS Code Settings (Recommended)
+#### Option A: .env File (Recommended for Portability)
+
+This is the **recommended approach** because it keeps `settings.json` portable across different machines.
+
+1. Copy the example file:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edit `.env` and set your paths (can use relative or absolute):
+   ```bash
+   # Relative path (works if esphome is in parent directory)
+   ESPHOME_PATH=../esphome
+
+   # Or absolute path
+   # ESPHOME_PATH=/Users/username/path/to/esphome
+
+   # Optional: PlatformIO libraries (auto-detected if not set)
+   # PLATFORMIO_LIBDEPS_PATH=../esphome/.pio/libdeps/esp8266-arduino
+   ```
+
+3. The `.env` file is gitignored, so each developer can have their own configuration without modifying committed files.
+
+**Benefits:**
+- ✅ Supports relative paths (e.g., `../esphome`)
+- ✅ Keeps `settings.json` portable and committable
+- ✅ Each developer has their own `.env` (gitignored)
+- ✅ No need to modify VS Code settings
+
+#### Option B: Environment Variables
+
+```bash
+export ESPHOME_PATH="/path/to/your/esphome"
+export PLATFORMIO_LIBDEPS_PATH="/path/to/your/esphome/.pio/libdeps/esp8266-arduino"
+```
+
+Add to your `~/.bashrc` or `~/.zshrc` to make permanent.
+
+#### Option C: VS Code Settings (Per-Project)
 
 Edit `.vscode/settings.json` and add:
 
@@ -21,24 +59,23 @@ Edit `.vscode/settings.json` and add:
 }
 ```
 
-See `.vscode/settings.local.json.example` for a complete example.
+⚠️ **Note:** This requires absolute paths and makes `settings.json` machine-specific.
 
-#### Option B: Environment Variables
-
-```bash
-export ESPHOME_PATH="/path/to/your/esphome"
-export PLATFORMIO_LIBDEPS_PATH="/path/to/your/esphome/.pio/libdeps/esp8266-arduino"
-```
-
-Add to your `~/.bashrc` or `~/.zshrc` to make permanent.
-
-#### Option C: CMake Command Line
+#### Option D: CMake Command Line
 
 ```bash
 cmake -S . -B build \
   -DESPHOME_PATH=/path/to/your/esphome \
   -DPLATFORMIO_LIBDEPS_PATH=/path/to/your/esphome/.pio/libdeps/esp8266-arduino
 ```
+
+### Configuration Priority
+
+If paths are set in multiple places, CMake uses this priority order:
+1. CMake command line (`-DESPHOME_PATH=...`)
+2. `.env` file
+3. Environment variables
+4. Auto-detection from common locations
 
 ### 2. Build the Project
 

@@ -1,13 +1,20 @@
 {
-    // Copy this file to settings.json and update the paths for your environment
-    // This is an example showing how to configure external ESPHome dependencies
+    // DEPRECATED: Use .env file instead (see .env.example)
+    // This file shows the old method of configuring paths via settings.json
+    //
+    // The .env approach is preferred because:
+    // - .env can use relative paths (../esphome)
+    // - .env is gitignored (each developer has their own)
+    // - settings.json stays portable and can be committed
+    //
+    // If you still prefer settings.json, uncomment below:
 
-    "cmake.configureSettings": {
-        // Path to your ESPHome installation (required for IntelliSense)
-        "ESPHOME_PATH": "/Users/YOUR_USERNAME/path/to/esphome",
-
-        // Optional: Direct path to PlatformIO libraries
-        // If not set, CMake will auto-detect from ESPHOME_PATH/.pio/libdeps
-        "PLATFORMIO_LIBDEPS_PATH": "/Users/YOUR_USERNAME/path/to/esphome/.pio/libdeps/esp8266-arduino"
-    }
+    // "cmake.configureSettings": {
+    //     // Path to your ESPHome installation (absolute or relative to workspace)
+    //     "ESPHOME_PATH": "/Users/YOUR_USERNAME/path/to/esphome",
+    //
+    //     // Optional: Direct path to PlatformIO libraries
+    //     // If not set, CMake will auto-detect from ESPHOME_PATH/.pio/libdeps
+    //     "PLATFORMIO_LIBDEPS_PATH": "/Users/YOUR_USERNAME/path/to/esphome/.pio/libdeps/esp8266-arduino"
+    // }
 }
