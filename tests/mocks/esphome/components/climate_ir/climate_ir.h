@@ -95,6 +95,9 @@ public:
     return traits();
   }
   
+  // Setup method (can be overridden)
+  virtual void setup() {}
+  
 protected:
   // Override these in derived classes
   virtual void transmit_state() = 0;

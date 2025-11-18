@@ -29,7 +29,7 @@ public:
     /// Set the humidity sensor for current humidity readings
     void set_humidity_sensor(sensor::Sensor *humidity_sensor) { this->humidity_sensor_ = humidity_sensor; }
     
-    /// Update method called periodically - updates current humidity from sensor
+    /// Setup method called once - initializes humidity sensor callback
     void setup() override;
 
 protected :

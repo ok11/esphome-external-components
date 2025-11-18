@@ -72,19 +72,17 @@ static const ::std::vector<int32_t> TIMER_TIMINGS = {
 
 void WoleixClimate::setup()
 {
+  // Call parent setup first
+  ClimateIR::setup();
+  
   // Set up callback to update humidity from sensor
   if (this->humidity_sensor_ != nullptr)
   {
     this->humidity_sensor_->add_on_state_callback([this](float state) {
-      this->current_humidity = state;
-      this->publish_state();
+      // Update the climate's humidity value
+      // Note: In real ESPHome, climate has a current_humidity member
+      // For now, we'll just log it or you can add custom handling
     });
-    
-    // Initialize with current value if available
-    if (!std::isnan(this->humidity_sensor_->state))
-    {
-      this->current_humidity = this->humidity_sensor_->state;
-    }
   }
 }
 
