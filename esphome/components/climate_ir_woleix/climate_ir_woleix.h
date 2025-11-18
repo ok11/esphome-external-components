@@ -6,6 +6,7 @@
 #include "esphome/core/optional.h"
 #include "esphome/components/climate/climate_mode.h"
 #include "esphome/components/climate_ir/climate_ir.h"
+#include "esphome/components/sensor/sensor.h"
 
 namespace esphome {
 namespace climate_ir_woleix {
@@ -24,6 +25,12 @@ public:
     WoleixClimate()
         : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX)
     {}
+    
+    /// Set the humidity sensor for current humidity readings
+    void set_humidity_sensor(sensor::Sensor *humidity_sensor) { this->humidity_sensor_ = humidity_sensor; }
+    
+    /// Update method called periodically - updates current humidity from sensor
+    void setup() override;
 
 protected :
     // Transmit via IR the state of this climate controller.
@@ -56,6 +63,9 @@ protected :
     optional<ClimateMode> last_mode_{};
     optional<float> last_target_temp_{};
     optional<ClimateFanMode> last_fan_mode_{};
+    
+    /// Humidity sensor for current humidity readings
+    sensor::Sensor *humidity_sensor_{nullptr};
 };
 
 }

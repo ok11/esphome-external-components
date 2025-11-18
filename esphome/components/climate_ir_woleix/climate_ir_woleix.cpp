@@ -70,6 +70,24 @@ static const ::std::vector<int32_t> TIMER_TIMINGS = {
     528, 1680, 528, 1680, 528, 1680, 528, 1680, 528, 1680, 528, 18780
 };
 
+void WoleixClimate::setup()
+{
+  // Set up callback to update humidity from sensor
+  if (this->humidity_sensor_ != nullptr)
+  {
+    this->humidity_sensor_->add_on_state_callback([this](float state) {
+      this->current_humidity = state;
+      this->publish_state();
+    });
+    
+    // Initialize with current value if available
+    if (!std::isnan(this->humidity_sensor_->state))
+    {
+      this->current_humidity = this->humidity_sensor_->state;
+    }
+  }
+}
+
 void WoleixClimate::transmit_state()
 {
   // Handle power on/off
