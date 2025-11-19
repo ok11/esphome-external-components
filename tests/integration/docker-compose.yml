@@ -1,0 +1,30 @@
+services:
+  esphome:
+    image: esphome/esphome:latest
+    container_name: esphome-test
+    volumes:
+      # Mount external components as read-only
+      - ../../esphome/components:/config/external_components:ro
+      # Mount test configurations
+      - ./test_configs:/config/test_configs:ro
+      # Mount output directory for compiled firmware
+      - ./output:/config/.esphome:rw
+    ports:
+      - "6052:6052"  # ESPHome web dashboard
+      - "6053:6053"  # ESPHome API
+    environment:
+      - ESPHOME_DASHBOARD_USE_PING=true
+      - ESPHOME_DASHBOARD_RELATIVE_URL=/
+    command: dashboard /config
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6052"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks:
+      - esphome-test-net
+
+networks:
+  esphome-test-net:
+    driver: bridge

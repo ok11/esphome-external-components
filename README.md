@@ -94,6 +94,7 @@ esphome version
 #### Install Required Tools
 
 **macOS:**
+
 ```bash
 # Install Xcode Command Line Tools (includes clang/clang++)
 xcode-select --install

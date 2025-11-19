@@ -1,181 +1,349 @@
-# Unit Tests for Woleix Climate IR Component
+# Testing Guide
 
-This directory contains unit tests for the `climate_ir_woleix` ESPHome external component using Google Test framework.
+This directory contains comprehensive tests for the climate_ir_woleix ESPHome external component.
 
-## Overview
-
-The tests validate the IR command encoding logic and state machine behavior without requiring actual hardware. This allows for:
-
-- Fast development iteration
-- Regression testing
-- Verification of IR timing accuracy
-- State transition validation
-
-## What's Being Tested
-
-### Core Functionality
-
-- **Power On/Off**: Verifies correct power command transmission
-- **Temperature Control**: Tests temperature increase/decrease commands
-- **Mode Changes**: Validates mode switching (cool, heat, etc.)
-- **Fan Speed**: Tests fan speed changes
-- **State Persistence**: Ensures component remembers last state to minimize IR commands
-
-### IR Protocol Validation
-
-- Correct timing sequences for each command
-- Proper carrier frequency (38.03 kHz)
-- Accurate mark/space durations
-
-## Project Structure
+## Test Structure
 
 ```text
 tests/
-├── CMakeLists.txt                    # Build configuration
-├── climate_ir_woleix_test.cpp        # Test cases
-├── run_tests.sh                      # Build and run script
-└── mocks/                            # ESPHome API mocks
-    └── esphome/
-        ├── core/
-        │   ├── log.h                 # Logging mock
-        │   ├── hal.h                 # Hardware abstraction mock
-        │   └── optional.h            # Optional type mock
-        └── components/
-            ├── climate/
-            │   └── climate_mode.h    # Climate enums and types
-            └── climate_ir/
-                └── climate_ir.h      # ClimateIR base class mock
+├── unit/                          # Fast, isolated unit tests
+│   ├── climate_ir_woleix_test.cpp
+│   ├── CMakeLists.txt
+│   ├── mocks/                     # Mock ESPHome headers
+│   └── README.md
+├── integration/                   # End-to-end integration tests
+│   ├── docker-compose.yml
+│   ├── Dockerfile.esphome
+│   ├── test_configs/              # ESPHome YAML configs
+│   ├── smoke_tests/               # Test scripts
+│   ├── scripts/                   # Helper scripts
+│   └── README.md
+├── CMakeLists.txt
+└── README.md                      # This file
+```
+
+## Two Types of Tests
+
+### Unit Tests (`tests/unit/`)
+
+**Purpose:** Fast, isolated tests using mocked dependencies
+
+**Characteristics:**
+
+- Run in seconds
+- Test component logic in isolation
+- Use Google Test/Mock framework
+- No external dependencies (beyond compiler & GTest)
+- Perfect for TDD and rapid development
+
+**When to use:**
+
+- Testing individual functions and methods
+- Verifying state transitions
+- Validating IR command generation
+- Quick feedback during development
+
+**How to run:**
+
+```bash
+cd tests/unit
+mkdir -p build && cd build
+cmake ..
+make
+ctest --output-on-failure
+```
+
+See [unit/README.md](unit/README.md) for detailed instructions.
+
+### Integration Tests (`tests/integration/`)
+
+**Purpose:** End-to-end validation with real ESPHome
+
+**Characteristics:**
+
+- Run in minutes
+- Test against actual ESPHome in Docker
+- Validate real compilation and integration
+- Test external component loading
+- Smoke tests for realistic scenarios
+
+**When to use:**
+
+- Before releasing changes
+- Verifying ESPHome compatibility
+- Testing component installation/loading
+- Validating real-world configurations
+- CI/CD pipeline validation
+
+**How to run:**
+
+```bash
+cd tests/integration
+./run_tests.sh
+```
+
+See [integration/README.md](integration/README.md) for detailed instructions.
+
+## Testing Pyramid
+
+Our test strategy follows the testing pyramid:
+
+```text
+       /\
+      /  \  Integration Tests (Few, Slow, High Confidence)
+     /____\
+    /      \
+   /  Unit  \ Unit Tests (Many, Fast, Focused)
+  /__________\
+```
+
+- **Many unit tests**: Fast feedback, test individual components
+- **Few integration tests**: Validate end-to-end functionality
+
+## Quick Start
+
+### Run All Tests Locally
+
+```bash
+# 1. Run unit tests
+cd tests/unit
+mkdir -p build && cd build
+cmake .. && make && ctest
+
+# 2. Run integration tests
+cd ../../integration
+./run_tests.sh
+```
+
+### Run Only Unit Tests (Fastest)
+
+```bash
+cd tests/unit/build
+ctest --output-on-failure
+```
+
+### Run Only Integration Tests
+
+```bash
+cd tests/integration
+./run_tests.sh
 ```
 
 ## Prerequisites
 
-- CMake 3.14 or higher
-- C++17 compatible compiler (GCC, Clang, or MSVC)
-- Internet connection (for first build to download Google Test)
+### For Unit Tests
 
-## Building and Running
+- CMake 3.20+
+- C++20 compiler (GCC/Clang)
+- Google Test
 
-### Quick Start
-
-```bash
-cd tests
-./run_tests.sh
-```
-
-### Manual Build
+**Install on macOS:**
 
 ```bash
-cd tests
-mkdir build
-cd build
-cmake ..
-cmake --build .
-./climate_ir_woleix_test
+brew install cmake googletest
 ```
 
-### Running Specific Tests
+**Install on Ubuntu:**
 
 ```bash
-# Run only power-related tests
-./climate_ir_woleix_test --gtest_filter="*Power*"
-
-# Run with verbose output
-./climate_ir_woleix_test --gtest_verbose
-
-# List all available tests
-./climate_ir_woleix_test --gtest_list_tests
+sudo apt-get install cmake libgtest-dev build-essential
 ```
 
-## Adding New Tests
+### For Integration Tests
 
-To add new test cases:
+- Docker
+- Docker Compose
+- Python 3.8+
+- bash
 
-1. Open `climate_ir_woleix_test.cpp`
-2. Add a new TEST_F within the appropriate section:
+**Install Docker:**
+
+- macOS/Windows: Install Docker Desktop
+- Ubuntu: `sudo apt-get install docker.io docker-compose`
+
+## CI/CD Integration
+
+### GitHub Actions Example
+
+```yaml
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: sudo apt-get install -y cmake libgtest-dev
+      - name: Run unit tests
+        run: |
+          cd tests/unit
+          mkdir build && cd build
+          cmake .. && make && ctest --output-on-failure
+          
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run integration tests
+        run: |
+          cd tests/integration
+          ./run_tests.sh
+```
+
+## Development Workflow
+
+### When Working on Component Code
+
+1. **Write unit tests first** (TDD approach)
+
+   ```bash
+   cd tests/unit/build
+   # Edit tests/unit/climate_ir_woleix_test.cpp
+   make && ctest
+   ```
+
+2. **Implement the feature** in component code
+
+3. **Run unit tests** to verify
+
+   ```bash
+   make && ctest --output-on-failure
+   ```
+
+4. **Run integration tests** before committing
+
+   ```bash
+   cd ../../integration
+   ./run_tests.sh
+   ```
+
+### Before Submitting Pull Request
+
+1. Ensure all unit tests pass
+2. Ensure all integration tests pass
+3. Add tests for new features
+4. Update test documentation if needed
+
+## Debugging Tests
+
+### Unit Tests
+
+```bash
+cd tests/unit/build
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+make
+
+# Run with debugger
+lldb ./climate_ir_woleix_test
+# or
+gdb ./climate_ir_woleix_test
+```
+
+### Integration Tests
+
+```bash
+# Keep containers running for inspection
+cd tests/integration
+KEEP_RUNNING=true ./run_tests.sh
+
+# Inspect ESPHome logs
+docker-compose logs -f esphome
+
+# Access ESPHome dashboard
+open http://localhost:6052
+
+# When done
+docker-compose down
+```
+
+## Test Coverage
+
+To generate coverage reports for unit tests:
+
+```bash
+cd tests/unit/build
+cmake -DENABLE_COVERAGE=ON ..
+make
+ctest
+
+# Generate HTML report
+lcov --capture --directory . --output-file coverage.info
+lcov --remove coverage.info '/usr/*' --output-file coverage.info
+genhtml coverage.info --output-directory coverage_html
+
+# View report
+open coverage_html/index.html  # macOS
+xdg-open coverage_html/index.html  # Linux
+```
+
+## Writing New Tests
+
+### Adding Unit Tests
+
+Edit `tests/unit/climate_ir_woleix_test.cpp`:
 
 ```cpp
-TEST_F(WoleixClimateTest, YourTestName) {
+TEST_F(WoleixClimateTest, YourNewTest) {
   // Setup
   climate->mode = ClimateMode::CLIMATE_MODE_COOL;
   
   // Execute
+  climate->target_temperature = 25.0f;
   climate->call_transmit_state();
   
   // Verify
-  ASSERT_EQ(transmitted_data.size(), 1);
-  EXPECT_TRUE(check_timings_match(transmitted_data[0], get_power_timings()));
+  EXPECT_EQ(transmitted_data.size(), 1);
 }
 ```
 
-## Test Output Example
+### Adding Integration Test Configs
 
-```text
-[==========] Running 12 tests from 1 test suite.
-[----------] Global test environment set-up.
-[----------] 12 tests from WoleixClimateTest
-[ RUN      ] WoleixClimateTest.TraitsConfiguredCorrectly
-[       OK ] WoleixClimateTest.TraitsConfiguredCorrectly (0 ms)
-[ RUN      ] WoleixClimateTest.TurningOnFromOffSendsPowerCommand
-[D][climate_ir_woleix.climate] Sending Power command
-[       OK ] WoleixClimateTest.TurningOnFromOffSendsPowerCommand (1 ms)
-...
-[==========] 12 tests from 1 test suite ran. (15 ms total)
-[  PASSED  ] 12 tests.
-```
-
-## Mocking Strategy
-
-The tests use lightweight mocks that simulate ESPHome's behavior:
-
-- **RemoteTransmitter**: Captures IR data instead of actually transmitting
-- **ClimateIR Base**: Provides state variables and transmitter access
-- **Logging**: Prints to stdout for debugging
-- **Delay**: No-op (tests run instantly)
-
-This approach allows testing the component's logic in isolation without ESP32 dependencies.
-
-## Continuous Integration
-
-You can integrate these tests into CI/CD:
+Create a new YAML file in `tests/integration/test_configs/`:
 
 ```yaml
-# .github/workflows/test.yml
-name: Unit Tests
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Run Tests
-        run: |
-          cd tests
-          ./run_tests.sh
+esphome:
+  name: test-your-scenario
+  # ... rest of config
 ```
+
+The test runner will automatically discover and test it.
 
 ## Troubleshooting
 
-### CMake can't find compiler
+### Unit Tests Won't Compile
 
-```bash
-export CXX=g++
-export CC=gcc
-```
+- Check C++20 support: `g++ --version` or `clang++ --version`
+- Verify Google Test installation
+- Check include paths in CMakeLists.txt
 
-### Google Test download fails
+### Integration Tests Timeout
 
-Check your internet connection. Google Test is fetched automatically during CMake configuration.
+- Increase `MAX_WAIT_TIME` in scripts
+- Check Docker has enough resources
+- Verify network connectivity
+- Check ESPHome logs: `docker-compose logs esphome`
 
-### Tests fail after component changes
+### Tests Pass Locally But Fail in CI
 
-Update the expected timing constants in the test file if you've modified the IR protocol timings in the component.
+- Check CI has sufficient resources
+- Verify Docker version compatibility
+- Check for timing-dependent tests
+- Review CI logs carefully
 
-## Future Improvements
+## Additional Resources
 
-Potential enhancements:
+- [Unit Tests README](unit/README.md) - Detailed unit test guide
+- [Integration Tests README](integration/README.md) - Detailed integration test guide
+- [ESPHome Testing Docs](https://esphome.io/guides/contributing.html#testing)
+- [Google Test Documentation](https://google.github.io/googletest/)
 
-- [ ] Test coverage for swing mode
-- [ ] Test coverage for timer functions
-- [ ] Parameterized tests for temperature ranges
-- [ ] Performance benchmarks
-- [ ] Mock receiver for decode testing
+## Support
+
+For issues or questions about testing:
+
+1. Check this documentation
+2. Review test output and logs
+3. Open an issue with test details

@@ -24,6 +24,9 @@ private:
   std::vector<uint32_t> data_;
 };
 
+// Forward declaration for MockRemoteTransmitter
+class MockRemoteTransmitter;
+
 // Mock RemoteTransmitter
 class RemoteTransmitter {
 public:
@@ -33,18 +36,23 @@ public:
     
     RemoteTransmitData* get_data() { return &data_; }
     
-    void perform() {
-      if (parent_->on_transmit_) {
-        parent_->on_transmit_(data_);
-      }
-    }
+    void perform();
     
   private:
     RemoteTransmitter* parent_;
     RemoteTransmitData data_;
   };
   
+  virtual ~RemoteTransmitter() = default;
+  
   TransmitCall transmit() { return TransmitCall(this); }
+  
+  // Virtual method for GMock
+  virtual void transmit_raw(const RemoteTransmitData& data) {
+    if (on_transmit_) {
+      on_transmit_(data);
+    }
+  }
   
   // For testing: set a callback to capture transmitted data
   void set_transmit_callback(std::function<void(const RemoteTransmitData&)> callback) {
@@ -53,6 +61,17 @@ public:
   
 private:
   std::function<void(const RemoteTransmitData&)> on_transmit_;
+};
+
+// TransmitCall::perform implementation (needs to be after RemoteTransmitter definition)
+inline void RemoteTransmitter::TransmitCall::perform() {
+  parent_->transmit_raw(data_);
+}
+
+// GMock version of RemoteTransmitter
+class MockRemoteTransmitter : public RemoteTransmitter {
+public:
+  MOCK_METHOD(void, transmit_raw, (const RemoteTransmitData& data), (override));
 };
 
 } // namespace remote_base

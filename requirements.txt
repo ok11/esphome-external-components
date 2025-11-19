@@ -1,0 +1,6 @@
+# ESPHome - for component development (__init__.py) and IntelliSense
+esphome ~= 2025.10.4
+
+# Test orchestration dependencies
+requests ~= 2.32.3
+pyyaml ~= 6.0.2

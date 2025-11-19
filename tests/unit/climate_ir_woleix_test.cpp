@@ -7,6 +7,8 @@ using namespace esphome::climate;
 using namespace esphome::remote_base;
 using ::testing::_;
 using ::testing::Return;
+using ::testing::AtLeast;
+using ::testing::Invoke;
 
 // Test fixture class
 class WoleixClimateTest : public ::testing::Test {
@@ -335,6 +337,98 @@ TEST_F(WoleixClimateTest, CarrierFrequencySetCorrectly) {
 TEST_F(WoleixClimateTest, TemperatureBoundsAreCorrect) {
   EXPECT_EQ(WOLEIX_TEMP_MIN, 15.0f);
   EXPECT_EQ(WOLEIX_TEMP_MAX, 30.0f);
+}
+
+// ============================================================================
+// Remote Transmitter Call Logic Tests 
+// ============================================================================
+
+class WoleixClimateMockTest : public ::testing::Test {
+protected:
+  void SetUp() override {
+    climate = new WoleixClimate();
+    mock_transmitter = new MockRemoteTransmitter();
+    climate->set_transmitter(mock_transmitter);
+    
+    // Initialize optional fan_mode
+    climate->fan_mode = ClimateFanMode::CLIMATE_FAN_AUTO;
+  }
+  
+  void TearDown() override {
+    delete climate;
+    delete mock_transmitter;
+  }
+  
+  WoleixClimate* climate;
+  MockRemoteTransmitter* mock_transmitter;
+};
+
+// ============================================================================
+// GMock Tests - Using EXPECT_CALL
+// ============================================================================
+
+TEST_F(WoleixClimateMockTest, PowerOnCallsTransmitMultipleTimes) {
+  // Turning on sends: Power, Mode, Speed commands
+  EXPECT_CALL(*mock_transmitter, transmit_raw(_))
+      .Times(3);  // Expect exactly 3 calls
+  
+  // Turn on from OFF
+  climate->mode = ClimateMode::CLIMATE_MODE_OFF;
+  climate->call_transmit_state();
+  
+  climate->mode = ClimateMode::CLIMATE_MODE_COOL;
+  climate->target_temperature = 22.0f;
+  climate->call_transmit_state();
+}
+
+TEST_F(WoleixClimateMockTest, TemperatureIncreaseCallsTransmitMultipleTimes) {
+  // Initialize state
+  climate->mode = ClimateMode::CLIMATE_MODE_COOL;
+  climate->target_temperature = 20.0f;
+  climate->call_transmit_state();
+  
+  // Expect transmit_raw to be called at least 3 times (for 3 degree increase)
+  EXPECT_CALL(*mock_transmitter, transmit_raw(_))
+      .Times(AtLeast(3));
+  
+  // Increase temperature by 3 degrees
+  climate->target_temperature = 23.0f;
+  climate->call_transmit_state();
+}
+
+TEST_F(WoleixClimateMockTest, StayingOffDoesNotCallTransmit) {
+  // Expect transmit_raw to NOT be called
+  EXPECT_CALL(*mock_transmitter, transmit_raw(_))
+      .Times(0);
+  
+  // Stay in OFF mode
+  climate->mode = ClimateMode::CLIMATE_MODE_OFF;
+  climate->call_transmit_state();
+  
+  climate->mode = ClimateMode::CLIMATE_MODE_OFF;
+  climate->call_transmit_state();
+}
+
+TEST_F(WoleixClimateMockTest, VerifyCarrierFrequencyInTransmittedData) {
+  // Initialize to OFF first
+  climate->mode = ClimateMode::CLIMATE_MODE_OFF;
+  climate->call_transmit_state();
+  
+  // Capture all transmitted data and verify carrier frequency
+  // Power on sends 3 commands: Power, Mode, Speed
+  EXPECT_CALL(*mock_transmitter, transmit_raw(_))
+      .Times(3)
+      .WillRepeatedly(Invoke([](const RemoteTransmitData& data) {
+        // Verify carrier frequency is set correctly for all transmissions
+        EXPECT_EQ(data.get_carrier_frequency(), 38030);
+        // Verify data contains timing information
+        EXPECT_GT(data.get_data().size(), 0);
+      }));
+  
+  // Trigger transmissions by turning on
+  climate->mode = ClimateMode::CLIMATE_MODE_COOL;
+  climate->target_temperature = 22.0f;
+  climate->call_transmit_state();
 }
 
 // ============================================================================
