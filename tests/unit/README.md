@@ -77,12 +77,14 @@ gdb ./climate_ir_woleix_test
 Unit tests focus on the **control path** - verifying what IR commands are transmitted in response to state changes:
 
 ✅ **What we test:**
+
 - Target temperature changes → Verify temp up/down IR commands sent
 - Mode changes (OFF → COOL) → Verify power, mode IR commands sent
 - Fan speed changes → Verify fan speed IR commands sent
 - Power on/off → Verify power IR command sent
 
 ❌ **What we don't test:**
+
 - Current temperature updates (sensor input, no IR transmission)
 - Current humidity updates (sensor input, no IR transmission)
 - Display updates (UI concern, not control logic)
@@ -104,6 +106,7 @@ Two types of test fixtures demonstrate different testing approaches:
    - Best for testing transmission behavior
 
 **Example GMock test:**
+
 ```cpp
 TEST_F(WoleixClimateMockTest, PowerOnCallsTransmitMultipleTimes) {
   EXPECT_CALL(*mock_transmitter, transmit_raw(_))
