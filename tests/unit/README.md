@@ -108,7 +108,7 @@ Current test coverage (as of latest run):
 - **95.7% function coverage** (22 of 23 functions)
 - **84.1% branch coverage** (37 of 44 branches)
 
-### Test Categories:
+### Test Categories
 
 1. **Traits Configuration** - Verifies temperature bounds and supported features
 2. **Power On/Off** - Tests power state transitions and commands
