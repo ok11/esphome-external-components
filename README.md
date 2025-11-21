@@ -228,17 +228,42 @@ climate:
 
 ### Unit Tests
 
+#### Quick Start
+
 ```bash
 # Build and run all tests
-cd tests
+cd tests/unit
 ./run_tests.sh
 
-# Or manually:
-cd build
-cmake ..
-cmake --build .
-ctest --verbose
+# Generate coverage report
+./generate_coverage.sh
+
+# View coverage report
+open build/coverage/html/index.html  # macOS
+xdg-open build/coverage/html/index.html  # Linux
 ```
+
+#### Using VSCode Tasks
+
+Press `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Windows/Linux), then:
+
+1. Type "Tasks: Run Task"
+2. Select:
+   - **"Unit Tests: Run Tests"** - Run tests only
+   - **"Unit Tests: Generate Coverage Report"** - Run tests + generate coverage
+   - **"Unit Tests: Open Coverage Report"** - Run tests + generate + open report in browser
+
+#### Manual Testing
+
+```bash
+cd tests/unit
+mkdir -p build && cd build
+cmake -DENABLE_COVERAGE=ON ..
+cmake --build .
+./climate_ir_woleix_test
+```
+
+See [tests/unit/README.md](tests/unit/README.md) for detailed testing documentation.
 
 ### Linting Python Code
 
