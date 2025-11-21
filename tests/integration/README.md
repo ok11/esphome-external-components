@@ -97,8 +97,8 @@ brew install python
 **Ubuntu:**
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y docker.io docker-compose python3 python3-pip
+sudo apt update
+sudo apt install -y docker.io docker-compose python3 python3-pip
 sudo usermod -aG docker $USER  # Add yourself to docker group
 # Log out and back in for group changes to take effect
 ```
