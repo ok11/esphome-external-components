@@ -76,7 +76,7 @@ echo ""
 # Step 3: Run the test suite
 echo "Step 3: Running integration tests..."
 echo "----------------------------------------------------------------------"
-if "$INTEGRATION_DIR/../../.venv/bin/python" "$INTEGRATION_DIR/smoke_tests/test_runner.py"; then
+if "$INTEGRATION_DIR/../../.venv/bin/python" "$INTEGRATION_DIR/test_runner.py"; then
   TEST_RESULT=0
   echo ""
   echo -e "${GREEN}✓ All tests passed!${NC}"

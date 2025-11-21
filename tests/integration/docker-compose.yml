@@ -5,8 +5,8 @@ services:
     volumes:
       # Mount external components as read-only
       - ../../esphome/components:/config/external_components:ro
-      # Mount test configurations
-      - ./test_configs:/config/test_configs:ro
+      # Mount test configurations (needs write access for ESPHome's .gitignore files)
+      - ./test_configs:/config/test_configs:rw
       # Mount output directory for compiled firmware
       - ./output:/config/.esphome:rw
     ports:

@@ -10,24 +10,30 @@ esphome-external-components/
 │   └── components/
 │       └── climate_ir_woleix/          # Main component directory
 │           ├── __init__.py             # Python configuration interface
+│           ├── climate.py              # ESPHome climate platform
 │           ├── climate_ir_woleix.h     # C++ header file
 │           ├── climate_ir_woleix.cpp   # C++ implementation
 │           └── LICENSE                 # Component license
-├── tests/                              # C++ unit tests
-│   ├── climate_ir_woleix_test.cpp      # Test implementation
-│   ├── CMakeLists.txt                  # Test build configuration
-│   ├── run_tests.sh                    # Test execution script
-│   └── mocks/                          # Mock ESPHome headers for testing
-│       └── esphome/
-│           ├── components/
-│           │   ├── climate/
-│           │   └── climate_ir/
-│           └── core/
+├── tests/                              # Test suite
+│   ├── unit/                           # C++ unit tests
+│   │   ├── climate_ir_woleix_test.cpp  # Test implementation
+│   │   ├── CMakeLists.txt              # Test build configuration
+│   │   ├── run_tests.sh                # Test execution script
+│   │   ├── generate_coverage.sh        # Coverage report generator
+│   │   └── mocks/                      # Mock ESPHome headers
+│   ├── integration/                    # Integration tests
+│   │   ├── test_configs/               # ESPHome test configurations
+│   │   ├── test_runner.py              # Test orchestration script
+│   │   ├── run_tests.sh                # Integration test runner
+│   │   └── docker-compose.yml          # Docker environment
+│   └── README.md                       # Testing documentation
 ├── .vscode/                            # VS Code configuration
 │   ├── settings.json                   # Editor settings
 │   ├── tasks.json                      # Build tasks
 │   ├── launch.json                     # Debug configurations
 │   └── c_cpp_properties.json           # C++ IntelliSense config
+├── platformio_install_deps_locally.py  # PlatformIO dependency installer
+├── prepare_esphome.sh                  # ESPHome setup helper script
 ├── .venv/                              # Python virtual environment
 ├── CMakeLists.txt                      # Root CMake configuration
 ├── .gitignore                          # Git ignore rules
@@ -138,10 +144,35 @@ clang++ --version
 # Check CMake
 cmake --version
 
-# Should see CMake 3.16 or higher
+# Should see CMake 3.20 or higher
 ```
 
-### 4. Building and Testing C++ Code
+### 4. PlatformIO Dependencies (For External Component Development)
+
+The `platformio_install_deps_locally.py` script installs PlatformIO libraries into the ESPHome installation directory, providing stable include and library paths for external component compilation. It is called from `prepare_esphome.sh` before `CMake` steps, so you basically don't bother, but it is of course also possible to call it separately.
+
+#### Why Use This Script?
+
+- **Stable Paths**: Unlike ESPHome's global `platformio_install_deps.py` (which installs to system-wide locations), this script installs dependencies under the ESPHome root directory
+- **Predictable Includes**: Ensures consistent library locations for IDE IntelliSense and compilation
+- **Development Workflow**: Essential for external component development where you need access to ESPHome's internal dependencies
+
+#### Usage
+
+```bash
+# Activate virtual environment first
+source .venv/bin/activate
+
+# Install all dependencies from a platformio.ini file
+./platformio_install_deps_locally.py /path/to/esphome/platformio.ini
+
+# Ii is also possible to install packages separately (as opposed to the above "everything mentioned in the ini file")
+#   -l, --libraries <list of libraries>  Install library dependencies
+#   -p, --platforms <list of platforms>  Install platform dependencies
+#   -t, --tools     <list of tools>      Install tool dependencies
+```
+
+### 5. Building and Testing C++ Code
 
 #### Build Tests
 
@@ -171,7 +202,7 @@ cd tests
 ./run_tests.sh
 ```
 
-### 5. VS Code Configuration
+### 6. VS Code Configuration
 
 The project includes pre-configured VS Code settings:
 

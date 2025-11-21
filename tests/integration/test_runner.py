@@ -48,7 +48,7 @@ def run_compilation_tests():
     print("Running Compilation Tests")
     print("=" * 60)
 
-    test_configs_dir = pathlib.Path(__file__).parent.parent / "test_configs"
+    test_configs_dir = pathlib.Path(__file__).parent / "test_configs"
     test_configs = list(test_configs_dir.glob("*.yaml"))
 
     if not test_configs:
@@ -67,11 +67,10 @@ def run_compilation_tests():
         ]
 
         try:
+            # Stream output to stdout/stderr in real-time
             result = subprocess.run(
                 cmd,
-                capture_output=True,
-                text=True,
-                timeout=300,  # 5 minutes timeout,
+                timeout=300,  # 5 minutes timeout
                 check=False
             )
 
@@ -80,8 +79,7 @@ def run_compilation_tests():
                 results.append((config.name, True, None))
             else:
                 print(f"✗ {config.name} failed to compile")
-                print(f"Error output:\n{result.stderr[-500:]}")  # Last 500 chars
-                results.append((config.name, False, result.stderr))
+                results.append((config.name, False, "See output above"))
         except subprocess.TimeoutExpired:
             print(f"✗ {config.name} compilation timed out")
             results.append((config.name, False, "Timeout"))

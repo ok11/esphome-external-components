@@ -20,8 +20,7 @@ integration/
 │   ├── basic_climate.yaml          # Minimal configuration
 │   ├── full_features.yaml          # Full-featured configuration
 │   └── ...
-├── smoke_tests/                    # Python test scripts
-│   └── test_runner.py              # Main test orchestrator
+├── test_runner.py                  # Main test orchestrator
 ├── scripts/                        # Helper scripts
 │   └── wait_for_esphome.sh         # Wait for ESPHome ready
 ├── run_tests.sh                    # Main entry point
@@ -227,7 +226,7 @@ Potential additions for more comprehensive testing:
 
 ### Extending test_runner.py
 
-Add new test functions to `smoke_tests/test_runner.py`:
+Add new test functions to `test_runner.py`:
 
 ```python
 def run_api_tests():
@@ -281,7 +280,7 @@ ESPHOME_PORT=8080 docker-compose up
 
 **Solutions:**
 
-1. Increase timeout: Edit `MAX_WAIT_TIME` in `smoke_tests/test_runner.py`
+1. Increase timeout: Edit `MAX_WAIT_TIME` in `test_runner.py`
 2. Check Docker resources: Ensure Docker has enough CPU/RAM
 3. View logs: `docker-compose logs esphome`
 

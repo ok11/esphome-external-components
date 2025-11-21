@@ -1,56 +1,31 @@
 esphome:
-  name: test-woleix-full
-  platform: ESP32
-  board: nodemcu-32s
+  name: test_climate_ir_woleix
 
-# Use external component from mounted directory
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
 external_components:
   - source: /config/external_components
     components: [ climate_ir_woleix ]
 
-# WiFi configuration
 wifi:
   ssid: "TestNetwork"
   password: "TestPassword"
-  
-  # Static IP for predictable testing
-  manual_ip:
-    static_ip: 192.168.1.200
-    gateway: 192.168.1.1
-    subnet: 255.255.255.0
-  
-  # Enable fallback hotspot
-  ap:
-    ssid: "Test Full Fallback"
-    password: "TestPassword"
 
-# Enable logging with detailed output
 logger:
-  level: DEBUG
-  logs:
-    climate: VERBOSE
-    climate_ir: VERBOSE
+  level: VERBOSE
 
-# Enable Home Assistant API
-api:
-  password: ""
-  reboot_timeout: 0s
-
-# Enable OTA updates
-ota:
-  password: ""
-
-# Enable web server for manual inspection
 web_server:
   port: 80
 
-# Configure the IR transmitter
 remote_transmitter:
   id: ir_transmitter
   pin: GPIO4
   carrier_duty_percent: 50%
+  non_blocking: true
 
-# Optional: Add temperature sensor for current temperature
 sensor:
   - platform: dht
     pin: GPIO5

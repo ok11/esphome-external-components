@@ -15,7 +15,7 @@ tests/
 │   ├── docker-compose.yml
 │   ├── Dockerfile.esphome
 │   ├── test_configs/              # ESPHome YAML configs
-│   ├── smoke_tests/               # Test scripts
+│   ├── test_runner.py             # Main test orchestrator
 │   ├── scripts/                   # Helper scripts
 │   └── README.md
 ├── CMakeLists.txt
@@ -136,18 +136,45 @@ cd tests/integration
 - CMake 3.20+
 - C++20 compiler (GCC/Clang)
 - Google Test
+- PlatformIO (for dependency management)
 
 **Install on macOS:**
 
 ```bash
 brew install cmake googletest
+pip install platformio
 ```
 
 **Install on Ubuntu:**
 
 ```bash
 sudo apt-get install cmake libgtest-dev build-essential
+pip install platformio
 ```
+
+**Install PlatformIO Dependencies:**
+
+The project uses `platformio_install_deps_locally.py` to install ESPHome dependencies under a stable path for reliable compilation:
+
+```bash
+# From project root, activate your virtual environment
+source .venv/bin/activate
+
+# Install dependencies for unit tests
+./platformio_install_deps_locally.py tests/unit/platformio.ini -l -p
+
+# This installs libraries under ESPHome root instead of global locations
+# providing stable include paths for C++ compilation and IDE IntelliSense
+```
+
+**Why use platformio_install_deps_locally.py?**
+
+- Provides stable, predictable library paths for external component development
+- Better IDE integration (IntelliSense can find headers reliably)
+- Installs under ESPHome directory instead of system-wide
+- Mirrors how ESPHome itself manages dependencies
+
+See the main [README.md](../README.md#4-platformio-dependencies-for-external-component-development) for more details.
 
 ### For Integration Tests
 

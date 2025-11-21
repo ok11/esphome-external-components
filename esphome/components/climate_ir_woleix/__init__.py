@@ -15,9 +15,8 @@ climate_ir_woleix_ns = cg.esphome_ns.namespace("climate_ir_woleix")
 WoleixClimate = climate_ir_woleix_ns.class_("WoleixClimate", climate_ir.ClimateIR)
 
 # Configuration schema - extends climate_ir's schema with humidity sensor support
-CONFIG_SCHEMA = climate_ir.CLIMATE_IR_WITH_RECEIVER_SCHEMA.extend(
+CONFIG_SCHEMA = climate_ir.climate_ir_with_receiver_schema(WoleixClimate).extend(
     {
-        cv.GenerateID(): cv.declare_id(WoleixClimate),
         cv.Optional(CONF_HUMIDITY_SENSOR): cv.use_id(sensor.Sensor),
     }
 )

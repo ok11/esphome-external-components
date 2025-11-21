@@ -1,6 +1,7 @@
 #!/bin/bash
 
 ESPHOME_PATH="${1}"
+SCRIPT_PATH=$(pwd)
 
 if [ -z "$ESPHOME_PATH" ]; then
   echo "Usage: $0 <path_to_esphome>"
@@ -36,7 +37,7 @@ source venv/bin/activate
 
 if [ ! -d "$ESPHOME_PATH/.pio/libdeps" ]; then
     echo "Installing PlatformIO dependencies at $ESPHOME_PATH..."
-    ./script/platformio_install_deps.py "$ESPHOME_PATH/platformio.ini"
+    "$SCRIPT_PATH/platformio_install_deps_locally.py" "$ESPHOME_PATH/platformio.ini"
     echo "Done."
 else
     echo "PlatformIO dependencies are already installed."
