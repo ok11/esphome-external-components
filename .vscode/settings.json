@@ -6,5 +6,16 @@
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "cmake.buildDirectory": "${workspaceFolder}/build",
     "cmake.testExplorer.suiteDelimiter": "::",
-    "cmake.ctest.testExplorerIntegrationEnabled": true
+    "cmake.ctest.testExplorerIntegrationEnabled": true,
+    "cmake.configureSettings": {
+        "ENABLE_COVERAGE": "ON"
+    },
+    "testing.coverageToolbarEnabled": true,
+    "liveServer.settings.donotShowInfoMsg": true,
+    "cmake.coverageInfoFiles": [
+        "${workspaceFolder}/tests/unit/build/coverage/coverage_filtered.info"
+    ],
+    "coverage-gutters.coverageFileNames": [
+        "coverage_filtered.info"
+    ]
 }

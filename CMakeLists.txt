@@ -36,6 +36,7 @@ endif()
 #   4. VS Code settings.json: "cmake.configureSettings"
 #   5. Auto-detection from common locations
 
+
 # Load .env file if it exists (for portable configuration)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.env")
     file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/.env" ENV_CONTENTS)
@@ -82,6 +83,34 @@ if(NOT DEFINED ESPHOME_PATH)
         endforeach()
     endif()
 endif()
+
+# Run prepare script before configuration (if it exists)
+set(PREPARE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/prepare_esphome.sh ${ESPHOME_PATH}")
+if(EXISTS "${PREPARE_SCRIPT}")
+    message(STATUS "Running prepare script: ${PREPARE_SCRIPT}")
+    execute_process(
+        COMMAND bash "${PREPARE_SCRIPT}"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        RESULT_VARIABLE PREPARE_RESULT
+        OUTPUT_VARIABLE PREPARE_OUTPUT
+        ERROR_VARIABLE PREPARE_ERROR
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_STRIP_TRAILING_WHITESPACE
+    )
+    
+    if(NOT PREPARE_RESULT EQUAL 0)
+        message(WARNING "Prepare script failed with exit code: ${PREPARE_RESULT}")
+        if(PREPARE_ERROR)
+            message(WARNING "Error output: ${PREPARE_ERROR}")
+        endif()
+    else()
+        message(STATUS "Prepare script completed successfully")
+        if(PREPARE_OUTPUT)
+            message(STATUS "Output: ${PREPARE_OUTPUT}")
+        endif()
+    endif()
+endif()
+
 
 # Try to find PlatformIO dependencies path
 if(NOT DEFINED PLATFORMIO_LIBDEPS_PATH)

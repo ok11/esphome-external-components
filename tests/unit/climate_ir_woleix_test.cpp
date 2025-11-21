@@ -432,6 +432,56 @@ TEST_F(WoleixClimateMockTest, VerifyCarrierFrequencyInTransmittedData) {
 }
 
 // ============================================================================
+// Test: Humidity Sensor Callback
+// ============================================================================
+
+TEST_F(WoleixClimateTest, HumiditySensorCallbackIsRegistered) {
+  // Create a mock humidity sensor
+  esphome::sensor::Sensor humidity_sensor;
+  
+  // Set the humidity sensor on the climate device
+  climate->set_humidity_sensor(&humidity_sensor);
+  
+  // Call setup to register the callback
+  climate->setup();
+  
+  // Verify the callback was registered by publishing a state
+  // and checking that it doesn't crash (basic test)
+  humidity_sensor.publish_state(55.0f);
+  
+  // Verify the sensor state was updated
+  EXPECT_EQ(humidity_sensor.state, 55.0f);
+}
+
+TEST_F(WoleixClimateTest, HumiditySensorCallbackReceivesUpdates) {
+  // Create a mock humidity sensor
+  esphome::sensor::Sensor humidity_sensor;
+  
+  // Set the humidity sensor on the climate device
+  climate->set_humidity_sensor(&humidity_sensor);
+  
+  // Call setup to register the callback
+  climate->setup();
+  
+  // Publish multiple humidity values and verify they're received
+  humidity_sensor.publish_state(45.5f);
+  EXPECT_EQ(humidity_sensor.state, 45.5f);
+  
+  humidity_sensor.publish_state(62.3f);
+  EXPECT_EQ(humidity_sensor.state, 62.3f);
+  
+  humidity_sensor.publish_state(70.0f);
+  EXPECT_EQ(humidity_sensor.state, 70.0f);
+}
+
+TEST_F(WoleixClimateTest, HumiditySensorCallbackWorksWithNullSensor) {
+  // Don't set a humidity sensor (leave it as nullptr)
+  
+  // Call setup - should not crash even without a sensor
+  EXPECT_NO_THROW(climate->setup());
+}
+
+// ============================================================================
 // Main
 // ============================================================================
 

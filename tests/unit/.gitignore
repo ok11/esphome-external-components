@@ -1,0 +1,9 @@
+# Build directory
+build/
+
+# Coverage data files
+*.gcda
+*.gcno
+*.gcov
+
+# Coverage reports

@@ -79,9 +79,7 @@ void WoleixClimate::setup()
   if (this->humidity_sensor_ != nullptr)
   {
     this->humidity_sensor_->add_on_state_callback([this](float state) {
-      // Update the climate's humidity value
-      // Note: In real ESPHome, climate has a current_humidity member
-      // For now, we'll just log it or you can add custom handling
+      ESP_LOGD(TAG, "Humidity sensor state: %f", state);
     });
   }
 }

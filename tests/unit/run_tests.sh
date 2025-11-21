@@ -10,8 +10,8 @@ echo "=== Building Woleix Climate IR Unit Tests ==="
 mkdir -p build
 cd build
 
-# Configure with CMake
-cmake ..
+# Configure with CMake and enable coverage
+cmake -DENABLE_COVERAGE=ON ..
 
 # Build
 cmake --build .
