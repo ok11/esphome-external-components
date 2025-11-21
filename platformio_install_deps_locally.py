@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-# This script is used to preinstall
-# all platformio libraries in the global storage
+
+''' 
+This script is used to preinstall
+all platformio libraries in the global storage
+'''
 
 import argparse
 import configparser

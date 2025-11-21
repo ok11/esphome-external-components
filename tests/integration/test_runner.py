@@ -134,7 +134,7 @@ def main():
 
     # Print summary
     all_passed = print_summary(results)
-    
+
     print("\n" + "=" * 60)
     if all_passed:
         print("✓ All tests passed!")
