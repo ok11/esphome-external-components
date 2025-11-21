@@ -16,9 +16,9 @@ Unlike unit tests that use mocks, integration tests:
 ```text
 integration/
 ├── docker-compose.yml              # Docker orchestration
+├── platformio.ini                  # PlatformIO config (for future on-device testing)
 ├── test_configs/                   # ESPHome YAML configurations
-│   ├── basic_climate.yaml          # Minimal configuration
-│   ├── full_features.yaml          # Full-featured configuration
+│   ├── climate_test.yaml           # Component test configuration
 │   └── ...
 ├── test_runner.py                  # Main test orchestrator
 ├── scripts/                        # Helper scripts
@@ -27,6 +27,8 @@ integration/
 ├── output/                         # Compiled firmware (gitignored)
 └── README.md                       # This file
 ```
+
+**Note on platformio.ini:** This file is currently not used by the integration tests but is included as preparation for future embedded on-device testing capabilities. The current tests focus on compilation validation using ESPHome in Docker.
 
 ## Quick Start
 
