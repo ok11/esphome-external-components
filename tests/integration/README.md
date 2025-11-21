@@ -105,28 +105,19 @@ sudo usermod -aG docker $USER  # Add yourself to docker group
 
 ## Test Configurations
 
-### basic_climate.yaml
+### climate_test.yaml
 
-Minimal configuration to ensure component loads and compiles:
-
-- ESP8266 platform
-- Basic WiFi setup
-- Simple climate component configuration
-- No optional features
-
-**Purpose:** Verify basic integration works
-
-### full_features.yaml
-
-Comprehensive configuration with all features:
+Comprehensive test configuration that validates:
 
 - ESP32 platform
-- Temperature sensor integration
-- Web server enabled
-- Full climate features
-- Status indicators
+- External component loading from mounted directory
+- Temperature and humidity sensor integration
+- IR transmitter setup
+- Web server for manual inspection
+- Full climate features (modes, temperature control, etc.)
+- Status LED indicators
 
-**Purpose:** Test all component capabilities
+**Purpose:** Verify component compiles and integrates correctly with ESPHome
 
 ### Adding New Test Configs
 
@@ -162,7 +153,7 @@ Open in browser: <http://localhost:6052>
 ### Compile a Configuration Manually
 
 ```bash
-docker exec esphome-test esphome compile /config/test_configs/basic_climate.yaml
+docker exec esphome-test esphome compile /config/test_configs/climate_test.yaml
 ```
 
 ### View Logs
@@ -264,8 +255,8 @@ ESPHOME_PORT=8080 docker-compose up
 
 - `../../esphome/components` → `/config/external_components` (read-only)
   - Your external component source code
-- `./test_configs` → `/config/test_configs` (read-only)
-  - Test YAML configurations
+- `./test_configs` → `/config/test_configs` (read-write)
+  - Test YAML configurations (needs write access for ESPHome's .gitignore files)
 - `./output` → `/config/.esphome` (read-write)
   - Compiled firmware and build artifacts
 
