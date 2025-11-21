@@ -77,13 +77,13 @@ docker-compose down
 
 - Docker Desktop (macOS, Windows) or Docker Engine (Linux)
 - Docker Compose
-- Python 3.8+
-- bash
+- Python 3.12+
+- `bash`
 
 ### Optional (for manual testing)
 
-- curl (for healthchecks)
-- requests Python library
+- `curl` (for healthchecks)
+- `requests` Python library
 
 ### Installation
 
