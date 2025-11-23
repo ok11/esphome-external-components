@@ -14,6 +14,8 @@ namespace climate_ir_woleix {
 
 const float_t WOLEIX_TEMP_MIN = 15.0f;          // Celsius
 const float_t WOLEIX_TEMP_MAX = 30.0f;          // Celsius
+const float_t WOLEIX_TEMP_DEFAULT = 25.0f;      // Celsius
+
 
 using climate::ClimateMode;
 using climate::ClimateFanMode;
@@ -38,6 +40,8 @@ protected :
     void transmit_state() override;
     
     ClimateTraits traits() override;
+
+    void control(const ClimateCall &call) override;
 
     /// Encode power command
     void encode_power_();

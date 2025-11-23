@@ -12,6 +12,7 @@ using esphome::climate::ClimateMode;
 using esphome::climate::ClimateFanMode;
 using esphome::climate::ClimateFeature;
 using esphome::climate::ClimateTraits;
+using esphome::climate::ClimateCall;
 
 static const char *const TAG = "climate_ir_woleix.climate";
 
@@ -77,6 +78,10 @@ void WoleixClimate::setup()
   // Call parent setup first
   ClimateIR::setup();
   
+  this->mode = ClimateMode::CLIMATE_MODE_OFF;
+  this->target_temperature = WOLEIX_TEMP_DEFAULT;
+  this->fan_mode = climate::CLIMATE_FAN_LOW;
+
   // Set up callback to update humidity from sensor
   if (this->humidity_sensor_ != nullptr)
   {
@@ -90,6 +95,19 @@ void WoleixClimate::setup()
       }
     });
   }
+}
+
+void WoleixClimate::control(const ClimateCall &call) {
+  if (call.get_mode().has_value()) {
+    this->mode = *call.get_mode();
+  }
+  if (call.get_target_temperature().has_value()) {
+    this->target_temperature = *call.get_target_temperature();
+  }
+  if (call.get_fan_mode().has_value()) {
+    this->fan_mode = *call.get_fan_mode();
+  }
+  this->transmit_state();
 }
 
 void WoleixClimate::transmit_state()
@@ -232,6 +250,7 @@ ClimateTraits WoleixClimate::traits()
   traits.add_feature_flags(ClimateFeature::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE);
   traits.add_feature_flags(ClimateFeature::CLIMATE_SUPPORTS_CURRENT_HUMIDITY);
 
+  traits.add_supported_mode(ClimateMode::CLIMATE_MODE_OFF);
   traits.add_supported_mode(ClimateMode::CLIMATE_MODE_COOL);
 
   traits.add_supported_fan_mode(ClimateFanMode::CLIMATE_FAN_LOW);
