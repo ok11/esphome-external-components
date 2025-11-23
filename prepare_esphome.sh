@@ -1,6 +1,7 @@
 #!/bin/bash
 
 ESPHOME_PATH="${1}"
+ESPHOME_TAG="${2:-latest}"
 SCRIPT_PATH=$(pwd)
 
 if [ -z "$ESPHOME_PATH" ]; then
@@ -14,7 +15,7 @@ ESPHOME_ROOT="$(dirname "$ESPHOME_PATH")"
 
 if [ ! -d "$ESPHOME_PATH" ]; then
     echo "Cloning ESPHome repository into $ESPHOME_PATH:Q..."
-    git clone https://github.com/esphome/esphome.git "$ESPHOME_PATH"
+    git clone https://github.com/esphome/esphome.git --branch "$ESPHOME_TAG" "$ESPHOME_PATH"
 else
     echo "ESPHome repository already exists, pulling latest changes..."
     cd "$ESPHOME_PATH"

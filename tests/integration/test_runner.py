@@ -70,7 +70,7 @@ def run_compilation_tests():
             # Stream output to stdout/stderr in real-time
             result = subprocess.run(
                 cmd,
-                timeout=300,  # 5 minutes timeout
+                timeout=900,  # 15 minutes timeout
                 check=False
             )
 

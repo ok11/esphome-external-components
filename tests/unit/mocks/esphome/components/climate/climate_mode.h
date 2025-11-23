@@ -33,10 +33,20 @@ enum ClimateSwingMode : uint8_t {
   CLIMATE_SWING_HORIZONTAL = 3,
 };
 
-// Feature flags
-const uint8_t CLIMATE_SUPPORTS_CURRENT_TEMPERATURE = 1 << 0;
-const uint8_t CLIMATE_SUPPORTS_CURRENT_HUMIDITY = 1 << 1;
-const uint8_t CLIMATE_SUPPORTS_TWO_POINT_TARGET_TEMPERATURE = 1 << 2;
+enum ClimateFeature : uint32_t {
+  // Reporting current temperature is supported
+  CLIMATE_SUPPORTS_CURRENT_TEMPERATURE = 1 << 0,
+  // Setting two target temperatures is supported (used in conjunction with CLIMATE_MODE_HEAT_COOL)
+  CLIMATE_SUPPORTS_TWO_POINT_TARGET_TEMPERATURE = 1 << 1,
+  // Single-point mode is NOT supported (UI always displays two handles, setting 'target_temperature' is not supported)
+  CLIMATE_REQUIRES_TWO_POINT_TARGET_TEMPERATURE = 1 << 2,
+  // Reporting current humidity is supported
+  CLIMATE_SUPPORTS_CURRENT_HUMIDITY = 1 << 3,
+  // Setting a target humidity is supported
+  CLIMATE_SUPPORTS_TARGET_HUMIDITY = 1 << 4,
+  // Reporting current climate action is supported
+  CLIMATE_SUPPORTS_ACTION = 1 << 5,
+};
 
 // Mock ClimateTraits
 class ClimateTraits {
@@ -45,6 +55,8 @@ public:
   void set_visual_min_temperature(float temp) { visual_min_temp_ = temp; }
   void set_visual_max_temperature(float temp) { visual_max_temp_ = temp; }
   void set_visual_temperature_step(float step) { visual_temp_step_ = step; }
+  void add_supported_mode(uint8_t mode) { modes_ |= 1 << mode; }
+  void add_supported_fan_mode(uint8_t mode) { fan_modes_ |= 1 << mode; }
   
   uint8_t get_feature_flags() const { return feature_flags_; }
   float get_visual_min_temperature() const { return visual_min_temp_; }
@@ -53,6 +65,8 @@ public:
 
 private:
   uint8_t feature_flags_ = 0;
+  uint8_t modes_ = 0;
+  uint8_t fan_modes_ = 0;
   float visual_min_temp_ = 0;
   float visual_max_temp_ = 0;
   float visual_temp_step_ = 0;

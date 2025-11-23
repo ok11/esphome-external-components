@@ -1,5 +1,5 @@
 esphome:
-  name: test_climate_ir_woleix
+  name: test-climate-ir-woleix
 
 esp32:
   board: esp32dev
@@ -24,7 +24,6 @@ remote_transmitter:
   id: ir_transmitter
   pin: GPIO4
   carrier_duty_percent: 50%
-  non_blocking: true
 
 sensor:
   - platform: dht
@@ -43,6 +42,7 @@ climate:
     name: "Test Woleix Full Features"
     id: test_climate_full
     transmitter_id: ir_transmitter
+    supports_heat: false
     sensor: room_temp
     humidity_sensor: room_humidity
     

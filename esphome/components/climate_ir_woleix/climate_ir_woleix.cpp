@@ -8,8 +8,10 @@ namespace esphome
 namespace climate_ir_woleix
 {
 
-using ::esphome::climate::ClimateMode;
-using ::esphome::climate::ClimateTraits;
+using esphome::climate::ClimateMode;
+using esphome::climate::ClimateFanMode;
+using esphome::climate::ClimateFeature;
+using esphome::climate::ClimateTraits;
 
 static const char *const TAG = "climate_ir_woleix.climate";
 
@@ -79,7 +81,13 @@ void WoleixClimate::setup()
   if (this->humidity_sensor_ != nullptr)
   {
     this->humidity_sensor_->add_on_state_callback([this](float state) {
-      ESP_LOGD(TAG, "Humidity sensor state: %f", state);
+      if (!std::isnan(state)) {
+        this->current_humidity_ = state;
+        this->publish_state();
+        ESP_LOGD(TAG, "Updated humidity: %.1f%%", state);
+      } else {
+        ESP_LOGW(TAG, "Received NaN humidity reading");
+      }
     });
   }
 }
@@ -152,7 +160,10 @@ void WoleixClimate::transmit_state()
   }
 
   ESP_LOGD(TAG, "Transmitted climate state - Mode: %d, Temp: %.1f, Fan: %d",
-            this->mode, this->target_temperature, this->fan_mode.value());
+    this->mode, this->target_temperature, this->fan_mode.value());
+  
+  // Publish the new state
+  this->publish_state();
 }
 
 void WoleixClimate::encode_power_()
@@ -216,12 +227,21 @@ void WoleixClimate::transmit_raw_(const ::std::vector<int32_t> &timings)
 
 ClimateTraits WoleixClimate::traits()
 {
-  auto traits = ClimateTraits();
-  traits.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE);
-  traits.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_HUMIDITY);
+  auto traits = this->ClimateIR::traits();
+
+  traits.add_feature_flags(ClimateFeature::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE);
+  traits.add_feature_flags(ClimateFeature::CLIMATE_SUPPORTS_CURRENT_HUMIDITY);
+
+  traits.add_supported_mode(ClimateMode::CLIMATE_MODE_COOL);
+
+  traits.add_supported_fan_mode(ClimateFanMode::CLIMATE_FAN_LOW);
+  traits.add_supported_fan_mode(ClimateFanMode::CLIMATE_FAN_MEDIUM);
+  traits.add_supported_fan_mode(ClimateFanMode::CLIMATE_FAN_HIGH);
+
   traits.set_visual_min_temperature(WOLEIX_TEMP_MIN);
   traits.set_visual_max_temperature(WOLEIX_TEMP_MAX);
   traits.set_visual_temperature_step(1.0f);
+
   return traits;
 }
 

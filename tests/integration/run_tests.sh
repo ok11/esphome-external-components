@@ -53,7 +53,7 @@ trap cleanup EXIT
 # Step 1: Build and start Docker containers
 echo "Step 1: Building and starting Docker containers..."
 echo "----------------------------------------------------------------------"
-if docker-compose up -d --build; then
+if docker-compose --env-file ../../.env up -d --build; then
   echo -e "${GREEN}✓ Containers started${NC}"
 else
   echo -e "${RED}✗ Failed to start containers${NC}"

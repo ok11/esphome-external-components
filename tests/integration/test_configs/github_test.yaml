@@ -1,0 +1,113 @@
+esphome:
+  name: new-room-climate
+  friendly_name: New Room AC
+  min_version: 2025.5.0
+  name_add_mac_suffix: false
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+  level: DEBUG
+
+web_server:
+  port: 80
+  include_internal: true
+
+external_components:
+  - source: github://ok11/esphome-external-components/esphome@main
+    components: [ climate_ir_woleix ]
+
+remote_transmitter:
+  pin: GPIO20
+  carrier_duty_percent: 50%
+  id: new_room_ac_ir
+
+button:
+  - platform: template
+    id: speed_pronto
+    name: "Speed Pronto"
+    on_press:
+      - remote_transmitter.transmit_pronto:
+          data: "0000 006D 0022 0000 0158 00B0 0013 0018 0014 0018 0014 0041 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018 0014 0040 0016 0043 0013 0043 0013 003D 0019 0040 0015 0018 0014 003E 0018 0043 0013 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0043 0013 0018 0014 0018 0014 0043 0013 0043 0013 0041 0014 0043 0013 0043 0013 0483"
+
+  - platform: template
+    id: temp_up_pronto
+    name: "Temp+ Pronto"
+    on_press:
+      - remote_transmitter.transmit_pronto:
+          data: "0000 006D 0022 0000 0158 00B0 0013 0018 0014 0017 0014 0043 0013 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0018 0014 0042 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0018 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0483"
+
+  - platform: template
+    id: mode_pronto
+    name: "Mode Pronto"
+    on_press:
+      - remote_transmitter.transmit_pronto:
+          data: "0000 006D 0022 0000 0159 00AF 0014 0018 0014 0018 0014 0043 0013 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0043 0013 0043 0013 0018 0014 0043 0013 0043 0013 0043 0013 0043 0013 0043 0013 0043 0013 0018 0014 0043 0013 0043 0013 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0043 0013 0018 0014 0018 0014 0043 0013 0043 0013 0043 0013 0042 0014 0483"
+
+  - platform: template
+    id: temp_down_pronto
+    name: "Temp- Pronto"
+    on_press:
+      - remote_transmitter.transmit_pronto:
+          data: "0000 006D 0022 0000 0158 00AF 0014 0018 0014 0018 0014 0043 0013 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0483"
+
+  - platform: template
+    id: timer_pronto
+    name: "Timer Pronto"
+    on_press:
+      - remote_transmitter.transmit_pronto:
+          data: "0000 006D 0022 0000 0159 00AF 0014 0018 0014 0018 0014 0043 0013 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0043 0013 0043 0013 0018 0014 0043 0013 0043 0013 0043 0013 0043 0013 0042 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0483"
+
+  - platform: template
+    id: power_pronto
+    name: "Power Pronto"
+    on_press:
+      - remote_transmitter.transmit_pronto:
+          data: "0000 006D 0022 0000 0158 00AF 0014 0018 0014 0018 0014 0042 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0018 0014 0018 0014 0042 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018 0014 0043 0013 0042 0014 0042 0014 0042 0014 0042 0014 0483"
+
+climate:
+  - platform: climate_ir_woleix
+    name: "New Room AC"
+    id: new_room_ac
+    transmitter_id: new_room_ac_ir
+    sensor: new_room_ac_current_temperature
+    humidity_sensor: new_room_ac_current_humidity
+    
+    # Visual settings
+    visual:
+      min_temperature: 16°C
+      max_temperature: 30°C
+      temperature_step: 1°C
+
+sensor:
+  - platform: dht
+    model: DHT11
+    pin: GPIO4
+    id: new_room_ac_dht
+    temperature:
+      name: Temperature
+      id: new_room_ac_current_temperature
+    humidity:
+      name: Humidity
+      id: new_room_ac_current_humidity
+    update_interval: 60s
+
+binary_sensor:
+  - platform: gpio
+    name: Power
+    internal: true
+    pin: 
+      number: GPIO01
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    on_click: 
+      then:
+        - button.press:
+            id: power_pronto
+ 

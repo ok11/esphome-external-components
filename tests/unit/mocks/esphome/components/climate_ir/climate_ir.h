@@ -3,7 +3,10 @@
 #include <gmock/gmock.h>
 #include <vector>
 #include <memory>
+
 #include "esphome/core/optional.h"
+#include "esphome/core/log.h"
+
 #include "esphome/components/climate/climate_mode.h"
 
 namespace esphome {
@@ -117,10 +120,14 @@ public:
   // Setup method (can be overridden)
   virtual void setup() {}
   
+  MOCK_METHOD(void, publish_state, ());
+
 protected:
   // Override these in derived classes
   virtual void transmit_state() = 0;
-  virtual ClimateTraits traits() = 0;
+  virtual ClimateTraits traits() {
+    return climate::ClimateTraits();
+  }
   
   // Protected members accessible to derived classes
   remote_base::RemoteTransmitter* transmitter_ = nullptr;

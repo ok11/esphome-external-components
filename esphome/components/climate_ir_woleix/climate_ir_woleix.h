@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "esphome/core/optional.h"
+
 #include "esphome/components/climate/climate_mode.h"
 #include "esphome/components/climate_ir/climate_ir.h"
 #include "esphome/components/sensor/sensor.h"
@@ -14,10 +15,10 @@ namespace climate_ir_woleix {
 const float_t WOLEIX_TEMP_MIN = 15.0f;          // Celsius
 const float_t WOLEIX_TEMP_MAX = 30.0f;          // Celsius
 
-using esphome::climate_ir::ClimateIR;
-using esphome::climate::ClimateMode;
-using esphome::climate::ClimateFanMode;
-using esphome::climate::ClimateTraits;
+using climate::ClimateMode;
+using climate::ClimateFanMode;
+using climate::ClimateTraits;
+using climate_ir::ClimateIR;
 
 class WoleixClimate : public ClimateIR {
 
@@ -35,7 +36,7 @@ public:
 protected :
     // Transmit via IR the state of this climate controller.
     void transmit_state() override;
-
+    
     ClimateTraits traits() override;
 
     /// Encode power command
@@ -66,6 +67,7 @@ protected :
     
     /// Humidity sensor for current humidity readings
     sensor::Sensor *humidity_sensor_{nullptr};
+    float current_humidity_;
 };
 
 }

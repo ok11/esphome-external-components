@@ -1,14 +1,15 @@
 services:
   esphome:
-    image: esphome/esphome:latest
+    image: esphome/esphome:${ESPHOME_TAG}
     container_name: esphome-test
     volumes:
-      # Mount external components as read-only
-      - ../../esphome/components:/config/external_components:ro
-      # Mount test configurations (needs write access for ESPHome's .gitignore files)
-      - ./test_configs:/config/test_configs:rw
-      # Mount output directory for compiled firmware
-      - ./output:/config/.esphome:rw
+      - type: bind
+        source: ../../esphome/components
+        target: /config/external_components
+        read_only: true
+      - type: bind
+        source: ./test_configs
+        target: /config/test_configs
     ports:
       - "6052:6052"  # ESPHome web dashboard
       - "6053:6053"  # ESPHome API
@@ -28,3 +29,7 @@ services:
 networks:
   esphome-test-net:
     driver: bridge
+
+# Start compilation by running ./test_runner.py (part of the ./run_tests.sh)
+# or by entering "esphome compile /config/test_configs/climate_test.yaml" 
+# in the container's interactive shell / terminal

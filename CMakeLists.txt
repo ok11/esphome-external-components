@@ -72,7 +72,7 @@ if(NOT DEFINED ESPHOME_PATH)
         set(POSSIBLE_ESPHOME_PATHS
             "${CMAKE_CURRENT_SOURCE_DIR}/../esphome"
             "$ENV{HOME}/esphome"
-            "/Users/$ENV{USER}/Library/CloudStorage/OneDrive-SAPSE/workspace/ok11/esphome"
+            "/Users/$ENV{USER}/workspace/ok11/esphome"
         )
         foreach(PATH ${POSSIBLE_ESPHOME_PATHS})
             if(EXISTS "${PATH}")
@@ -84,8 +84,17 @@ if(NOT DEFINED ESPHOME_PATH)
     endif()
 endif()
 
+if(NOT DEFINED ESPHOME_TAG)
+    if(DEFINED ENV{ESPHOME_TAG})
+        set(ESPHOME_TAG $ENV{ESPHOME_TAG})
+        message(STATUS "Using ESPHOME_TAG from environment: ${ESPHOME_TAG}")
+    else()
+        set(ESPHOME_TAG "latest")
+    endif()
+endif()
+
 # Run prepare script before configuration (if it exists)
-set(PREPARE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/prepare_esphome.sh ${ESPHOME_PATH}")
+set(PREPARE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/prepare_esphome.sh ${ESPHOME_PATH} ${ESPHOME_TAG}")
 if(EXISTS "${PREPARE_SCRIPT}")
     message(STATUS "Running prepare script: ${PREPARE_SCRIPT}")
     execute_process(
@@ -119,12 +128,8 @@ if(NOT DEFINED PLATFORMIO_LIBDEPS_PATH)
         message(STATUS "Using PLATFORMIO_LIBDEPS_PATH from environment: ${PLATFORMIO_LIBDEPS_PATH}")
     elseif(DEFINED ESPHOME_PATH AND EXISTS "${ESPHOME_PATH}/.pio/libdeps")
         # Try to find in ESPHome installation
-        file(GLOB PIO_PLATFORMS "${ESPHOME_PATH}/.pio/libdeps/*")
-        if(PIO_PLATFORMS)
-            list(GET PIO_PLATFORMS 0 FIRST_PLATFORM)
-            set(PLATFORMIO_LIBDEPS_PATH "${FIRST_PLATFORM}")
-            message(STATUS "Auto-detected PLATFORMIO_LIBDEPS_PATH: ${PLATFORMIO_LIBDEPS_PATH}")
-        endif()
+        set(PLATFORMIO_LIBDEPS_PATH "${ESPHOME_PATH}/.pio/libdeps/esp32-arduino/ArduinoJson/src/")
+        message(STATUS "Auto-detected PLATFORMIO_LIBDEPS_PATH: ${PLATFORMIO_LIBDEPS_PATH}")
     endif()
 endif()
 
