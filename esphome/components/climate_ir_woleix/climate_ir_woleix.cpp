@@ -12,7 +12,6 @@ using esphome::climate::ClimateMode;
 using esphome::climate::ClimateFanMode;
 using esphome::climate::ClimateFeature;
 using esphome::climate::ClimateTraits;
-using esphome::climate::ClimateCall;
 
 static const char *const TAG = "climate_ir_woleix.climate";
 
