@@ -78,9 +78,9 @@ void WoleixClimate::setup()
   ClimateIR::setup();
   
   // Initialize with default values
-  this->mode = ClimateMode::CLIMATE_MODE_COOL;
+  this->mode = ClimateMode::CLIMATE_MODE_OFF;
   this->target_temperature = WOLEIX_TEMP_DEFAULT;
-  this->fan_mode = climate::CLIMATE_FAN_AUTO;
+  this->fan_mode = climate::CLIMATE_FAN_LOW;
 
   // Set up callback to update humidity from sensor
   if (this->humidity_sensor_ != nullptr)
@@ -235,17 +235,23 @@ void WoleixClimate::transmit_raw_(const ::std::vector<int32_t> &timings)
 
 ClimateTraits WoleixClimate::traits()
 {
-  auto traits = this->ClimateIR::traits();
+  auto traits = ClimateTraits();
+
+  traits.set_supported_modes({
+    ClimateMode::CLIMATE_MODE_OFF,
+    ClimateMode::CLIMATE_MODE_COOL
+  });
+
+  traits.set_supported_fan_modes({
+    ClimateFanMode::CLIMATE_FAN_LOW,
+    ClimateFanMode::CLIMATE_FAN_MEDIUM,
+    ClimateFanMode::CLIMATE_FAN_HIGH
+  });
+
+  traits.set_supported_swing_modes({});
 
   traits.add_feature_flags(ClimateFeature::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE);
   traits.add_feature_flags(ClimateFeature::CLIMATE_SUPPORTS_CURRENT_HUMIDITY);
-
-  traits.add_supported_mode(ClimateMode::CLIMATE_MODE_OFF);
-  traits.add_supported_mode(ClimateMode::CLIMATE_MODE_COOL);
-
-  traits.add_supported_fan_mode(ClimateFanMode::CLIMATE_FAN_LOW);
-  traits.add_supported_fan_mode(ClimateFanMode::CLIMATE_FAN_MEDIUM);
-  traits.add_supported_fan_mode(ClimateFanMode::CLIMATE_FAN_HIGH);
 
   traits.set_visual_min_temperature(WOLEIX_TEMP_MIN);
   traits.set_visual_max_temperature(WOLEIX_TEMP_MAX);
