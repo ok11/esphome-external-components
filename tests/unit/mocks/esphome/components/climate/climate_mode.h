@@ -1,5 +1,17 @@
 #pragma once
 
+#include <set>
+
+// Helper function to convert a set of enum values to a bitmask
+template<typename EnumType>
+uint32_t to_bitmask(const std::set<EnumType>& enum_set) {
+  uint32_t bitmask = 0;
+  for (const auto& value : enum_set) {
+    bitmask |= (1 << static_cast<uint8_t>(value));
+  }
+  return bitmask;
+}
+
 namespace esphome {
 namespace climate {
 
@@ -55,8 +67,11 @@ public:
   void set_visual_min_temperature(float temp) { visual_min_temp_ = temp; }
   void set_visual_max_temperature(float temp) { visual_max_temp_ = temp; }
   void set_visual_temperature_step(float step) { visual_temp_step_ = step; }
+  void set_supported_modes(std::set<uint8_t> modes) { modes_ = to_bitmask<uint8_t>(modes); } 
   void add_supported_mode(uint8_t mode) { modes_ |= 1 << mode; }
   void add_supported_fan_mode(uint8_t mode) { fan_modes_ |= 1 << mode; }
+  void set_supported_fan_modes(std::set<uint8_t> modes) { fan_modes_ = to_bitmask<uint8_t>(modes); } 
+  void set_supported_swing_modes(std::set<uint8_t> modes) { swing_modes_ = to_bitmask<uint8_t>(modes); } 
   
   uint8_t get_feature_flags() const { return feature_flags_; }
   float get_visual_min_temperature() const { return visual_min_temp_; }
@@ -67,6 +82,7 @@ private:
   uint8_t feature_flags_ = 0;
   uint8_t modes_ = 0;
   uint8_t fan_modes_ = 0;
+  uint8_t swing_modes_ = 0;
   float visual_min_temp_ = 0;
   float visual_max_temp_ = 0;
   float visual_temp_step_ = 0;

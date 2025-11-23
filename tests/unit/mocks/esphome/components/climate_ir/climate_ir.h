@@ -134,6 +134,8 @@ protected:
   float temperature_step_;
   float min_temperature_;
   float max_temperature_;
+
+  float current_humidity{NAN};
 };
 
 } // namespace climate_ir

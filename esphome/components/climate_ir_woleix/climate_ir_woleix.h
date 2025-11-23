@@ -26,11 +26,11 @@ class WoleixClimate : public ClimateIR {
 
 public:
     WoleixClimate()
-        : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX, 1.0f, 0.5f, 0.5f)
+        : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX)
     {
         this->target_temperature = WOLEIX_TEMP_DEFAULT;
-        this->mode = climate::CLIMATE_MODE_COOL;
-        this->fan_mode = climate::CLIMATE_FAN_AUTO;
+        this->mode = climate::CLIMATE_MODE_OFF;
+        this->fan_mode = climate::CLIMATE_FAN_LOW;
     }
     
     /// Set the humidity sensor for current humidity readings
@@ -73,7 +73,6 @@ protected :
     
     /// Humidity sensor for current humidity readings
     sensor::Sensor *humidity_sensor_{nullptr};
-    float current_humidity_;
 };
 
 }

@@ -87,7 +87,7 @@ void WoleixClimate::setup()
   {
     this->humidity_sensor_->add_on_state_callback([this](float state) {
       if (!std::isnan(state)) {
-        this->current_humidity_ = state;
+        this->current_humidity = state;
         this->publish_state();
         ESP_LOGD(TAG, "Updated humidity: %.1f%%", state);
       } else {
