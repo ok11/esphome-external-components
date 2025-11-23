@@ -78,9 +78,10 @@ void WoleixClimate::setup()
   // Call parent setup first
   ClimateIR::setup();
   
-  this->mode = ClimateMode::CLIMATE_MODE_OFF;
+  // Initialize with default values
+  this->mode = ClimateMode::CLIMATE_MODE_COOL;
   this->target_temperature = WOLEIX_TEMP_DEFAULT;
-  this->fan_mode = climate::CLIMATE_FAN_LOW;
+  this->fan_mode = climate::CLIMATE_FAN_AUTO;
 
   // Set up callback to update humidity from sensor
   if (this->humidity_sensor_ != nullptr)
@@ -95,18 +96,8 @@ void WoleixClimate::setup()
       }
     });
   }
-}
-
-void WoleixClimate::control(const ClimateCall &call) {
-  if (call.get_mode().has_value()) {
-    this->mode = *call.get_mode();
-  }
-  if (call.get_target_temperature().has_value()) {
-    this->target_temperature = *call.get_target_temperature();
-  }
-  if (call.get_fan_mode().has_value()) {
-    this->fan_mode = *call.get_fan_mode();
-  }
+  
+  // Transmit initial state
   this->transmit_state();
 }
 

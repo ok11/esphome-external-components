@@ -26,8 +26,12 @@ class WoleixClimate : public ClimateIR {
 
 public:
     WoleixClimate()
-        : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX)
-    {}
+        : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX, 1.0f, 0.5f, 0.5f)
+    {
+        this->target_temperature = WOLEIX_TEMP_DEFAULT;
+        this->mode = climate::CLIMATE_MODE_COOL;
+        this->fan_mode = climate::CLIMATE_FAN_AUTO;
+    }
     
     /// Set the humidity sensor for current humidity readings
     void set_humidity_sensor(sensor::Sensor *humidity_sensor) { this->humidity_sensor_ = humidity_sensor; }
@@ -40,8 +44,6 @@ protected :
     void transmit_state() override;
     
     ClimateTraits traits() override;
-
-    void control(const ClimateCall &call) override;
 
     /// Encode power command
     void encode_power_();
