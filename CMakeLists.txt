@@ -195,26 +195,26 @@ add_library(climate_ir_woleix STATIC
 )
 
 # Set include directories for the component
+# Note: External paths are only added for IDE IntelliSense, not for test builds
 target_include_directories(climate_ir_woleix PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/esphome
     ${CMAKE_CURRENT_SOURCE_DIR}/esphome/components/climate_ir_woleix
-    ${EXTERNAL_INCLUDE_PATHS}  # Add external ESPHome and PlatformIO paths
 )
 
-# Add mock headers as interface library to satisfy component dependencies
-# without actual compilation (header-only mocks)
-add_library(esphome_core_mocks INTERFACE)
-target_include_directories(esphome_core_mocks INTERFACE
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/mocks
-)
-
-# Link mocks to the component for header resolution
-target_link_libraries(climate_ir_woleix PUBLIC esphome_core_mocks)
-
-# Find Google Test (optional for tests)
+# Find Google Test first to determine if we're building tests
 find_package(GTest QUIET)
 
-# Enable testing only if GTest is available
+# Always add external ESPHome paths for the main library (for IntelliSense)
+# Use SYSTEM to give these paths lower priority than regular includes
+target_include_directories(climate_ir_woleix SYSTEM PUBLIC ${EXTERNAL_INCLUDE_PATHS})
+
+if(GTest_FOUND)
+    message(STATUS "External ESPHome paths added for library (tests will use mocks via test-specific includes)")
+else()
+    message(STATUS "External ESPHome paths added for IntelliSense (tests disabled)")
+endif()
+
+# Enable testing if GTest is available
 if(GTest_FOUND)
     enable_testing()
     add_subdirectory(tests)
@@ -226,4 +226,3 @@ endif()
 
 # Print information about compile_commands.json
 message(STATUS "CMAKE_EXPORT_COMPILE_COMMANDS is ON")
-message(STATUS "compile_commands.json will be generated at: ${CMAKE_BINARY_DIR}/compile_commands.json")

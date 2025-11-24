@@ -1,5 +1,6 @@
 #include "esphome/core/log.h"
 #include "esphome/core/hal.h"
+#include "esphome/components/remote_base/pronto_protocol.h"
 
 #include "climate_ir_woleix.h"
 
@@ -15,62 +16,62 @@ using esphome::climate::ClimateTraits;
 
 static const char *const TAG = "climate_ir_woleix.climate";
 
-// Decoded timings from Pronto codes (in microseconds)
-// Carrier frequency: 38.03 kHz
+// Pronto hex codes for IR commands (from yaml configuration)
+// Carrier frequency: 38.03 kHz (0x006D)
 
-// Power button timing
-static const ::std::vector<int32_t> POWER_TIMINGS = {
-    5568, 2832, 528, 600, 528, 600, 528, 1680, 528, 600, 528, 600, 528, 600,
-    528, 600, 528, 600, 528, 1680, 528, 1680, 528, 600, 528, 1680, 528, 1680,
-    528, 1680, 528, 1680, 528, 1680, 528, 600, 528, 600, 528, 1680, 528, 600,
-    528, 600, 528, 600, 528, 600, 528, 600, 528, 1680, 528, 1680, 528, 600,
-    528, 1704, 516, 1680, 528, 1680, 528, 1680, 528, 1680, 528, 18780
-};
+// Power button
+static const std::string POWER_PRONTO = 
+    "0000 006D 0022 0000 0158 00AF 0014 0018 0014 0018 0014 0042 0014 0018 "
+    "0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018 "
+    "0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0018 0014 0018 "
+    "0014 0042 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 "
+    "0014 0042 0014 0018 0014 0043 0013 0042 0014 0042 0014 0042 0014 0042 "
+    "0014 0483";
 
-// Temperature Up timing
-static const ::std::vector<int32_t> TEMP_UP_TIMINGS = {
-    5568, 2832, 516, 600, 528, 576, 528, 1704, 516, 600, 528, 600, 528, 600,
-    528, 600, 528, 600, 528, 1680, 528, 1680, 528, 600, 528, 1680, 528, 1680,
-    528, 1680, 528, 1680, 528, 1680, 528, 1680, 528, 600, 528, 1680, 528, 600,
-    528, 600, 528, 600, 528, 600, 528, 600, 528, 600, 528, 1680, 528, 600,
-    528, 1680, 528, 1680, 528, 1680, 528, 1680, 528, 1680, 528, 18780
-};
+// Temperature Up
+static const std::string TEMP_UP_PRONTO = 
+    "0000 006D 0022 0000 0158 00B0 0013 0018 0014 0017 0014 0043 0013 0018 "
+    "0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018 "
+    "0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0018 "
+    "0014 0042 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 "
+    "0014 0042 0014 0018 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 "
+    "0014 0483";
 
-// Temperature Down timing
-static const ::std::vector<int32_t> TEMP_DOWN_TIMINGS = {
-    5568, 2820, 528, 600, 528, 600, 528, 1704, 516, 600, 528, 600, 528, 600,
-    528, 600, 528, 600, 528, 1680, 528, 1680, 528, 600, 528, 1680, 528, 1680,
-    528, 1680, 528, 1680, 528, 1680, 528, 1680, 528, 600, 528, 600, 528, 600,
-    528, 600, 528, 600, 528, 600, 528, 600, 528, 600, 528, 1680, 528, 1680,
-    528, 1680, 528, 1680, 528, 1680, 528, 1680, 528, 1680, 528, 18780
-};
+// Temperature Down
+static const std::string TEMP_DOWN_PRONTO = 
+    "0000 006D 0022 0000 0158 00AF 0014 0018 0014 0018 0014 0043 0013 0018 "
+    "0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018 "
+    "0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0018 "
+    "0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 "
+    "0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 "
+    "0014 0483";
 
-// Mode button timing
-static const ::std::vector<int32_t> MODE_TIMINGS = {
-    5592, 2820, 528, 600, 528, 600, 528, 1704, 516, 600, 528, 600, 528, 600,
-    528, 600, 528, 600, 528, 1704, 516, 1704, 516, 600, 528, 1704, 516, 1704,
-    516, 1704, 516, 1704, 516, 1704, 516, 1704, 516, 600, 528, 1704, 516, 1704,
-    516, 600, 528, 600, 528, 600, 528, 600, 528, 600, 528, 1704, 516, 600,
-    528, 600, 528, 1704, 516, 1704, 516, 1704, 516, 1680, 528, 18780
-};
+// Mode button
+static const std::string MODE_PRONTO = 
+    "0000 006D 0022 0000 0159 00AF 0014 0018 0014 0018 0014 0043 0013 0018 "
+    "0014 0018 0014 0018 0014 0018 0014 0018 0014 0043 0013 0043 0013 0018 "
+    "0014 0043 0013 0043 0013 0043 0013 0043 0013 0043 0013 0043 0013 0018 "
+    "0014 0043 0013 0043 0013 0018 0014 0018 0014 0018 0014 0018 0014 0018 "
+    "0014 0043 0013 0018 0014 0018 0014 0043 0013 0043 0013 0043 0013 0042 "
+    "0014 0483";
 
-// Speed/Fan button timing
-static const ::std::vector<int32_t> SPEED_TIMINGS = {
-    5568, 2832, 516, 600, 528, 600, 528, 1656, 528, 600, 528, 600, 528, 600,
-    528, 600, 528, 600, 528, 1680, 528, 1680, 528, 600, 528, 1632, 552, 1704,
-    516, 1704, 516, 1560, 624, 1632, 552, 600, 528, 600, 528, 1584, 600, 1704,
-    516, 600, 528, 600, 528, 600, 528, 600, 528, 600, 528, 1704, 516, 600,
-    528, 600, 528, 1704, 516, 1704, 516, 1656, 528, 1704, 516, 1704, 516, 18780
-};
+// Speed/Fan button
+static const std::string SPEED_PRONTO = 
+    "0000 006D 0022 0000 0158 00B0 0013 0018 0014 0018 0014 0041 0014 0018 "
+    "0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018 "
+    "0014 0040 0016 0043 0013 0043 0013 003D 0019 0040 0015 0018 0014 003E "
+    "0018 0043 0013 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0043 "
+    "0013 0018 0014 0018 0014 0043 0013 0043 0013 0041 0014 0043 0013 0043 "
+    "0013 0483";
 
-// Timer button timing
-static const ::std::vector<int32_t> TIMER_TIMINGS = {
-    5592, 2820, 528, 600, 528, 600, 528, 1704, 516, 600, 528, 600, 528, 600,
-    528, 600, 528, 600, 528, 1704, 516, 1704, 516, 600, 528, 1704, 516, 1704,
-    516, 1704, 516, 1704, 516, 1680, 528, 600, 528, 600, 528, 600, 528, 600,
-    528, 600, 528, 600, 528, 600, 528, 600, 528, 1680, 528, 1680, 528, 1680,
-    528, 1680, 528, 1680, 528, 1680, 528, 1680, 528, 1680, 528, 18780
-};
+// Timer button
+static const std::string TIMER_PRONTO = 
+    "0000 006D 0022 0000 0159 00AF 0014 0018 0014 0018 0014 0043 0013 0018 "
+    "0014 0018 0014 0018 0014 0018 0014 0018 0014 0043 0013 0043 0013 0018 "
+    "0014 0043 0013 0043 0013 0043 0013 0043 0013 0042 0014 0018 0014 0018 "
+    "0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 "
+    "0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 "
+    "0014 0483";
 
 void WoleixClimate::setup()
 {
@@ -177,60 +178,58 @@ void WoleixClimate::transmit_state()
 void WoleixClimate::encode_power_()
 {
   ESP_LOGD(TAG, "Sending Power command");
-  transmit_raw_(POWER_TIMINGS);
+  transmit_pronto_(POWER_PRONTO);
 }
 
 void WoleixClimate::encode_temp_up_()
 {
   ESP_LOGD(TAG, "Sending Temp+ command");
-  transmit_raw_(TEMP_UP_TIMINGS);
+  transmit_pronto_(TEMP_UP_PRONTO);
 }
 
 void WoleixClimate::encode_temp_down_()
 {
   ESP_LOGD(TAG, "Sending Temp- command");
-  transmit_raw_(TEMP_DOWN_TIMINGS);
+  transmit_pronto_(TEMP_DOWN_PRONTO);
 }
 
 void WoleixClimate::encode_mode_()
 {
   ESP_LOGD(TAG, "Sending Mode command");
-  transmit_raw_(MODE_TIMINGS);
+  transmit_pronto_(MODE_PRONTO);
 }
 
 void WoleixClimate::encode_speed_()
 {
   ESP_LOGD(TAG, "Sending Speed/Fan command");
-  transmit_raw_(SPEED_TIMINGS);
+  transmit_pronto_(SPEED_PRONTO);
 }
 
 void WoleixClimate::encode_timer_()
 {
   ESP_LOGD(TAG, "Sending Timer command");
-  transmit_raw_(TIMER_TIMINGS);
+  transmit_pronto_(TIMER_PRONTO);
 }
 
-void WoleixClimate::transmit_raw_(const ::std::vector<int32_t> &timings)
+void WoleixClimate::transmit_pronto_(const std::string& pronto_hex)
 {
-  auto transmit = this->transmitter_->transmit();
-  auto data = transmit.get_data();
-
-  data->set_carrier_frequency(38030); // 38.03 kHz carrier
-
-  // Add all timing values
-  for (size_t i = 0; i < timings.size(); i++)
-  {
-    if (i % 2 == 0)
-    {
-      data->mark(timings[i]); // Mark (IR on)
-    }
-    else
-    {
-      data->space(timings[i]); // Space (IR off)
-    }
-  }
-
-  transmit.perform();
+  // Create ProntoData from the hex string
+  remote_base::ProntoData pronto_data;
+  pronto_data.data = pronto_hex;
+  pronto_data.delta = 0;
+  
+  // Transmit using ProntoProtocol
+  auto call = this->transmitter_->transmit();
+  auto data = call.get_data();
+  
+  // Set carrier frequency (38.03 kHz)
+  data->set_carrier_frequency(38030);
+  
+  // Encode the Pronto data
+  remote_base::ProntoProtocol().encode(data, pronto_data);
+  
+  // Perform the transmission
+  call.perform();
 }
 
 ClimateTraits WoleixClimate::traits()

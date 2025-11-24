@@ -5,8 +5,7 @@
     "cmake.configureOnOpen": true,
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "cmake.buildDirectory": "${workspaceFolder}/build",
-    "cmake.testExplorer.suiteDelimiter": "::",
-    "cmake.ctest.testExplorerIntegrationEnabled": true,
+    "cmake.ctest.testExplorerIntegrationEnabled": false,
     "cmake.configureSettings": {
         "ENABLE_COVERAGE": "ON"
     },

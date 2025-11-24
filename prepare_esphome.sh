@@ -5,7 +5,7 @@ ESPHOME_TAG="${2:-latest}"
 SCRIPT_PATH=$(pwd)
 
 if [ -z "$ESPHOME_PATH" ]; then
-  echo "Usage: $0 <path_to_esphome>"
+  echo "Usage: $0 <path_to_esphome> [esphome_tag]"
   exit 1
 fi
 

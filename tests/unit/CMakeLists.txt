@@ -1,4 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
+
+# Signal to parent that we're building tests (must be before project())
+set(BUILDING_TESTS TRUE PARENT_SCOPE)
+
 project(climate_ir_woleix_unit_tests)
 
 # Set C++ standard
@@ -31,13 +35,6 @@ if(ENABLE_COVERAGE)
     endif()
 endif()
 
-# Include directories for ESPHome mocks and component
-include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}/mocks
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome/components/climate_ir_woleix
-)
-
 # Create mock library for ESPHome dependencies
 add_library(esphome_mocks INTERFACE)
 target_include_directories(esphome_mocks INTERFACE
@@ -54,6 +51,16 @@ add_executable(
   climate_ir_woleix_test
   climate_ir_woleix_test.cpp
   ${COMPONENT_SOURCES}
+)
+
+# Set include directories with mocks having highest priority
+# Use BEFORE PRIVATE to ensure mocks are searched first, before any inherited paths
+target_include_directories(
+  climate_ir_woleix_test
+  BEFORE PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/mocks
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome/components/climate_ir_woleix
 )
 
 target_link_libraries(

@@ -2,12 +2,14 @@
 
 #include <cinttypes>
 #include <vector>
+#include <string>
 
 #include "esphome/core/optional.h"
 
 #include "esphome/components/climate/climate_mode.h"
 #include "esphome/components/climate_ir/climate_ir.h"
 #include "esphome/components/sensor/sensor.h"
+#include "esphome/components/remote_base/pronto_protocol.h"
 
 namespace esphome {
 namespace climate_ir_woleix {
@@ -15,7 +17,6 @@ namespace climate_ir_woleix {
 const float_t WOLEIX_TEMP_MIN = 15.0f;          // Celsius
 const float_t WOLEIX_TEMP_MAX = 30.0f;          // Celsius
 const float_t WOLEIX_TEMP_DEFAULT = 25.0f;      // Celsius
-
 
 using climate::ClimateMode;
 using climate::ClimateFanMode;
@@ -46,25 +47,25 @@ protected :
     ClimateTraits traits() override;
 
     /// Encode power command
-    void encode_power_();
+    virtual void encode_power_();
     
     /// Encode temperature up command
-    void encode_temp_up_();
+    virtual void encode_temp_up_();
     
     /// Encode temperature down command
-    void encode_temp_down_();
+    virtual void encode_temp_down_();
     
     /// Encode mode command
-    void encode_mode_();
+    virtual void encode_mode_();
     
     /// Encode fan speed command
-    void encode_speed_();
+    virtual void encode_speed_();
     
     /// Encode timer command
-    void encode_timer_();
+    virtual void encode_timer_();
     
-    /// Helper to transmit raw timing data
-    void transmit_raw_(const ::std::vector<int32_t>& timings);
+    /// Helper to transmit Pronto data
+    virtual void transmit_pronto_(const std::string& pronto_hex);
     
     /// Store last transmitted state to minimize IR commands
     optional<ClimateMode> last_mode_{};
