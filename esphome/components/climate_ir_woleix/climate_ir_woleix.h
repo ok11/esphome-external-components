@@ -46,23 +46,23 @@ protected :
     
     ClimateTraits traits() override;
 
-    /// Encode power command
-    virtual void encode_power_();
+    /// Transmit power command
+    virtual void transmit_power_();
     
-    /// Encode temperature up command
-    virtual void encode_temp_up_();
+    /// Transmit temperature up command
+    virtual void transmit_temp_up_();
     
-    /// Encode temperature down command
-    virtual void encode_temp_down_();
+    /// Transmit temperature down command
+    virtual void transmit_temp_down_();
     
-    /// Encode mode command
-    virtual void encode_mode_();
+    /// Transmit mode command
+    virtual void transmit_mode_();
     
-    /// Encode fan speed command
-    virtual void encode_speed_();
+    /// Transmit fan speed command
+    virtual void transmit_speed_();
     
-    /// Encode timer command
-    virtual void encode_timer_();
+    /// Transmit timer command
+    virtual void transmit_timer_();
     
     /// Helper to transmit Pronto data
     virtual void transmit_pronto_(const std::string& pronto_hex);

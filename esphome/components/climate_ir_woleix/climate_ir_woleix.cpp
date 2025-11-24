@@ -109,16 +109,18 @@ void WoleixClimate::transmit_state()
     if (last_mode_.has_value() && last_mode_.value() != ClimateMode::CLIMATE_MODE_OFF)
     {
       // Turning off - send power command
-      encode_power_();
+      transmit_power_();
       last_mode_ = ClimateMode::CLIMATE_MODE_OFF;
     }
+    // Publish the new state
+    this->publish_state();
     return;
   }
 
   // Handle power on (if coming from off state)
   if (!last_mode_.has_value() || last_mode_.value() == ClimateMode::CLIMATE_MODE_OFF)
   {
-    encode_power_();
+    transmit_power_();
     delay(100); // Small delay between commands
   }
 
@@ -127,7 +129,7 @@ void WoleixClimate::transmit_state()
   {
     // Mode changed - send mode command
     // Note: You may need to send mode command multiple times to cycle through modes
-    encode_mode_();
+    transmit_mode_();
     delay(100);
     last_mode_ = this->mode;
   }
@@ -143,7 +145,7 @@ void WoleixClimate::transmit_state()
       int steps = (int)(temp_diff / this->temperature_step_);
       for (int i = 0; i < steps; i++)
       {
-        encode_temp_up_();
+        transmit_temp_up_();
         delay(100);
       }
     }
@@ -153,7 +155,7 @@ void WoleixClimate::transmit_state()
       int steps = (int)(-temp_diff / this->temperature_step_);
       for (int i = 0; i < steps; i++)
       {
-        encode_temp_down_();
+        transmit_temp_down_();
         delay(100);
       }
     }
@@ -163,7 +165,7 @@ void WoleixClimate::transmit_state()
   // Handle fan mode changes
   if (!last_fan_mode_.has_value() || last_fan_mode_.value() != this->fan_mode.value())
   {
-    encode_speed_();
+    transmit_speed_();
     delay(100);
     last_fan_mode_ = this->fan_mode.value();
   }
@@ -175,37 +177,37 @@ void WoleixClimate::transmit_state()
   this->publish_state();
 }
 
-void WoleixClimate::encode_power_()
+void WoleixClimate::transmit_power_()
 {
   ESP_LOGD(TAG, "Sending Power command");
   transmit_pronto_(POWER_PRONTO);
 }
 
-void WoleixClimate::encode_temp_up_()
+void WoleixClimate::transmit_temp_up_()
 {
   ESP_LOGD(TAG, "Sending Temp+ command");
   transmit_pronto_(TEMP_UP_PRONTO);
 }
 
-void WoleixClimate::encode_temp_down_()
+void WoleixClimate::transmit_temp_down_()
 {
   ESP_LOGD(TAG, "Sending Temp- command");
   transmit_pronto_(TEMP_DOWN_PRONTO);
 }
 
-void WoleixClimate::encode_mode_()
+void WoleixClimate::transmit_mode_()
 {
   ESP_LOGD(TAG, "Sending Mode command");
   transmit_pronto_(MODE_PRONTO);
 }
 
-void WoleixClimate::encode_speed_()
+void WoleixClimate::transmit_speed_()
 {
   ESP_LOGD(TAG, "Sending Speed/Fan command");
   transmit_pronto_(SPEED_PRONTO);
 }
 
-void WoleixClimate::encode_timer_()
+void WoleixClimate::transmit_timer_()
 {
   ESP_LOGD(TAG, "Sending Timer command");
   transmit_pronto_(TIMER_PRONTO);
