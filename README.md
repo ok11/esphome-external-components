@@ -8,25 +8,28 @@ Custom ESPHome component for controlling Woleix air conditioners via infrared re
 esphome-external-components/
 ├── esphome/
 │   └── components/
-│       └── climate_ir_woleix/          # Main component directory
-│           ├── __init__.py             # Python configuration interface
-│           ├── climate.py              # ESPHome climate platform
-│           ├── climate_ir_woleix.h     # C++ header file
-│           ├── climate_ir_woleix.cpp   # C++ implementation
-│           └── LICENSE                 # Component license
-├── tests/                              # Test suite
-│   ├── unit/                           # C++ unit tests
-│   │   ├── climate_ir_woleix_test.cpp  # Test implementation
-│   │   ├── CMakeLists.txt              # Test build configuration
-│   │   ├── run_tests.sh                # Test execution script
-│   │   ├── generate_coverage.sh        # Coverage report generator
-│   │   └── mocks/                      # Mock ESPHome headers
-│   ├── integration/                    # Integration tests
-│   │   ├── test_configs/               # ESPHome test configurations
-│   │   ├── test_runner.py              # Test orchestration script
-│   │   ├── run_tests.sh                # Integration test runner
-│   │   └── docker-compose.yml          # Docker environment
-│   └── README.md                       # Testing documentation
+│       └── climate_ir_woleix/              # Main component directory
+│           ├── __init__.py                 # Python configuration interface
+│           ├── climate.py                  # ESPHome climate platform
+│           ├── climate_ir_woleix.h         # C++ header file
+│           ├── climate_ir_woleix.cpp       # C++ implementation
+│           ├── woleix_ac_state_machine.h   # State machine header
+│           ├── woleix_ac_state_machine.cpp # State machine implementation
+│           └── LICENSE                     # Component license
+├── tests/                                  # Test suite
+│   ├── unit/                               # C++ unit tests
+│   │   ├── climate_ir_woleix_test.cpp      # Climate component tests (20 tests)
+│   │   ├── woleix_ac_state_machine_test.cpp # State machine tests (26 tests)
+│   │   ├── CMakeLists.txt                  # Test build configuration
+│   │   ├── run_tests.sh                    # Test execution script
+│   │   ├── generate_coverage.sh            # Coverage report generator
+│   │   └── mocks/                          # Mock ESPHome headers
+│   ├── integration/                        # Integration tests
+│   │   ├── test_configs/                   # ESPHome test configurations
+│   │   ├── test_runner.py                  # Test orchestration script
+│   │   ├── run_tests.sh                    # Integration test runner
+│   │   └── docker-compose.yml              # Docker environment
+│   └── README.md                           # Testing documentation
 ├── .vscode/                            # VS Code configuration
 │   ├── settings.json                   # Editor settings
 │   ├── tasks.json                      # Build tasks
@@ -51,6 +54,32 @@ esphome-external-components/
 - **C++ Compiler**: For building and testing
 - **CMake 3.16+**: For build system
 - **VS Code**: Recommended IDE
+
+## 📖 Component Architecture
+
+The climate_ir_woleix component consists of two main parts:
+
+### Climate IR Component (`climate_ir_woleix.h/cpp`)
+
+- Implements ESPHome's Climate interface
+- Handles user interactions and state management
+- Integrates with temperature/humidity sensors
+- Coordinates IR command transmission
+
+### State Machine (`woleix_ac_state_machine.h/cpp`)
+
+- Manages internal AC state (power, mode, temperature, fan speed)
+- Generates optimal command sequences for state transitions
+- Provides Pronto hex format IR commands
+- Handles mode cycling and temperature adjustments
+
+**Key Features:**
+
+- Power toggle with state reset on power-on
+- Mode cycling: COOL → DEHUM → FAN → COOL
+- Temperature control (15-30°C, COOL mode only)
+- Fan speed toggle (LOW ↔ HIGH)
+- Optimized command generation for minimal IR transmissions
 
 ### 1. Clone the Repository
 
@@ -316,28 +345,38 @@ black esphome/components/climate_ir_woleix/__init__.py
 
 ### Adding New Features
 
-1. **Update C++ Header** (`climate_ir_woleix.h`)
-   - Add method declarations
-   - Add member variables
+1. **Identify the Layer**
+   - Climate interface changes → `climate_ir_woleix.h/cpp`
+   - State management/IR commands → `woleix_ac_state_machine.h/cpp`
+   - Configuration options → `__init__.py` and `climate.py`
 
-2. **Update C++ Implementation** (`climate_ir_woleix.cpp`)
-   - Implement new methods
-   - Add IR timing data if needed
+2. **Update Headers and Implementation**
+   - Add method declarations in `.h` files
+   - Implement in corresponding `.cpp` files
+   - For state machine: add IR commands to `woleix_ac_state_machine.cpp`
 
-3. **Update Python Configuration** (`__init__.py`)
-   - Add configuration parameters to `CONFIG_SCHEMA`
+3. **Update Python Configuration** (if adding user-facing options)
+   - Add configuration parameters to `CONFIG_SCHEMA` in `__init__.py`
    - Add code generation in `to_code()`
 
-4. **Write Tests** (`tests/climate_ir_woleix_test.cpp`)
-   - Add unit tests for new functionality
+4. **Write Tests**
+   - Climate interface tests → `tests/unit/climate_ir_woleix_test.cpp`
+   - State machine tests → `tests/unit/woleix_ac_state_machine_test.cpp`
+   - Aim for high coverage (current: 96.3% line coverage)
 
 5. **Test Locally**
 
    ```bash
-   # Build and test C++
-   cd tests && ./run_tests.sh
+   # Run unit tests
+   cd tests/unit && ./run_tests.sh
    
-   # Test with ESPHome
+   # Generate coverage report
+   cd tests/unit && ./generate_coverage.sh
+   
+   # Run integration tests
+   cd tests/integration && ./run_tests.sh
+   
+   # Test with real ESPHome config
    esphome compile your-config.yaml
    ```
 

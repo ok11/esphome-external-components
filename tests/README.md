@@ -6,20 +6,23 @@ This directory contains comprehensive tests for the climate_ir_woleix ESPHome ex
 
 ```text
 tests/
-├── unit/                          # Fast, isolated unit tests
-│   ├── climate_ir_woleix_test.cpp
+├── unit/                               # Fast, isolated unit tests
+│   ├── climate_ir_woleix_test.cpp      # Climate component tests (20 tests)
+│   ├── woleix_ac_state_machine_test.cpp # State machine tests (26 tests)
 │   ├── CMakeLists.txt
-│   ├── mocks/                     # Mock ESPHome headers
+│   ├── run_tests.sh                    # Quick test runner
+│   ├── generate_coverage.sh            # Coverage report generator
+│   ├── mocks/                          # Mock ESPHome headers
 │   └── README.md
-├── integration/                   # End-to-end integration tests
+├── integration/                        # End-to-end integration tests
 │   ├── docker-compose.yml
-│   ├── Dockerfile.esphome
-│   ├── test_configs/              # ESPHome YAML configs
-│   ├── test_runner.py             # Main test orchestrator
-│   ├── scripts/                   # Helper scripts
+│   ├── test_configs/                   # ESPHome YAML configs
+│   ├── test_runner.py                  # Main test orchestrator
+│   ├── run_tests.sh                    # Integration test runner
+│   ├── scripts/                        # Helper scripts
 │   └── README.md
 ├── CMakeLists.txt
-└── README.md                      # This file
+└── README.md                           # This file
 ```
 
 ## Two Types of Tests
@@ -28,6 +31,12 @@ tests/
 
 **Purpose:** Fast, isolated tests using mocked dependencies
 
+**Test Files:**
+
+- `climate_ir_woleix_test.cpp` - 20 tests for climate component
+- `woleix_ac_state_machine_test.cpp` - 26 tests for state machine
+- **Total: 46 unit tests**
+
 **Characteristics:**
 
 - Run in seconds
@@ -35,22 +44,24 @@ tests/
 - Use Google Test/Mock framework
 - No external dependencies (beyond compiler & GTest)
 - Perfect for TDD and rapid development
+- **96.3% line coverage, 95.7% function coverage**
 
 **When to use:**
 
 - Testing individual functions and methods
 - Verifying state transitions
-- Validating IR command generation
+- Validating IR command generation and sequences
+- Testing mode cycling logic
 - Quick feedback during development
 
 **How to run:**
 
 ```bash
 cd tests/unit
-mkdir -p build && cd build
-cmake ..
-make
-ctest --output-on-failure
+./run_tests.sh
+
+# Or generate coverage report
+./generate_coverage.sh
 ```
 
 See [unit/README.md](unit/README.md) for detailed instructions.
@@ -310,7 +321,7 @@ xdg-open coverage_html/index.html  # Linux
 
 ### Adding Unit Tests
 
-Edit `tests/unit/climate_ir_woleix_test.cpp`:
+**For Climate Component** - Edit `tests/unit/climate_ir_woleix_test.cpp`:
 
 ```cpp
 TEST_F(WoleixClimateTest, YourNewTest) {
@@ -323,6 +334,25 @@ TEST_F(WoleixClimateTest, YourNewTest) {
   
   // Verify
   EXPECT_EQ(transmitted_data.size(), 1);
+}
+```
+
+**For State Machine** - Edit `tests/unit/woleix_ac_state_machine_test.cpp`:
+
+```cpp
+TEST(WoleixACStateMachineTest, YourNewTest) {
+  // Setup
+  WoleixACStateMachine state_machine;
+  
+  // Execute
+  state_machine.set_target_state(WoleixPowerState::ON, 
+                                  WoleixMode::COOL, 
+                                  25.0f, 
+                                  WoleixFanSpeed::LOW);
+  
+  // Verify
+  auto commands = state_machine.get_commands();
+  EXPECT_EQ(commands.size(), expected_count);
 }
 ```
 

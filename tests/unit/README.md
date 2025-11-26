@@ -93,14 +93,27 @@ cmake --build .
 
 ## Test Structure
 
-- `climate_ir_woleix_test.cpp` - Main test file containing 19 test cases
+- `climate_ir_woleix_test.cpp` - Climate component tests (20 test cases)
+  - Tests ESPHome climate interface integration
+  - Validates IR command transmission
+  - Tests sensor integration (temperature/humidity)
+  
+- `woleix_ac_state_machine_test.cpp` - State machine tests (26 test cases)
+  - Tests internal state management
+  - Validates IR command generation
+  - Tests state transitions and mode cycling
+
 - `mocks/` - Mock implementations of ESPHome dependencies
-  - `esphome/components/sensor/sensor.h` - Mock sensor with callback support for testing humidity sensors
+  - `esphome/components/sensor/sensor.h` - Mock sensor with callback support
   - `esphome/components/climate_ir/climate_ir.h` - Mock ClimateIR base class
+  - `esphome/components/remote_base/remote_base.h` - Mock remote transmitter
   - Other mock headers for ESPHome core functionality
-- `CMakeLists.txt` - CMake configuration for tests
+
+- `CMakeLists.txt` - CMake configuration for both test executables
 
 ## Test Coverage
+
+**Total: 46 unit tests** (20 climate + 26 state machine)
 
 Current test coverage (as of latest run):
 
@@ -108,15 +121,26 @@ Current test coverage (as of latest run):
 - **95.7% function coverage** (22 of 23 functions)
 - **84.1% branch coverage** (37 of 44 branches)
 
-### Test Categories
+### Climate Component Tests (climate_ir_woleix_test.cpp)
 
 1. **Traits Configuration** - Verifies temperature bounds and supported features
 2. **Power On/Off** - Tests power state transitions and commands
 3. **Temperature Changes** - Tests temperature increase/decrease commands
-4. **Mode Changes** - Tests switching between cooling, heating, etc.
+4. **Mode Changes** - Tests switching between cooling, dehumidify, fan modes
 5. **Fan Speed Changes** - Tests fan mode transitions
 6. **Complex State Transitions** - Tests complete state changes
 7. **Humidity Sensor Callbacks** - Tests humidity sensor integration and state updates
+
+### State Machine Tests (woleix_ac_state_machine_test.cpp)
+
+1. **State Initialization** - Tests default state values
+2. **Power State Transitions** - Tests ON/OFF toggling
+3. **Mode Cycling** - Tests COOL → DEHUM → FAN → COOL transitions
+4. **Temperature Control** - Tests temperature adjustments (15-30°C range)
+5. **Fan Speed Toggling** - Tests LOW ↔ HIGH switching
+6. **Command Queue Management** - Tests command generation and retrieval
+7. **Complex Scenarios** - Tests multi-step state changes
+8. **Edge Cases** - Tests boundary conditions and error handling
 
 ## Coverage Configuration
 

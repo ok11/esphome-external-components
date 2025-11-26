@@ -44,13 +44,21 @@ target_include_directories(esphome_mocks INTERFACE
 # Add the component source files
 set(COMPONENT_SOURCES
   ../../esphome/components/climate_ir_woleix/climate_ir_woleix.cpp
+  ../../esphome/components/climate_ir_woleix/woleix_ac_state_machine.cpp
 )
 
-# Create test executable
+# Create test executable for climate component
 add_executable(
   climate_ir_woleix_test
   climate_ir_woleix_test.cpp
   ${COMPONENT_SOURCES}
+)
+
+# Create test executable for state machine
+add_executable(
+  woleix_ac_state_machine_test
+  woleix_ac_state_machine_test.cpp
+  ../../esphome/components/climate_ir_woleix/woleix_ac_state_machine.cpp
 )
 
 # Set include directories with mocks having highest priority
@@ -65,6 +73,22 @@ target_include_directories(
 
 target_link_libraries(
   climate_ir_woleix_test
+  GTest::gtest_main
+  GTest::gmock_main
+  esphome_mocks
+)
+
+# Set include directories for state machine test
+target_include_directories(
+  woleix_ac_state_machine_test
+  BEFORE PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/mocks
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome/components/climate_ir_woleix
+)
+
+target_link_libraries(
+  woleix_ac_state_machine_test
   GTest::gtest_main
   GTest::gmock_main
   esphome_mocks
