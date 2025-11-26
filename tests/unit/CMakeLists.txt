@@ -97,3 +97,5 @@ target_link_libraries(
 # Enable testing
 include(GoogleTest)
 gtest_discover_tests(climate_ir_woleix_test)
+gtest_discover_tests(woleix_ac_state_machine_test)
+
