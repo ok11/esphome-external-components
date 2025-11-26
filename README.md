@@ -18,7 +18,7 @@ esphome-external-components/
 │           └── LICENSE                     # Component license
 ├── tests/                                  # Test suite
 │   ├── unit/                               # C++ unit tests
-│   │   ├── climate_ir_woleix_test.cpp      # Climate component tests (20 tests)
+│   │   ├── climate_ir_woleix_test.cpp      # Climate component tests (21 tests)
 │   │   ├── woleix_ac_state_machine_test.cpp # State machine tests (26 tests)
 │   │   ├── CMakeLists.txt                  # Test build configuration
 │   │   ├── run_tests.sh                    # Test execution script

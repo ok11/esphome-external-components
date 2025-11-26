@@ -7,7 +7,7 @@ This directory contains comprehensive tests for the climate_ir_woleix ESPHome ex
 ```text
 tests/
 ├── unit/                               # Fast, isolated unit tests
-│   ├── climate_ir_woleix_test.cpp      # Climate component tests (20 tests)
+│   ├── climate_ir_woleix_test.cpp      # Climate component tests (21 tests)
 │   ├── woleix_ac_state_machine_test.cpp # State machine tests (26 tests)
 │   ├── CMakeLists.txt
 │   ├── run_tests.sh                    # Quick test runner
@@ -33,9 +33,9 @@ tests/
 
 **Test Files:**
 
-- `climate_ir_woleix_test.cpp` - 20 tests for climate component
+- `climate_ir_woleix_test.cpp` - 21 tests for climate component
 - `woleix_ac_state_machine_test.cpp` - 26 tests for state machine
-- **Total: 46 unit tests**
+- **Total: 47 unit tests**
 
 **Characteristics:**
 

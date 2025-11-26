@@ -45,6 +45,12 @@ protected:
 // Test: Initialization and Default State
 // ============================================================================
 
+/**
+ * Test: State machine initializes with correct default values
+ * 
+ * Verifies that on construction, the state machine starts with device defaults:
+ * power=ON, mode=COOL, temperature=25°C, fan_speed=LOW
+ */
 TEST_F(WoleixACStateMachineTest, InitialStateIsCorrect)
 {
     auto state = state_machine_->get_state();
@@ -55,6 +61,12 @@ TEST_F(WoleixACStateMachineTest, InitialStateIsCorrect)
     EXPECT_EQ(state.fan_speed, WoleixFanSpeed::LOW);
 }
 
+/**
+ * Test: reset() restores state machine to defaults
+ * 
+ * Validates that calling reset() after changing state restores all values
+ * to the device defaults, providing a way to recover from state sync issues.
+ */
 TEST_F(WoleixACStateMachineTest, ResetRestoresDefaultState)
 {
     // Change state
@@ -80,6 +92,12 @@ TEST_F(WoleixACStateMachineTest, ResetRestoresDefaultState)
 // Test: Power State Transitions
 // ============================================================================
 
+/**
+ * Test: Turning power OFF from ON sends single POWER command
+ * 
+ * Validates that transitioning from ON to OFF state generates exactly
+ * one POWER IR command and updates the internal power state.
+ */
 TEST_F(WoleixACStateMachineTest, PowerOffFromOnSendsPowerCommand)
 {
     // Start from ON (default state)
@@ -100,6 +118,13 @@ TEST_F(WoleixACStateMachineTest, PowerOffFromOnSendsPowerCommand)
     EXPECT_EQ(state.power, WoleixPowerState::OFF);
 }
 
+/**
+ * Test: Turning power ON from OFF sends POWER command
+ * 
+ * When powering on from OFF, the state machine resets to defaults and
+ * then generates commands to reach the requested state. Verifies POWER
+ * command is sent and state is updated to ON.
+ */
 TEST_F(WoleixACStateMachineTest, PowerOnFromOffSendsPowerCommand)
 {
     // First turn off
@@ -128,6 +153,13 @@ TEST_F(WoleixACStateMachineTest, PowerOnFromOffSendsPowerCommand)
     EXPECT_EQ(state.power, WoleixPowerState::ON);
 }
 
+/**
+ * Test: Power OFF ignores other state parameters
+ * 
+ * When turning power OFF, mode, temperature, and fan speed parameters
+ * should be ignored. Only the POWER command is sent regardless of
+ * other requested changes.
+ */
 TEST_F(WoleixACStateMachineTest, PowerOffIgnoresOtherStateChanges)
 {
     state_machine_->set_target_state(
@@ -150,6 +182,12 @@ TEST_F(WoleixACStateMachineTest, PowerOffIgnoresOtherStateChanges)
 // Test: Mode Transitions (Circular)
 // ============================================================================
 
+/**
+ * Test: COOL→DEHUM mode transition requires 1 MODE button press
+ * 
+ * Tests the circular mode sequence. Going from COOL to DEHUM is the
+ * first step in the cycle, requiring exactly 1 MODE command.
+ */
 TEST_F(WoleixACStateMachineTest, ModeTransitionCoolToDehum)
 {
     // Start in COOL (default)
@@ -166,6 +204,12 @@ TEST_F(WoleixACStateMachineTest, ModeTransitionCoolToDehum)
     EXPECT_EQ(count_command(commands, MODE_PRONTO), 1);
 }
 
+/**
+ * Test: COOL→FAN mode transition requires 2 MODE button presses
+ * 
+ * Tests the circular mode sequence. Going from COOL to FAN requires
+ * passing through DEHUM: COOL→DEHUM→FAN (2 steps).
+ */
 TEST_F(WoleixACStateMachineTest, ModeTransitionCoolToFan)
 {
     // Start in COOL (default)
@@ -182,6 +226,12 @@ TEST_F(WoleixACStateMachineTest, ModeTransitionCoolToFan)
     EXPECT_EQ(count_command(commands, MODE_PRONTO), 2);
 }
 
+/**
+ * Test: DEHUM→FAN mode transition requires 1 MODE button press
+ * 
+ * Tests the circular mode sequence. Going from DEHUM to FAN is the
+ * next step in the cycle, requiring exactly 1 MODE command.
+ */
 TEST_F(WoleixACStateMachineTest, ModeTransitionDehumToFan)
 {
     // First go to DEHUM
@@ -207,6 +257,12 @@ TEST_F(WoleixACStateMachineTest, ModeTransitionDehumToFan)
     EXPECT_EQ(count_command(commands, MODE_PRONTO), 1);
 }
 
+/**
+ * Test: FAN→COOL mode transition requires 1 MODE button press
+ * 
+ * Tests the circular mode sequence. Going from FAN to COOL wraps around
+ * the cycle, requiring exactly 1 MODE command: FAN→COOL.
+ */
 TEST_F(WoleixACStateMachineTest, ModeTransitionFanToCool)
 {
     // First go to FAN
@@ -232,6 +288,12 @@ TEST_F(WoleixACStateMachineTest, ModeTransitionFanToCool)
     EXPECT_EQ(count_command(commands, MODE_PRONTO), 1);
 }
 
+/**
+ * Test: DEHUM→COOL mode transition requires 2 MODE button presses
+ * 
+ * Tests the circular mode sequence. Going from DEHUM to COOL requires
+ * passing through FAN: DEHUM→FAN→COOL (2 steps).
+ */
 TEST_F(WoleixACStateMachineTest, ModeTransitionDehumToCool)
 {
     // First go to DEHUM
@@ -257,6 +319,12 @@ TEST_F(WoleixACStateMachineTest, ModeTransitionDehumToCool)
     EXPECT_EQ(count_command(commands, MODE_PRONTO), 2);
 }
 
+/**
+ * Test: No mode change means no MODE commands
+ * 
+ * When the target mode matches the current mode, no MODE commands
+ * should be generated.
+ */
 TEST_F(WoleixACStateMachineTest, NoModeChangeGeneratesNoModeCommands)
 {
     // Stay in COOL mode
@@ -276,6 +344,13 @@ TEST_F(WoleixACStateMachineTest, NoModeChangeGeneratesNoModeCommands)
 // Test: Temperature Adjustments (COOL mode only)
 // ============================================================================
 
+/**
+ * Test: Temperature increase in COOL mode generates TEMP_UP commands
+ * 
+ * Validates that increasing temperature (e.g., 25°C to 28°C) in COOL mode
+ * generates the correct number of TEMP_UP commands (3 in this case) and
+ * updates the internal temperature state.
+ */
 TEST_F(WoleixACStateMachineTest, TemperatureIncreaseInCoolMode)
 {
     // Start in COOL at 25°C (default)
@@ -294,6 +369,13 @@ TEST_F(WoleixACStateMachineTest, TemperatureIncreaseInCoolMode)
     EXPECT_FLOAT_EQ(state.temperature, 28.0f);
 }
 
+/**
+ * Test: Temperature decrease in COOL mode generates TEMP_DOWN commands
+ * 
+ * Validates that decreasing temperature (e.g., 25°C to 20°C) in COOL mode
+ * generates the correct number of TEMP_DOWN commands (5 in this case) and
+ * updates the internal temperature state.
+ */
 TEST_F(WoleixACStateMachineTest, TemperatureDecreaseInCoolMode)
 {
     // Start in COOL at 25°C (default)
@@ -312,6 +394,13 @@ TEST_F(WoleixACStateMachineTest, TemperatureDecreaseInCoolMode)
     EXPECT_FLOAT_EQ(state.temperature, 20.0f);
 }
 
+/**
+ * Test: Temperature values below minimum are clamped to 15°C
+ * 
+ * When a temperature below the minimum (15°C) is requested, the state
+ * machine should clamp it to 15°C and generate the appropriate number
+ * of TEMP_DOWN commands to reach the minimum.
+ */
 TEST_F(WoleixACStateMachineTest, TemperatureClampedToMinimum)
 {
     state_machine_->set_target_state(
@@ -327,6 +416,13 @@ TEST_F(WoleixACStateMachineTest, TemperatureClampedToMinimum)
     EXPECT_EQ(count_command(commands, TEMP_DOWN_PRONTO), 10);
 }
 
+/**
+ * Test: Temperature values above maximum are clamped to 30°C
+ * 
+ * When a temperature above the maximum (30°C) is requested, the state
+ * machine should clamp it to 30°C and generate the appropriate number
+ * of TEMP_UP commands to reach the maximum.
+ */
 TEST_F(WoleixACStateMachineTest, TemperatureClampedToMaximum)
 {
     state_machine_->set_target_state(
@@ -342,6 +438,13 @@ TEST_F(WoleixACStateMachineTest, TemperatureClampedToMaximum)
     EXPECT_EQ(count_command(commands, TEMP_UP_PRONTO), 5);
 }
 
+/**
+ * Test: Temperature changes ignored in DEHUM mode
+ * 
+ * Temperature control is only available in COOL mode. When in DEHUM mode,
+ * temperature change requests should be ignored and no temperature commands
+ * should be generated.
+ */
 TEST_F(WoleixACStateMachineTest, TemperatureIgnoredInDehumMode)
 {
     // First switch to DEHUM mode
@@ -368,6 +471,13 @@ TEST_F(WoleixACStateMachineTest, TemperatureIgnoredInDehumMode)
     EXPECT_EQ(count_command(commands, TEMP_DOWN_PRONTO), 0);
 }
 
+/**
+ * Test: Temperature changes ignored in FAN mode
+ * 
+ * Temperature control is only available in COOL mode. When in FAN mode,
+ * temperature change requests should be ignored and no temperature commands
+ * should be generated.
+ */
 TEST_F(WoleixACStateMachineTest, TemperatureIgnoredInFanMode)
 {
     // First switch to FAN mode
@@ -398,6 +508,12 @@ TEST_F(WoleixACStateMachineTest, TemperatureIgnoredInFanMode)
 // Test: Fan Speed Transitions
 // ============================================================================
 
+/**
+ * Test: Fan speed LOW→HIGH transition sends SPEED command
+ * 
+ * Validates that changing fan speed from LOW to HIGH generates exactly
+ * one SPEED IR command and updates the internal fan speed state.
+ */
 TEST_F(WoleixACStateMachineTest, FanSpeedLowToHigh)
 {
     // Start at LOW (default)
@@ -416,6 +532,12 @@ TEST_F(WoleixACStateMachineTest, FanSpeedLowToHigh)
     EXPECT_EQ(state.fan_speed, WoleixFanSpeed::HIGH);
 }
 
+/**
+ * Test: Fan speed HIGH→LOW transition sends SPEED command
+ * 
+ * Validates that changing fan speed from HIGH to LOW generates exactly
+ * one SPEED IR command (toggle) and updates the internal fan speed state.
+ */
 TEST_F(WoleixACStateMachineTest, FanSpeedHighToLow)
 {
     // First set to HIGH
@@ -443,6 +565,12 @@ TEST_F(WoleixACStateMachineTest, FanSpeedHighToLow)
     EXPECT_EQ(state.fan_speed, WoleixFanSpeed::LOW);
 }
 
+/**
+ * Test: No fan speed change means no SPEED commands
+ * 
+ * When the target fan speed matches the current fan speed, no SPEED
+ * commands should be generated.
+ */
 TEST_F(WoleixACStateMachineTest, NoFanSpeedChangeGeneratesNoCommands)
 {
     // Stay at LOW
@@ -462,6 +590,13 @@ TEST_F(WoleixACStateMachineTest, NoFanSpeedChangeGeneratesNoCommands)
 // Test: Complex Multi-State Transitions
 // ============================================================================
 
+/**
+ * Test: Complete multi-parameter state change from defaults
+ * 
+ * Tests changing all parameters simultaneously (mode, temperature, fan speed).
+ * Validates that temperature is correctly ignored when target mode doesn't
+ * support temperature control (FAN mode in this case).
+ */
 TEST_F(WoleixACStateMachineTest, CompleteStateChangeFromDefaults)
 {
     // Change everything from defaults
@@ -481,6 +616,13 @@ TEST_F(WoleixACStateMachineTest, CompleteStateChangeFromDefaults)
     EXPECT_EQ(count_command(commands, TEMP_UP_PRONTO), 0);  // Ignored in FAN mode
 }
 
+/**
+ * Test: Multiple sequential state changes
+ * 
+ * Validates that the state machine correctly handles a series of state
+ * changes, with each change building on the previous state. Tests that
+ * the command queue is properly cleared between changes.
+ */
 TEST_F(WoleixACStateMachineTest, MultipleSequentialChanges)
 {
     // Change 1: Mode and fan
@@ -520,6 +662,13 @@ TEST_F(WoleixACStateMachineTest, MultipleSequentialChanges)
     EXPECT_EQ(count_command(commands3, POWER_PRONTO), 1);  // Turn off
 }
 
+/**
+ * Test: Command ordering follows correct priority
+ * 
+ * When powering on and changing multiple parameters, commands should be
+ * generated in the correct order: POWER first, then MODE, TEMP, and FAN.
+ * This ensures the AC unit processes commands in the expected sequence.
+ */
 TEST_F(WoleixACStateMachineTest, CommandOrderingIsCorrect)
 {
     // Power on from off should process in order: POWER, MODE, TEMP, FAN
@@ -549,6 +698,13 @@ TEST_F(WoleixACStateMachineTest, CommandOrderingIsCorrect)
     EXPECT_EQ(count_command(commands, SPEED_PRONTO), 1);
 }
 
+/**
+ * Test: No commands generated when state doesn't change
+ * 
+ * Validates that setting the same target state twice in a row generates
+ * commands only on the first call. The second call should return an empty
+ * command queue since there's no state change.
+ */
 TEST_F(WoleixACStateMachineTest, EmptyCommandsAfterNoChange)
 {
     // Set a state
@@ -578,6 +734,13 @@ TEST_F(WoleixACStateMachineTest, EmptyCommandsAfterNoChange)
 // Test: Edge Cases
 // ============================================================================
 
+/**
+ * Test: get_commands() clears the command queue
+ * 
+ * Validates that calling get_commands() returns the queued commands and
+ * then clears the queue. Subsequent calls should return an empty vector
+ * until new state changes generate more commands.
+ */
 TEST_F(WoleixACStateMachineTest, GetCommandsClearsQueue)
 {
     state_machine_->set_target_state(
@@ -594,6 +757,13 @@ TEST_F(WoleixACStateMachineTest, GetCommandsClearsQueue)
     EXPECT_EQ(commands2.size(), 0);  // Queue should be empty
 }
 
+/**
+ * Test: Fractional temperatures are rounded correctly
+ * 
+ * Validates that fractional temperature values (e.g., 27.5°C) are properly
+ * rounded to the nearest integer (28°C) when calculating the number of
+ * temperature adjustment commands needed.
+ */
 TEST_F(WoleixACStateMachineTest, TemperatureRoundingHandled)
 {
     // Test fractional temperatures

@@ -33,7 +33,7 @@ WoleixClimate::WoleixClimate(WoleixACStateMachine *state_machine)
     state_machine_ = state_machine;
 }
 
-void WoleixClimate::reset_state_()
+void WoleixClimate::reset_state()
 {
     state_machine_->reset();
 }
@@ -43,8 +43,6 @@ void WoleixClimate::setup()
   // Call parent setup first
   ClimateIR::setup();
   
-  reset_state_();
-
   // Set up callback to update humidity from sensor
   if (humidity_sensor_ != nullptr)
   {

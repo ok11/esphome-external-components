@@ -22,13 +22,17 @@ using climate::ClimateFanMode;
 using climate::ClimateTraits;
 using climate_ir::ClimateIR;
 
-const float_t WOLEIX_TEMP_MIN = 15.0f;          // Celsius
-const float_t WOLEIX_TEMP_MAX = 30.0f;          // Celsius
+const float_t WOLEIX_TEMP_MIN = 15.0f;  /**< Minimum temperature in Celsius */
+const float_t WOLEIX_TEMP_MAX = 30.0f;  /**< Maximum temperature in Celsius */
 
-// Carrier frequency: 38.03 kHz (0x006D)
-// Pronto hex codes for IR commands
+/**
+ * @name IR Command Definitions
+ * Pronto hex format IR commands for Woleix AC remote control.
+ * Carrier frequency: 38.03 kHz (0x006D)
+ * @{
+ */
 
-// Power button
+/** Power button - toggles AC unit on/off */
 static const std::string POWER_PRONTO = 
     "0000 006D 0022 0000 0158 00AF 0014 0018 0014 0018 0014 0042 0014 0018 "
     "0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018 "
@@ -37,7 +41,7 @@ static const std::string POWER_PRONTO =
     "0014 0042 0014 0018 0014 0043 0013 0042 0014 0042 0014 0042 0014 0042 "
     "0014 0483";
 
-// Temperature Up
+/** Temperature Up button - increases temperature by 1°C */
 static const std::string TEMP_UP_PRONTO = 
     "0000 006D 0022 0000 0158 00B0 0013 0018 0014 0017 0014 0043 0013 0018 "
     "0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018 "
@@ -46,7 +50,7 @@ static const std::string TEMP_UP_PRONTO =
     "0014 0042 0014 0018 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 "
     "0014 0483";
 
-// Temperature Down
+/** Temperature Down button - decreases temperature by 1°C */
 static const std::string TEMP_DOWN_PRONTO = 
     "0000 006D 0022 0000 0158 00AF 0014 0018 0014 0018 0014 0043 0013 0018 "
     "0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018 "
@@ -55,7 +59,7 @@ static const std::string TEMP_DOWN_PRONTO =
     "0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 "
     "0014 0483";
 
-// Mode button
+/** Mode button - cycles through COOL→DEHUM→FAN modes */
 static const std::string MODE_PRONTO = 
     "0000 006D 0022 0000 0159 00AF 0014 0018 0014 0018 0014 0043 0013 0018 "
     "0014 0018 0014 0018 0014 0018 0014 0018 0014 0043 0013 0043 0013 0018 "
@@ -64,7 +68,7 @@ static const std::string MODE_PRONTO =
     "0014 0043 0013 0018 0014 0018 0014 0043 0013 0043 0013 0043 0013 0042 "
     "0014 0483";
 
-// Speed/Fan button
+/** Speed/Fan button - toggles between LOW and HIGH fan speed */
 static const std::string SPEED_PRONTO = 
     "0000 006D 0022 0000 0158 00B0 0013 0018 0014 0018 0014 0041 0014 0018 "
     "0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018 "
@@ -73,7 +77,7 @@ static const std::string SPEED_PRONTO =
     "0013 0018 0014 0018 0014 0043 0013 0043 0013 0041 0014 0043 0013 0043 "
     "0013 0483";
 
-// Timer button
+/** Timer button - controls timer function (not currently used) */
 static const std::string TIMER_PRONTO = 
     "0000 006D 0022 0000 0159 00AF 0014 0018 0014 0018 0014 0043 0013 0018 "
     "0014 0018 0014 0018 0014 0018 0014 0018 0014 0043 0013 0043 0013 0018 "
@@ -82,43 +86,125 @@ static const std::string TIMER_PRONTO =
     "0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 "
     "0014 0483";
 
+/** @} */
+
+/**
+ * Climate IR controller for Woleix air conditioners.
+ * 
+ * This class provides ESPHome integration for Woleix AC units via infrared
+ * remote control. It implements the Climate interface and coordinates with
+ * the WoleixACStateMachine for IR command generation.
+ * 
+ * Features:
+ * - Temperature control (15-30°C in COOL mode)
+ * - Mode control (COOL, DEHUM, FAN)
+ * - Fan speed control (LOW, HIGH)
+ * - Temperature sensor integration (required)
+ * - Humidity sensor integration (optional)
+ * - Pronto hex format IR transmission
+ * 
+ * Usage in ESPHome YAML:
+ * @code{.yaml}
+ * climate:
+ *   - platform: climate_ir_woleix
+ *     name: "Air Conditioner"
+ *     transmitter_id: ir_transmitter
+ *     sensor: room_temp
+ *     humidity_sensor: room_humidity  # optional
+ * @endcode
+ * 
+ * @see WoleixACStateMachine
+ */
 class WoleixClimate : public ClimateIR {
 
 public:
+    /**
+     * Default constructor.
+     * 
+     * Creates a new WoleixClimate instance with its own internal state machine.
+     */
     WoleixClimate();
+    
+    /**
+     * Constructor with custom state machine.
+     * 
+     * @param state_machine Pointer to external state machine (for testing)
+     */
     WoleixClimate(WoleixACStateMachine* state_machine);
     
-    /// Set the humidity sensor for current humidity readings
-    void set_humidity_sensor(sensor::Sensor *humidity_sensor) { this->humidity_sensor_ = humidity_sensor; }
-    
-    /// Setup method called once - initializes humidity sensor callback
+    /**
+     * Setup method called once during initialization.
+     * 
+     * Initializes the humidity sensor callback if a humidity sensor is configured.
+     * This allows the climate controller to track current humidity levels.
+     */
     void setup() override;
 
+    /**
+     * Set the humidity sensor for current humidity readings.
+     * 
+     * @param humidity_sensor Pointer to sensor providing humidity data
+     */
+    void set_humidity_sensor(sensor::Sensor *humidity_sensor) { this->humidity_sensor_ = humidity_sensor; }
+    
+    /**
+     * Reset the state machine to default values.
+     * 
+     * Resets internal state to: power=ON, mode=COOL, temperature=25°C, fan_speed=LOW
+     * Does not transmit any IR commands.
+     */
+    virtual void reset_state();
+
 protected:    
-    // Transmit via IR the state of this climate controller.
+    /**
+     * Transmit the current state via IR.
+     * 
+     * Called by ESPHome when the climate state changes. Generates the necessary
+     * IR command sequence and transmits it to the AC unit.
+     */
     void transmit_state() override;
     
+    /**
+     * Get the traits/capabilities of this climate device.
+     * 
+     * @return ClimateTraits describing supported features and temperature range
+     */
     ClimateTraits traits() override;
     
-    /// Transmit all queued Pronto IR commands with delays between transmissions
+    /**
+     * Transmit all queued Pronto IR commands.
+     * 
+     * Sends each command in the queue with appropriate delays between transmissions
+     * to ensure the AC unit processes each command correctly.
+     */
     virtual void transmit_commands_();
     
-    /// Queue a Pronto hex command for later transmission
-    /// @param pronto_hex Pronto format IR command string
+    /**
+     * Queue a Pronto hex command for later transmission.
+     * 
+     * @param pronto_hex Pronto format IR command string
+     */
     virtual void enqueue_command_(const std::string& pronto_hex);
     
-    /// Reset state machine to defaults
-    virtual void reset_state_();
-    
-    /// Map ESPHome ClimateMode to WoleixMode
+    /**
+     * Map ESPHome ClimateMode to WoleixMode.
+     * 
+     * @param climate_mode ESPHome climate mode
+     * @return Corresponding Woleix AC mode
+     */
     WoleixMode map_climate_mode_(ClimateMode climate_mode);
     
-    /// Map ESPHome ClimateFanMode to WoleixFanSpeed
+    /**
+     * Map ESPHome ClimateFanMode to WoleixFanSpeed.
+     * 
+     * @param fan_mode ESPHome fan mode
+     * @return Corresponding Woleix fan speed
+     */
     WoleixFanSpeed map_fan_mode_(ClimateFanMode fan_mode);
 
-    WoleixACStateMachine *state_machine_{nullptr};
-    sensor::Sensor *humidity_sensor_{nullptr};
-    std::vector<std::string> commands_;
+    WoleixACStateMachine *state_machine_{nullptr};  /**< State machine for command generation */
+    sensor::Sensor *humidity_sensor_{nullptr};      /**< Optional humidity sensor */
+    std::vector<std::string> commands_;             /**< Queue of commands to transmit */
 };
 
 }  // namespace climate_ir_woleix

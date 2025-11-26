@@ -93,7 +93,7 @@ cmake --build .
 
 ## Test Structure
 
-- `climate_ir_woleix_test.cpp` - Climate component tests (20 test cases)
+- `climate_ir_woleix_test.cpp` - Climate component tests (21 test cases)
   - Tests ESPHome climate interface integration
   - Validates IR command transmission
   - Tests sensor integration (temperature/humidity)
@@ -113,7 +113,7 @@ cmake --build .
 
 ## Test Coverage
 
-**Total: 46 unit tests** (20 climate + 26 state machine)
+**Total: 47 unit tests** (21 climate + 26 state machine)
 
 Current test coverage (as of latest run):
 
