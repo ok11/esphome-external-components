@@ -737,8 +737,9 @@ TEST_F(WoleixACStateMachineTest, EmptyCommandsAfterNoChange)
 /**
  * Test: get_commands() clears the command queue
  * 
- * Validates that calling get_commands() returns the queued commands 
- * until the next target state is set. Subsequent calls should return the same vector
+ * Validates that calling get_commands() is side-effect free,
+ * in this case returns the queued commands until the next target 
+ * state is set. Subsequent calls should return the same vector
  * until new state changes generate other commands.
  */
 TEST_F(WoleixACStateMachineTest, GetCommandsClearsQueue)
@@ -761,7 +762,8 @@ TEST_F(WoleixACStateMachineTest, GetCommandsClearsQueue)
     auto commands2 = state_machine_->get_commands();
     
     EXPECT_GT(commands1.size(), 0);
-    EXPECT_GT(commands2.size(), 0);  // Queue should be empty
+    EXPECT_GT(commands2.size(), 0);  // Queue should be not empty
+    EXPECT_EQ(commands1, commands2); // Both calls return the same commands
 }
 
 /**
