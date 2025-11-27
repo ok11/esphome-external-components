@@ -57,11 +57,9 @@ void WoleixACStateMachine::set_target_state
              static_cast<int>(fan_speed));
 }
 
-std::vector<std::string> WoleixACStateMachine::get_commands()
+const std::vector<WoleixCommand>& WoleixACStateMachine::get_commands()
 {
-    std::vector<std::string> commands = std::move(command_queue_);
-    command_queue_.clear();
-    return commands;
+    return command_queue_;
 }
 
 void WoleixACStateMachine::reset()
@@ -77,7 +75,7 @@ void WoleixACStateMachine::generate_power_commands_(WoleixPowerState target_powe
     if (current_state_.power != target_power)
     {
         // Power state change required
-        enqueue_command_(POWER_PRONTO);
+        enqueue_command_(POWER_COMMAND);
         
         if (target_power == WoleixPowerState::ON)
         {            
@@ -103,7 +101,7 @@ void WoleixACStateMachine::generate_mode_commands_(WoleixMode target_mode)
         // Send MODE commands to cycle through modes
         for (int i = 0; i < steps; i++)
         {
-            enqueue_command_(MODE_PRONTO);
+            enqueue_command_(MODE_COMMAND);
         }
         
         current_state_.mode = target_mode;
@@ -132,7 +130,7 @@ void WoleixACStateMachine::generate_temperature_commands_(float target_temp)
             
             for (int i = 0; i < steps; i++)
             {
-                enqueue_command_(TEMP_UP_PRONTO);
+                enqueue_command_(TEMP_UP_COMMAND);
             }
             
             current_state_.temperature += steps;
@@ -147,7 +145,7 @@ void WoleixACStateMachine::generate_temperature_commands_(float target_temp)
             
             for (int i = 0; i < steps; i++)
             {
-                enqueue_command_(TEMP_DOWN_PRONTO);
+                enqueue_command_(TEMP_DOWN_COMMAND);
             }
             
             current_state_.temperature -= steps;
@@ -162,7 +160,7 @@ void WoleixACStateMachine::generate_fan_commands_(WoleixFanSpeed target_fan)
     if (current_state_.fan_speed != target_fan)
     {
         // Fan speed toggles between LOW and HIGH with single SPEED command
-        enqueue_command_(SPEED_PRONTO);
+        enqueue_command_(SPEED_COMMAND);
         
         current_state_.fan_speed = target_fan;
         
@@ -202,11 +200,10 @@ int WoleixACStateMachine::calculate_mode_steps_(WoleixMode from_mode, WoleixMode
     return steps;
 }
 
-void WoleixACStateMachine::enqueue_command_(const std::string& pronto_hex)
+void WoleixACStateMachine::enqueue_command_(const WoleixCommand& command)
 {
-    command_queue_.push_back(pronto_hex);
+    command_queue_.push_back(command);
 }
 
 }  // namespace climate_ir_woleix
 }  // namespace esphome
-

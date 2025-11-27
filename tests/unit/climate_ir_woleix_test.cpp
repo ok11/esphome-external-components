@@ -83,7 +83,7 @@ public:
   }
 
   MOCK_METHOD(void, publish_state, (), (override)); 
-  MOCK_METHOD(void, enqueue_command_, (const std::string&));
+  MOCK_METHOD(void, enqueue_command_, (const WoleixCommand&));
   MOCK_METHOD(void, transmit_commands_, ());
 };
 
@@ -241,11 +241,11 @@ TEST_F(WoleixClimateTest, TurningOnFromOffSendsPowerCommand)
   mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_OFF, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
 
   testing::InSequence seq;  // Enforce call order
-  EXPECT_CALL(*mock_climate, enqueue_command_(testing::StrEq(POWER_PRONTO)))
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(POWER_COMMAND)))
     .Times(1);
-  EXPECT_CALL(*mock_climate, enqueue_command_(testing::StrEq(MODE_PRONTO)))
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(MODE_COMMAND)))
     .Times(1);
-  EXPECT_CALL(*mock_climate, enqueue_command_(testing::StrEq(SPEED_PRONTO)))
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(SPEED_COMMAND)))
     .Times(1);
   EXPECT_CALL(*mock_climate, transmit_commands_())
     .Times(1);
@@ -269,7 +269,7 @@ TEST_F(WoleixClimateTest, TurningOffSendsPowerCommand)
   mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_COOL, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
 
   testing::InSequence seq;  // Enforce call order
-  EXPECT_CALL(*mock_climate, enqueue_command_(testing::StrEq(POWER_PRONTO)))
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(POWER_COMMAND)))
     .Times(1);  
   EXPECT_CALL(*mock_climate, transmit_commands_())
     .Times(1);  
@@ -328,7 +328,7 @@ TEST_F(WoleixClimateTest, IncreasingTemperatureSendsTempUpCommands)
   );
 
   testing::InSequence seq;  // Enforce call order
-  EXPECT_CALL(*mock_climate, enqueue_command_(testing::StrEq(TEMP_UP_PRONTO)))
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(TEMP_UP_COMMAND)))
     .Times(3);
   EXPECT_CALL(*mock_climate, transmit_commands_())
     .Times(1);
@@ -357,7 +357,7 @@ TEST_F(WoleixClimateTest, DecreasingTemperatureSendsTempDownCommands)
   );
 
   testing::InSequence seq;  // Enforce call order
-  EXPECT_CALL(*mock_climate, enqueue_command_(testing::StrEq(TEMP_DOWN_PRONTO)))
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(TEMP_DOWN_COMMAND)))
     .Times(2);
   EXPECT_CALL(*mock_climate, transmit_commands_())
     .Times(1);
@@ -444,7 +444,7 @@ TEST_F(WoleixClimateTest, ChangingModeCoolToFanSends2ModeCommands)
   );
 
   testing::InSequence seq;  // Enforce call order
-  EXPECT_CALL(*mock_climate, enqueue_command_(testing::StrEq(MODE_PRONTO)))
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(MODE_COMMAND)))
     .Times(2);
   EXPECT_CALL(*mock_climate, transmit_commands_())
     .Times(1);
@@ -472,7 +472,7 @@ TEST_F(WoleixClimateTest, ChangingModeDryToCoolSends2ModeCommands)
   );
 
   testing::InSequence seq;  // Enforce call order
-  EXPECT_CALL(*mock_climate, enqueue_command_(testing::StrEq(MODE_PRONTO)))
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(MODE_COMMAND)))
     .Times(2);
   EXPECT_CALL(*mock_climate, transmit_commands_())
     .Times(1);
@@ -500,7 +500,7 @@ TEST_F(WoleixClimateTest, ChangingModeCoolToDrySends1ModeCommand)
   );
 
   testing::InSequence seq;  // Enforce call order
-  EXPECT_CALL(*mock_climate, enqueue_command_(testing::StrEq(MODE_PRONTO)))
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(MODE_COMMAND)))
     .Times(1);
   EXPECT_CALL(*mock_climate, transmit_commands_())
     .Times(1);
@@ -532,7 +532,7 @@ TEST_F(WoleixClimateTest, IncreasingFanSpeedSendsSpeedCommand)
   );
 
   testing::InSequence seq;  // Enforce call order
-  EXPECT_CALL(*mock_climate, enqueue_command_(testing::StrEq(SPEED_PRONTO)))
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(SPEED_COMMAND)))
     .Times(1);
   EXPECT_CALL(*mock_climate, transmit_commands_())
     .Times(1);
@@ -561,7 +561,7 @@ TEST_F(WoleixClimateTest, DecreasingFanSpeedSendsSpeedCommand)
   );
 
   testing::InSequence seq;  // Enforce call order
-  EXPECT_CALL(*mock_climate, enqueue_command_(testing::StrEq(SPEED_PRONTO)))
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(SPEED_COMMAND)))
     .Times(1);
   EXPECT_CALL(*mock_climate, transmit_commands_())
     .Times(1);
@@ -589,7 +589,7 @@ TEST_F(WoleixClimateTest, UnchangedFanSpeedDoesNotSendSpeedCommand)
     ClimateFanMode::CLIMATE_FAN_HIGH
   );
   
-  EXPECT_CALL(*mock_climate, enqueue_command_(testing::StrEq(SPEED_PRONTO)))
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(SPEED_COMMAND)))
     .Times(0);
   EXPECT_CALL(*mock_climate, transmit_commands_())
     .Times(0);
@@ -621,11 +621,11 @@ TEST_F(WoleixClimateTest, CompleteStateChangeSequence)
     ClimateFanMode::CLIMATE_FAN_LOW
   );
 
-  EXPECT_CALL(*mock_climate, enqueue_command_(testing::StrEq(SPEED_PRONTO)))
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(SPEED_COMMAND)))
     .Times(1);
-  EXPECT_CALL(*mock_climate, enqueue_command_(testing::StrEq(MODE_PRONTO)))
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(MODE_COMMAND)))
     .Times(2);
-  EXPECT_CALL(*mock_climate, enqueue_command_(testing::StrEq(TEMP_UP_PRONTO)))
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(TEMP_UP_COMMAND)))
     .Times(4);
   EXPECT_CALL(*mock_climate, transmit_commands_())
     .Times(1);

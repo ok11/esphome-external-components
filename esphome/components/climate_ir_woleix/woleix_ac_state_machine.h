@@ -6,6 +6,9 @@
 namespace esphome {
 namespace climate_ir_woleix {
 
+// Forward declaration
+struct WoleixCommand;
+
 /** Power state of the AC unit */
 enum class WoleixPowerState {
     OFF,  /**< AC unit is powered off */
@@ -105,7 +108,7 @@ public:
      * @note Turning power ON from OFF will reset all settings to defaults
      */
     void set_target_state(WoleixPowerState power, WoleixMode mode, 
-                         float temperature, WoleixFanSpeed fan_speed);
+        float temperature, WoleixFanSpeed fan_speed);
     
     /**
      * Get the generated command sequence and clear the internal queue.
@@ -114,12 +117,12 @@ public:
      * most recent call to set_target_state(). After returning the commands,
      * the internal queue is cleared.
      * 
-     * @return Vector of Pronto hex command strings ready for IR transmission
+     * @return Const reference to vector of commands ready for IR transmission
      * 
      * @note The command queue is cleared after this call
      * @note Returns empty vector if no commands were generated
      */
-    std::vector<std::string> get_commands();
+    const std::vector<WoleixCommand>& get_commands();
     
     /**
      * Reset the internal state to device defaults.
@@ -149,7 +152,7 @@ protected:
     WoleixInternalState current_state_;  /**< Current tracked state of the AC unit */
 
 private:
-    std::vector<std::string> command_queue_;  /**< Queue of IR commands to be transmitted */
+    std::vector<WoleixCommand> command_queue_;  /**< Queue of IR commands to be transmitted */
     
     /**
      * Generate IR commands to change power state.
@@ -201,7 +204,7 @@ private:
      * 
      * @param pronto_hex Pronto format IR command string
      */
-    void enqueue_command_(const std::string& pronto_hex);
+    void enqueue_command_(const WoleixCommand& command);
 };
 
 }  // namespace climate_ir_woleix

@@ -25,6 +25,19 @@ using climate_ir::ClimateIR;
 const float_t WOLEIX_TEMP_MIN = 15.0f;  /**< Minimum temperature in Celsius */
 const float_t WOLEIX_TEMP_MAX = 30.0f;  /**< Maximum temperature in Celsius */
 
+struct WoleixCommand {
+    const std::string& pronto_hex;  /**< Pronto hex format IR command (reference to constant) */
+    uint16_t delay_ms;               /**< Delay after command in milliseconds (0-65535) */
+    
+    /**
+     * Equality comparison operator.
+     * Compares both the string content and delay value.
+     */
+    bool operator==(const WoleixCommand& other) const {
+        return pronto_hex == other.pronto_hex && delay_ms == other.delay_ms;
+    }
+};
+
 /**
  * @name IR Command Definitions
  * Pronto hex format IR commands for Woleix AC remote control.
@@ -87,6 +100,13 @@ static const std::string TIMER_PRONTO =
     "0014 0483";
 
 /** @} */
+
+static const WoleixCommand POWER_COMMAND      = {POWER_PRONTO, 200};
+static const WoleixCommand TEMP_UP_COMMAND    = {TEMP_UP_PRONTO, 500};
+static const WoleixCommand TEMP_DOWN_COMMAND  = {TEMP_DOWN_PRONTO, 500};
+static const WoleixCommand MODE_COMMAND       = {MODE_PRONTO, 100};
+static const WoleixCommand SPEED_COMMAND      = {SPEED_PRONTO, 100};
+static const WoleixCommand TIMER_COMMAND      = {TIMER_PRONTO, 100};
 
 /**
  * Climate IR controller for Woleix air conditioners.
@@ -184,7 +204,7 @@ protected:
      * 
      * @param pronto_hex Pronto format IR command string
      */
-    virtual void enqueue_command_(const std::string& pronto_hex);
+    virtual void enqueue_command_(const WoleixCommand& command);
     
     /**
      * Map ESPHome ClimateMode to WoleixMode.
@@ -204,7 +224,7 @@ protected:
 
     WoleixACStateMachine *state_machine_{nullptr};  /**< State machine for command generation */
     sensor::Sensor *humidity_sensor_{nullptr};      /**< Optional humidity sensor */
-    std::vector<std::string> commands_;             /**< Queue of commands to transmit */
+    std::vector<WoleixCommand> commands_;           /**< Queue of commands to transmit */
 };
 
 }  // namespace climate_ir_woleix

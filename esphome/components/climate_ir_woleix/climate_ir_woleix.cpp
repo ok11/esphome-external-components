@@ -101,18 +101,18 @@ void WoleixClimate::transmit_state()
   }
 }
 
-void WoleixClimate::enqueue_command_(const std::string& pronto_hex)
+void WoleixClimate::enqueue_command_(const WoleixCommand& command)
 {
-  this->commands_.push_back(pronto_hex);
+  this->commands_.push_back(command);
 }
 
 void WoleixClimate::transmit_commands_()
 {
-  for(const std::string& pronto_hex: this->commands_)
+  for(const WoleixCommand& command: this->commands_)
   {
     // Create ProntoData from the hex string
     remote_base::ProntoData pronto_data;
-    pronto_data.data = pronto_hex;
+    pronto_data.data = command.pronto_hex;
     pronto_data.delta = 0;
     
     // Transmit using ProntoProtocol
@@ -127,7 +127,7 @@ void WoleixClimate::transmit_commands_()
     
     // Perform the transmission
     call.perform();
-    delay(100); // Small delay between commands
+    delay(command.delay_ms); // Small delay between commands
   }
   this->commands_.clear();
 }
