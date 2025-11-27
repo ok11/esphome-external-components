@@ -1,3 +1,7 @@
+#include <ranges>
+#include <algorithm>
+#include <cmath>
+
 #include "woleix_ac_state_machine.h"
 #include "climate_ir_woleix.h"
 #include "esphome/core/log.h"
@@ -31,30 +35,28 @@ void WoleixACStateMachine::set_target_state
     // Step 1: Handle power state transitions
     generate_power_commands_(power);
     
-    // If turning off, we're done
-    if (current_state_.power == WoleixPowerState::OFF) return;
-    
-    // Step 2: Handle mode changes (only if powered on)
+    // If turning off, we're done, otherwise continue
     if (current_state_.power == WoleixPowerState::ON)
     {
         generate_mode_commands_(mode);
+        
+        // Step 3: Handle temperature changes (only in COOL mode)
+        if (current_state_.mode == WoleixMode::COOL)
+        {
+            generate_temperature_commands_(temperature);
+        }
+        
+        // Step 4: Handle fan speed changes
+        generate_fan_commands_(fan_speed);
+        
+        ESP_LOGD(TAG, "Generated %zu commands to reach the target state: power=%d, mode=%d, temp=%.1f, fan=%d",
+                command_queue_.size(),
+                static_cast<int>(power),
+                static_cast<int>(mode),
+                temperature,
+                static_cast<int>(fan_speed));
+
     }
-    
-    // Step 3: Handle temperature changes (only in COOL mode)
-    if (current_state_.mode == WoleixMode::COOL)
-    {
-        generate_temperature_commands_(temperature);
-    }
-    
-    // Step 4: Handle fan speed changes
-    generate_fan_commands_(fan_speed);
-    
-    ESP_LOGD(TAG, "Generated %zu commands to reach the target state: power=%d, mode=%d, temp=%.1f, fan=%d",
-             command_queue_.size(),
-             static_cast<int>(power),
-             static_cast<int>(mode),
-             temperature,
-             static_cast<int>(fan_speed));
 }
 
 const std::vector<WoleixCommand>& WoleixACStateMachine::get_commands()
@@ -76,19 +78,10 @@ void WoleixACStateMachine::generate_power_commands_(WoleixPowerState target_powe
     {
         // Power state change required
         enqueue_command_(POWER_COMMAND);
-        
-        if (target_power == WoleixPowerState::ON)
-        {            
-            // Turning on
-            ESP_LOGD(TAG, "Power ON");
-            current_state_.power = WoleixPowerState::ON;
-        }
-        else
-        {
-            // Turning off
-            ESP_LOGD(TAG, "Power OFF");
-            current_state_.power = WoleixPowerState::OFF;            
-        }
+        current_state_.power = target_power;
+
+        ESP_LOGD(TAG, "Power switched to %s", 
+            target_power == WoleixPowerState::ON ? "ON" : "OFF");
     }
 }
 
@@ -99,11 +92,11 @@ void WoleixACStateMachine::generate_mode_commands_(WoleixMode target_mode)
         int steps = calculate_mode_steps_(current_state_.mode, target_mode);
         
         // Send MODE commands to cycle through modes
-        for (int i = 0; i < steps; i++)
-        {
-            enqueue_command_(MODE_COMMAND);
-        }
-        
+        std::ranges::for_each(
+            std::views::iota(0, steps),
+            [this](int) { enqueue_command_(MODE_COMMAND); }
+        );
+
         current_state_.mode = target_mode;
         
         ESP_LOGD(TAG, "Mode change: %d steps to reach mode %d", 
@@ -116,22 +109,21 @@ void WoleixACStateMachine::generate_temperature_commands_(float target_temp)
     // Temperature is only adjustable in COOL mode
     if (current_state_.mode == WoleixMode::COOL)
     {
-    
+
         // Clamp temperature to valid range
-        if (target_temp < 15.0f) target_temp = 15.0f;
-        if (target_temp > 30.0f) target_temp = 30.0f;
-        
+        target_temp = std::clamp(target_temp, WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX);
+
         float temp_diff = target_temp - current_state_.temperature;
         
         if (temp_diff > 0.1f)
         {
             // Temperature increase needed
-            int steps = static_cast<int>(temp_diff + 0.5f);  // Round to nearest integer
+            int steps = std::lround(std::abs(temp_diff));  // Round to nearest integer
             
-            for (int i = 0; i < steps; i++)
-            {
-                enqueue_command_(TEMP_UP_COMMAND);
-            }
+            std::ranges::for_each(
+                std::views::iota(0, steps),
+                [this](int) { enqueue_command_(TEMP_UP_COMMAND); }
+            );
             
             current_state_.temperature += steps;
             
@@ -141,12 +133,12 @@ void WoleixACStateMachine::generate_temperature_commands_(float target_temp)
         else if (temp_diff < -0.1f)
         {
             // Temperature decrease needed
-            int steps = static_cast<int>(-temp_diff + 0.5f);  // Round to nearest integer
+            int steps = std::lround(std::abs(temp_diff));  // Round to nearest integer
             
-            for (int i = 0; i < steps; i++)
-            {
-                enqueue_command_(TEMP_DOWN_COMMAND);
-            }
+            std::ranges::for_each(
+                std::views::iota(0, steps),
+                [this](int) { enqueue_command_(TEMP_DOWN_COMMAND); }
+            );
             
             current_state_.temperature -= steps;
             
@@ -171,27 +163,20 @@ void WoleixACStateMachine::generate_fan_commands_(WoleixFanSpeed target_fan)
 
 int WoleixACStateMachine::calculate_mode_steps_(WoleixMode from_mode, WoleixMode to_mode)
 {
-    // Find indices in the mode sequence
-    int from_index = -1;
-    int to_index = -1;
+    auto from_it = std::ranges::find(MODE_SEQUENCE, from_mode);
+    auto to_it = std::ranges::find(MODE_SEQUENCE, to_mode);
     
-    for (size_t i = 0; i < MODE_SEQUENCE.size(); i++) {
-        if (MODE_SEQUENCE[i] == from_mode)
-        {
-            from_index = static_cast<int>(i);
-        }
-        if (MODE_SEQUENCE[i] == to_mode)
-        {
-            to_index = static_cast<int>(i);
-        }
-    }
-    
-    if (from_index < 0 || to_index < 0)
+    // Check if both modes were found
+    if (from_it == MODE_SEQUENCE.end() || to_it == MODE_SEQUENCE.end())
     {
         ESP_LOGW(TAG, "Invalid mode in sequence: from=%d, to=%d", 
-                 static_cast<int>(from_mode), static_cast<int>(to_mode));
+            static_cast<int>(from_mode), static_cast<int>(to_mode));
         return 0;
     }
+    
+    // Calculate indices using std::ranges::distance
+    int from_index = std::ranges::distance(MODE_SEQUENCE.begin(), from_it);
+    int to_index = std::ranges::distance(MODE_SEQUENCE.begin(), to_it);
     
     // Calculate forward distance with wrap-around
     int size = static_cast<int>(MODE_SEQUENCE.size());
