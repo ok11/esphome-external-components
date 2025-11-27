@@ -16,6 +16,6 @@
     ],
     "coverage-gutters.coverageFileNames": [
         "coverage_filtered.info"
-    ]
-
+    ],
+    "testMate.cpp.test.executables": "build/**/*test*"
 }
