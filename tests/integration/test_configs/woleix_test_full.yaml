@@ -1,0 +1,54 @@
+esphome:
+  name: test-climate-ir-woleix-full
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+  level: VERBOSE
+
+external_components:
+  - source: /config/external_components
+    components: [ climate_ir_woleix ]
+
+remote_transmitter:
+  pin: GPIO20
+  carrier_duty_percent: 50%
+  id: new_room_ac_ir
+
+sensor:
+  - platform: dht
+    model: DHT11
+    pin: GPIO4
+    id: new_room_ac_dht
+    temperature:
+      name: Temperature
+      id: new_room_ac_current_temperature
+    humidity:
+      name: Humidity
+      id: new_room_ac_current_humidity
+    update_interval: 60s
+
+binary_sensor:
+  - platform: gpio
+    id: reset_button
+    internal: true
+    pin: 
+      number: GPIO01
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+ 
+climate:
+  - platform: climate_ir_woleix
+    name: "New Room AC"
+    id: new_room_ac
+    transmitter_id: new_room_ac_ir
+    sensor: new_room_ac_current_temperature
+    humidity_sensor: new_room_ac_current_humidity
+    reset_button: reset_button
+

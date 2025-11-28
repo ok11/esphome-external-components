@@ -1,0 +1,22 @@
+esphome:
+  name: test-climate-ir-woleix-basic
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+external_components:
+  - source: /config/external_components
+    components: [ climate_ir_woleix ]
+
+remote_transmitter:
+  id: ir_transmitter
+  pin: GPIO4
+  carrier_duty_percent: 50%
+
+climate:
+  - platform: climate_ir_woleix
+    name: "Test Woleix Full Features"
+    id: test_climate_basic
+    transmitter_id: ir_transmitter

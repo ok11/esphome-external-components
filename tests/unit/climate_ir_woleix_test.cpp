@@ -15,46 +15,17 @@ class MockWoleixACStateMachine : public WoleixACStateMachine
 {
 public:
   void set_current_state(
-    ClimateMode mode, float temperature, ClimateFanMode fan_speed
+    WoleixPowerState power, WoleixMode woleix_mode, float temperature, WoleixFanSpeed woleix_fan_speed
   )
   {
-    current_state_.power = 
-      (mode == ClimateMode::CLIMATE_MODE_OFF)
-      ? WoleixPowerState::OFF
-      : WoleixPowerState::ON;
-
-    WoleixMode woleix_mode;
-    switch (mode) {
-      case ClimateMode::CLIMATE_MODE_COOL:
-        woleix_mode = WoleixMode::COOL;
-        break;
-      case ClimateMode::CLIMATE_MODE_DRY:
-        woleix_mode = WoleixMode::DEHUM;
-        break;
-      case ClimateMode::CLIMATE_MODE_FAN_ONLY:
-        woleix_mode = WoleixMode::FAN;
-        break;
-      default:
-        woleix_mode = WoleixMode::COOL; // Default to COOL for unsupported modes
-        break;
-    }
+    current_state_.power = power;
     current_state_.mode = woleix_mode;
-
     current_state_.temperature = temperature;
-
-    WoleixFanSpeed woleix_fan_speed;
-    switch (fan_speed) {
-      case ClimateFanMode::CLIMATE_FAN_LOW:
-        woleix_fan_speed = WoleixFanSpeed::LOW;
-        break;
-      case ClimateFanMode::CLIMATE_FAN_HIGH:
-        woleix_fan_speed = WoleixFanSpeed::HIGH;
-        break;
-      default:
-        woleix_fan_speed = WoleixFanSpeed::LOW; // Default to LOW for unsupported speeds
-        break;
-    }
     current_state_.fan_speed = woleix_fan_speed;
+  }
+
+  WoleixInternalState get_current_state() {
+    return current_state_;
   }
 };
 
@@ -79,7 +50,54 @@ public:
     ClimateFanMode fan_mode = ClimateFanMode::CLIMATE_FAN_LOW
   )
   {
-      ((MockWoleixACStateMachine*)state_machine_)->set_current_state(mode, target_temperature, fan_mode);
+    WoleixPowerState woleix_power = 
+      (mode == ClimateMode::CLIMATE_MODE_OFF)
+      ? WoleixPowerState::OFF
+      : WoleixPowerState::ON;
+
+    WoleixMode woleix_mode = map_climate_mode_(mode);
+    WoleixFanSpeed woleix_fan_speed = map_fan_mode_(fan_mode);
+
+    ((MockWoleixACStateMachine*)state_machine_)->set_current_state(
+      woleix_power, woleix_mode, target_temperature, woleix_fan_speed
+    );
+  }
+
+  void get_last_state(ClimateMode& mode,
+                      float& target_temperature,
+                      ClimateFanMode& fan_mode)
+  {
+      WoleixInternalState woleix_state =
+        ((MockWoleixACStateMachine*)state_machine_)->get_current_state();
+
+      if (woleix_state.power == WoleixPowerState::OFF)
+      {
+        mode = ClimateMode::CLIMATE_MODE_OFF;
+      }
+      else if (woleix_state.mode == WoleixMode::COOL)
+      {
+        mode = ClimateMode::CLIMATE_MODE_COOL;
+      }
+      else if (woleix_state.mode == WoleixMode::DEHUM)
+      {
+        mode = ClimateMode::CLIMATE_MODE_DRY;
+      }
+      else if (woleix_state.mode == WoleixMode::FAN)
+      {
+        mode = ClimateMode::CLIMATE_MODE_FAN_ONLY;
+      }
+      target_temperature = woleix_state.temperature;
+      fan_mode = 
+        (woleix_state.fan_speed == WoleixFanSpeed::HIGH) ?
+        ClimateFanMode::CLIMATE_FAN_HIGH : ClimateFanMode::CLIMATE_FAN_LOW;
+  }
+
+  esphome::sensor::Sensor* get_humidity_sensor() {
+    return this->humidity_sensor_;
+  }
+
+  esphome::binary_sensor::BinarySensor* get_reset_button() {
+    return this->reset_button_;
   }
 
   MOCK_METHOD(void, publish_state, (), (override)); 
@@ -795,6 +813,122 @@ TEST_F(WoleixClimateTest, PublishingStateOfHumiditySensorRepublishesItByClimate)
   
   // Publish multiple humidity values and verify they're received
   humidity_sensor.publish_state(45.5f);
+}
+
+// ============================================================================
+// Test: Reset Button Callback
+// ============================================================================
+
+/**
+ * Test: Setup() handles null reset button gracefully
+ * 
+ * Verifies that calling setup() without the reset button configured
+ * (nullptr) does not cause crashes or exceptions. The reset button
+ * is optional, so this must work correctly.
+ */
+TEST_F(WoleixClimateTest, ResetButtonCallbackWorksWithNullSensor)
+{
+  // Don't set a reset button (leave it as nullptr)
+  
+  // Call setup - should not crash even without a sensor
+  EXPECT_NO_THROW(mock_climate->setup());
+}
+
+
+/**
+ * Test: Reset button callback registration during setup
+ * 
+ * Verifies that when the reset button is configured, the setup() method
+ * registers a callback to receive button press. Tests that publishing
+ * the reset button state updates the climate state correctly.
+ */
+TEST_F(WoleixClimateTest, ResetButtonCallbackIsRegistered)
+{
+  // Create a mock reset button
+  esphome::binary_sensor::BinarySensor reset_button;
+  
+  // Set the reset button on the climate device
+  mock_climate->set_reset_button(&reset_button);
+  
+  // Call setup to register the callback
+  mock_climate->setup();
+  
+  // Verify the callback was registered by publishing a state
+  // and checking that it doesn't crash (basic test)
+  reset_button.publish_state(true);
+}
+
+/**
+ * Test: Reset button press resets the internal state
+ * 
+ * Validates that the reset button press resets the internal climate state.
+ */
+TEST_F(WoleixClimateTest, ResetButtonCallbackResetsState)
+{
+  // Create a mock reset button
+  esphome::binary_sensor::BinarySensor reset_button;
+  
+  // Set the reset button on the climate device
+  mock_climate->set_reset_button(&reset_button);
+  
+  // Call setup to register the callback
+  mock_climate->setup();
+  
+  ClimateMode mode = ClimateMode::CLIMATE_MODE_OFF;
+  float target_temperature = 20.0f;
+  ClimateFanMode fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
+
+  mock_climate->set_last_state(
+    mode,
+    target_temperature,
+    fan_mode
+  );
+
+  // Press the reset button
+  reset_button.publish_state(true);
+
+  mock_climate->get_last_state(
+    mode,
+    target_temperature,
+    fan_mode
+  );
+  EXPECT_EQ(mode, ClimateMode::CLIMATE_MODE_COOL);
+  EXPECT_EQ(target_temperature, 25.0f);
+  EXPECT_EQ(fan_mode, ClimateFanMode::CLIMATE_FAN_LOW);
+}
+
+/**
+ * Test: Reset button press triggers climate state republishing
+ * (with reset values)
+ * 
+ * Validates that when the reset button is pressed, the
+ * climate component's publish_state() is called to update ESPHome
+ * with the new climate state.
+ */
+TEST_F(WoleixClimateTest, PublishingStateOfResetButtonRepublishesItByClimate)
+{
+  // Turning on sends: Power, Mode, Speed commands
+
+  mock_climate->set_last_state(
+    ClimateMode::CLIMATE_MODE_OFF,
+    22.0f,
+    ClimateFanMode::CLIMATE_FAN_LOW
+  );
+
+  EXPECT_CALL(*mock_climate, publish_state())
+      .Times(1);  // Expect exactly 1 call
+  
+  // Create a mock humidity sensor
+  esphome::binary_sensor::BinarySensor reset_button;
+  
+  // Set the humidity sensor on the climate device
+  mock_climate->set_reset_button(&reset_button);
+  
+  // Call setup to register the callback
+  mock_climate->setup();
+  
+  // Publish multiple humidity values and verify they're received
+  reset_button.publish_state(true);
 }
 
 // ============================================================================

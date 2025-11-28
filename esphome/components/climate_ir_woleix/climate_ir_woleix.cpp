@@ -19,17 +19,14 @@ static const char *const TAG = "climate_ir_woleix.climate";
 WoleixClimate::WoleixClimate()
     : WoleixClimate(new WoleixACStateMachine())
 {
-    this->target_temperature = WOLEIX_TEMP_DEFAULT;
-    this->mode = climate::CLIMATE_MODE_OFF;
-    this->fan_mode = climate::CLIMATE_FAN_LOW;
+    target_temperature = WOLEIX_TEMP_DEFAULT;
+    mode = climate::CLIMATE_MODE_OFF;
+    fan_mode = climate::CLIMATE_FAN_LOW;
 }
 
 WoleixClimate::WoleixClimate(WoleixACStateMachine *state_machine)
     : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX)
 {
-    target_temperature = WOLEIX_TEMP_DEFAULT;
-    mode = climate::CLIMATE_MODE_OFF;
-    fan_mode = climate::CLIMATE_FAN_LOW;
     state_machine_ = state_machine;
 }
 
@@ -57,6 +54,18 @@ void WoleixClimate::setup()
       else
       {
         ESP_LOGW(TAG, "Received NaN humidity reading");
+      }
+    });
+  }
+  if (reset_button_ != nullptr)
+  {
+    reset_button_->add_on_state_callback([this](bool state)
+    {
+      if (state)
+      {
+        ESP_LOGI(TAG, "Reset button pressed - resetting the internal state");
+        reset_state();
+        publish_state();
       }
     });
   }

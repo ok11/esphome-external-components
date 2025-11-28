@@ -157,7 +157,7 @@ void WoleixACStateMachine::generate_fan_commands_(WoleixFanSpeed target_fan)
         current_state_.fan_speed = target_fan;
         
         ESP_LOGD(TAG, "Fan speed changed to %s", 
-                 target_fan == WoleixFanSpeed::LOW ? "LOW" : "HIGH");
+            target_fan == WoleixFanSpeed::LOW ? "LOW" : "HIGH");
     }
 }
 

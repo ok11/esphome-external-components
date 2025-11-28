@@ -11,6 +11,7 @@
 #include "esphome/components/climate/climate_mode.h"
 #include "esphome/components/climate_ir/climate_ir.h"
 #include "esphome/components/sensor/sensor.h"
+#include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/remote_base/pronto_protocol.h"
 #include "woleix_ac_state_machine.h"
 
@@ -166,7 +167,14 @@ public:
      * @param humidity_sensor Pointer to sensor providing humidity data
      */
     void set_humidity_sensor(sensor::Sensor *humidity_sensor) { this->humidity_sensor_ = humidity_sensor; }
-    
+
+    /**
+     * Set the reset button to reconcile the state with the physical device.
+     * 
+     * @param humidity_sensor Pointer to the reset button
+     */
+    void set_reset_button(binary_sensor::BinarySensor *btn) { this->reset_button_ = btn; }
+
     /**
      * Reset the state machine to default values.
      * 
@@ -224,6 +232,7 @@ protected:
 
     WoleixACStateMachine *state_machine_{nullptr};  /**< State machine for command generation */
     sensor::Sensor *humidity_sensor_{nullptr};      /**< Optional humidity sensor */
+    binary_sensor::BinarySensor *reset_button_{nullptr};  /**< Optional reset button */
     std::vector<WoleixCommand> commands_;           /**< Queue of commands to transmit */
 };
 
