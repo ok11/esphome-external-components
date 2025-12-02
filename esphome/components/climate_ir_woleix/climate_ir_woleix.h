@@ -26,7 +26,7 @@ using climate_ir::ClimateIR;
 const float_t WOLEIX_TEMP_MIN = 15.0f;  /**< Minimum temperature in Celsius */
 const float_t WOLEIX_TEMP_MAX = 30.0f;  /**< Maximum temperature in Celsius */
 
-struct WoleixCommand {
+struct WoleixSequence {
     const std::string& pronto_hex;  /**< Pronto hex format IR command (reference to constant) */
     uint16_t delay_ms;               /**< Delay after command in milliseconds (0-65535) */
     
@@ -34,8 +34,20 @@ struct WoleixCommand {
      * Equality comparison operator.
      * Compares both the string content and delay value.
      */
-    bool operator==(const WoleixCommand& other) const {
+    bool operator==(const WoleixSequence& other) const {
         return pronto_hex == other.pronto_hex && delay_ms == other.delay_ms;
+    }
+};
+
+struct WoleixCommand {
+    const std::vector<WoleixSequence>& sequences;
+
+    /**
+     * Equality comparison operator.
+     * Compares all sequences.
+     */
+    bool operator==(const WoleixCommand& other) const {
+        return sequences == other.sequences;
     }
 };
 
@@ -116,12 +128,12 @@ static const std::string TIMER_PRONTO =
 
 /** @} */
 
-static const WoleixCommand POWER_COMMAND      = {POWER_PRONTO, 200};
-static const WoleixCommand TEMP_UP_COMMAND    = {TEMP_UP_PRONTO, 500};
-static const WoleixCommand TEMP_DOWN_COMMAND  = {TEMP_DOWN_PRONTO, 500};
-static const WoleixCommand MODE_COMMAND       = {MODE_PRONTO, 100};
-static const WoleixCommand SPEED_COMMAND      = {SPEED_PRONTO, 100};
-static const WoleixCommand TIMER_COMMAND      = {TIMER_PRONTO, 100};
+static const WoleixCommand POWER_COMMAND      = {{{ POWER_PRONTO, 200 }}};
+static const WoleixCommand TEMP_UP_COMMAND    = {{{ TEMP_UP_PRONTO, 108 }, { TEMP_UP_PRONTO, 500 }}};
+static const WoleixCommand TEMP_DOWN_COMMAND  = {{{ TEMP_DOWN_PRONTO, 108 }, { TEMP_DOWN_PRONTO, 500 }}};
+static const WoleixCommand MODE_COMMAND       = {{{ MODE_PRONTO, 108 }}};
+static const WoleixCommand SPEED_COMMAND      = {{{ SPEED_PRONTO, 108 }}};
+static const WoleixCommand TIMER_COMMAND      = {{{ TIMER_PRONTO, 108 }}};
 
 /**
  * Climate IR controller for Woleix air conditioners.

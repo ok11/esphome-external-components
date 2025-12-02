@@ -119,24 +119,27 @@ void WoleixClimate::transmit_commands_()
 {
   for(const WoleixCommand& command: this->commands_)
   {
-    // Create ProntoData from the hex string
-    remote_base::ProntoData pronto_data;
-    pronto_data.data = command.pronto_hex;
-    pronto_data.delta = 0;
-    
-    // Transmit using ProntoProtocol
-    auto call = this->transmitter_->transmit();
-    auto data = call.get_data();
-    
-    // Set carrier frequency (38.03 kHz)
-    data->set_carrier_frequency(38030);
-    
-    // Encode the Pronto data
-    remote_base::ProntoProtocol().encode(data, pronto_data);
-    
-    // Perform the transmission
-    call.perform();
-    delay(command.delay_ms); // Small delay between commands
+    for (const WoleixSequence& sequence: command.sequences)
+    {
+      // Create ProntoData from the hex string
+      remote_base::ProntoData pronto_data;
+      pronto_data.data = sequence.pronto_hex;
+      pronto_data.delta = 0;
+      
+      // Transmit using ProntoProtocol
+      auto call = this->transmitter_->transmit();
+      auto data = call.get_data();
+      
+      // Set carrier frequency (38.03 kHz)
+      data->set_carrier_frequency(38030);
+      
+      // Encode the Pronto data
+      remote_base::ProntoProtocol().encode(data, pronto_data);
+      
+      // Perform the transmission
+      call.perform();
+      delay(sequence.delay_ms); // Small delay between commands
+    }
   }
   this->commands_.clear();
 }
