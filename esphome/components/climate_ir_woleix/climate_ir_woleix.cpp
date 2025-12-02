@@ -135,9 +135,13 @@ void WoleixClimate::transmit_commands_()
       
       // Encode the Pronto data
       remote_base::ProntoProtocol().encode(data, pronto_data);
-      
+
+      ESP_LOGD(TAG, "Transmitting %s", pronto_data);
+
       // Perform the transmission
       call.perform();
+
+      ESP_LOGD(TAG, "Delay of %d", sequence.delay_ms);
       delay(sequence.delay_ms); // Small delay between commands
     }
   }

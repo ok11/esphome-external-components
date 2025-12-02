@@ -27,7 +27,7 @@ const float_t WOLEIX_TEMP_MIN = 15.0f;  /**< Minimum temperature in Celsius */
 const float_t WOLEIX_TEMP_MAX = 30.0f;  /**< Maximum temperature in Celsius */
 
 struct WoleixSequence {
-    const std::string& pronto_hex;  /**< Pronto hex format IR command (reference to constant) */
+    const std::string& pronto_hex;   /**< Pronto hex format IR command (reference to constant) */
     uint16_t delay_ms;               /**< Delay after command in milliseconds (0-65535) */
     
     /**
@@ -74,8 +74,7 @@ static const std::string TEMP_UP_PRONTO =
     "0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0018 "
     "0014 0042 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 "
     "0014 0042 0014 0018 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 "
-    "0014 0483"
-    ;
+    "0014 0483";
 
 /** Temperature Down button - decreases temperature by 1°C */
 static const std::string TEMP_DOWN_PRONTO = 
@@ -84,8 +83,7 @@ static const std::string TEMP_DOWN_PRONTO =
     "0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0018 "
     "0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 "
     "0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 "
-    "0014 0483"
-    ;
+    "0014 0483";
 
 /** Mode button - cycles through COOL -> DEHUM -> FAN modes */
 static const std::string MODE_PRONTO = 
