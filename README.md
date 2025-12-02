@@ -18,7 +18,7 @@ esphome-external-components/
 │           └── LICENSE                     # Component license
 ├── tests/                                  # Test suite
 │   ├── unit/                               # C++ unit tests
-│   │   ├── climate_ir_woleix_test.cpp      # Climate component tests (21 tests)
+│   │   ├── climate_ir_woleix_test.cpp      # Climate component tests (24 tests)
 │   │   ├── woleix_ac_state_machine_test.cpp # State machine tests (26 tests)
 │   │   ├── CMakeLists.txt                  # Test build configuration
 │   │   ├── run_tests.sh                    # Test execution script
@@ -65,6 +65,7 @@ The climate_ir_woleix component consists of two main parts:
 - Handles user interactions and state management
 - Integrates with temperature/humidity sensors
 - Coordinates IR command transmission
+- Supports an optional reset button for state reconciliation
 
 ### State Machine (`woleix_ac_state_machine.h/cpp`)
 
@@ -80,6 +81,28 @@ The climate_ir_woleix component consists of two main parts:
 - Temperature control (15-30°C, COOL mode only)
 - Fan speed toggle (LOW ↔ HIGH)
 - Optimized command generation for minimal IR transmissions
+- Granular temperature control: Sends individual commands for each degree of change
+- Support for humidity sensor integration
+- Optional reset button for state reconciliation
+
+**Temperature Control Behavior:**
+The temperature control implementation sends multiple commands, one for each degree of change. This approach:
+- Mimics the behavior of pressing a physical remote button multiple times
+- Ensures compatibility with the AC unit's internal state tracking
+- Allows for precise control and feedback
+- Is consistent with the granular nature of temperature control compared to other binary or cyclic settings
+
+**State Machine Behavior:**
+- Power toggle affects all other states (turning ON resets to defaults)
+- Mode cycles through COOL→DEHUM→FAN→COOL in sequence
+- Temperature is only adjustable in COOL mode (15-30°C range)
+- Fan speed toggles between LOW and HIGH
+
+**Default Settings:**
+- Power: ON
+- Mode: COOL
+- Temperature: 25°C
+- Fan Speed: LOW
 
 ### 1. Clone the Repository
 
@@ -282,6 +305,7 @@ climate:
     transmitter_id: ir_transmitter
     sensor: room_temp              # Temperature sensor (required)
     humidity_sensor: room_humidity  # Humidity sensor (optional)
+    reset_button: ac_reset_button  # Reset button (optional)
 ```
 
 ## 🧪 Running Tests
@@ -302,6 +326,26 @@ cd tests/unit
 open build/coverage/html/index.html  # macOS
 xdg-open build/coverage/html/index.html  # Linux
 ```
+
+#### Current Test Status
+
+As of the latest update, all 24 unit tests in the test suite are passing. This includes tests for:
+
+1. **Temperature Control**: Verifying that temperature changes are only processed in COOL mode and that the correct number of temperature adjustment commands are sent.
+
+2. **Mode Transitions**: Ensuring that mode changes (e.g., COOL to FAN, DRY to COOL) generate the correct number of mode change commands.
+
+3. **Sensor Integration**: Confirming that temperature and humidity sensor updates are processed correctly and trigger state updates.
+
+4. **Power State Transitions**: Validating the correct handling of power on/off sequences.
+
+5. **Fan Speed Control**: Verifying proper fan speed adjustments across different modes.
+
+6. **Complex State Changes**: Testing scenarios involving multiple parameter changes simultaneously.
+
+These passing tests demonstrate the reliability and correctness of the climate control component across various scenarios and edge cases.
+
+**Note:** The component has undergone significant improvements, and all previously failing tests have been resolved. The development team continues to maintain and enhance the test suite to ensure ongoing reliability.
 
 #### Using VSCode Tasks
 

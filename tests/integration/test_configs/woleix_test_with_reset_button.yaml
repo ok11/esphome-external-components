@@ -23,6 +23,9 @@ binary_sensor:
   - platform: gpio
     id: reset_button
     pin: GPIO5
+    filters:
+      - delayed_on: 3s
+      - delayed_off: 10ms
 
 # Configure the climate component with all features
 climate:

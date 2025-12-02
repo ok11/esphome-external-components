@@ -42,7 +42,10 @@ binary_sensor:
         input: true
         pullup: true
       inverted: true
- 
+    filters:
+      - delayed_on: 3s
+      - delayed_off: 10ms 
+
 climate:
   - platform: climate_ir_woleix
     name: "New Room AC"

@@ -47,7 +47,10 @@ void WoleixACStateMachine::set_target_state
         }
         
         // Step 4: Handle fan speed changes
-        generate_fan_commands_(fan_speed);
+        if (current_state_.mode == WoleixMode::FAN)
+        {
+            generate_fan_commands_(fan_speed);
+        }
         
         ESP_LOGD(TAG, "Generated %zu commands to reach the target state: power=%d, mode=%d, temp=%.1f, fan=%d",
                 command_queue_.size(),

@@ -262,13 +262,13 @@ TEST_F(WoleixClimateTest, TurningOnFromOffSendsPowerCommand)
   EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(POWER_COMMAND)))
     .Times(1);
   EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(MODE_COMMAND)))
-    .Times(1);
+    .Times(2);
   EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(SPEED_COMMAND)))
     .Times(1);
   EXPECT_CALL(*mock_climate, transmit_commands_())
     .Times(1);
 
-  mock_climate->mode = ClimateMode::CLIMATE_MODE_DRY;
+  mock_climate->mode = ClimateMode::CLIMATE_MODE_FAN_ONLY;
   mock_climate->target_temperature = 25.0f;
   mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
   mock_climate->call_transmit_state();
@@ -544,7 +544,7 @@ TEST_F(WoleixClimateTest, IncreasingFanSpeedSendsSpeedCommand)
 {
   // Initialize with known state
   mock_climate->set_last_state(
-    ClimateMode::CLIMATE_MODE_COOL,
+    ClimateMode::CLIMATE_MODE_FAN_ONLY,
     22.0f,
     ClimateFanMode::CLIMATE_FAN_LOW
   );
@@ -557,7 +557,7 @@ TEST_F(WoleixClimateTest, IncreasingFanSpeedSendsSpeedCommand)
 
     // Change fan speed
   mock_climate->target_temperature = 22.0f;
-  mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
+  mock_climate->mode = ClimateMode::CLIMATE_MODE_FAN_ONLY;
   mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
   mock_climate->call_transmit_state();
   
@@ -573,7 +573,7 @@ TEST_F(WoleixClimateTest, DecreasingFanSpeedSendsSpeedCommand)
 {
   // Initialize with known state
   mock_climate->set_last_state(
-    ClimateMode::CLIMATE_MODE_COOL,
+    ClimateMode::CLIMATE_MODE_FAN_ONLY,
     22.0f,
     ClimateFanMode::CLIMATE_FAN_HIGH
   );
@@ -586,7 +586,7 @@ TEST_F(WoleixClimateTest, DecreasingFanSpeedSendsSpeedCommand)
 
   // Change fan speed
   mock_climate->target_temperature = 22.0f;
-  mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
+  mock_climate->mode = ClimateMode::CLIMATE_MODE_FAN_ONLY;
   mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
   mock_climate->call_transmit_state();
   
@@ -640,7 +640,7 @@ TEST_F(WoleixClimateTest, CompleteStateChangeSequence)
   );
 
   EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(SPEED_COMMAND)))
-    .Times(1);
+    .Times(0); // the target state is not FAN, so fan speed change won't be sent
   EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(MODE_COMMAND)))
     .Times(2);
   EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(TEMP_UP_COMMAND)))
@@ -929,6 +929,68 @@ TEST_F(WoleixClimateTest, PublishingStateOfResetButtonRepublishesItByClimate)
   
   // Publish multiple humidity values and verify they're received
   reset_button.publish_state(true);
+}
+
+/**
+ * Test: Fan speed is only transmitted in FAN mode
+ * 
+ * Validates that the SPEED_COMMAND is only sent when the climate
+ * is in FAN mode. In other modes (COOL, DRY), fan speed changes
+ * should not trigger a SPEED_COMMAND.
+ */
+TEST_F(WoleixClimateTest, FanSpeedOnlyTransmittedInFanMode)
+{
+  // Test in COOL mode
+  mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_COOL, 22.0f, ClimateFanMode::CLIMATE_FAN_LOW);
+  
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(SPEED_COMMAND)))
+    .Times(0);
+  EXPECT_CALL(*mock_climate, transmit_commands_())
+    .Times(0);
+
+  mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
+  mock_climate->target_temperature = 22.0f;
+  mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
+  mock_climate->call_transmit_state();
+
+  // Test in DRY mode
+  mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_DRY, 22.0f, ClimateFanMode::CLIMATE_FAN_LOW);
+  
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(SPEED_COMMAND)))
+    .Times(0);
+  EXPECT_CALL(*mock_climate, transmit_commands_())
+    .Times(0);
+
+  mock_climate->mode = ClimateMode::CLIMATE_MODE_DRY;
+  mock_climate->target_temperature = 22.0f;
+  mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
+  mock_climate->call_transmit_state();
+
+  // Test in FAN mode
+  mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_FAN_ONLY, 22.0f, ClimateFanMode::CLIMATE_FAN_LOW);
+  
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(SPEED_COMMAND)))
+    .Times(1);
+  EXPECT_CALL(*mock_climate, transmit_commands_())
+    .Times(1);
+
+  mock_climate->mode = ClimateMode::CLIMATE_MODE_FAN_ONLY;
+  mock_climate->target_temperature = 22.0f;
+  mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
+  mock_climate->call_transmit_state();
+
+  // Test that changing temperature in FAN mode doesn't trigger SPEED_COMMAND
+  mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_FAN_ONLY, 22.0f, ClimateFanMode::CLIMATE_FAN_LOW);
+  
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(SPEED_COMMAND)))
+    .Times(0);
+  EXPECT_CALL(*mock_climate, transmit_commands_())
+    .Times(0);
+
+  mock_climate->mode = ClimateMode::CLIMATE_MODE_FAN_ONLY;
+  mock_climate->target_temperature = 24.0f;
+  mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
+  mock_climate->call_transmit_state();
 }
 
 // ============================================================================
