@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <set>
 
 // Helper function to convert a set of enum values to a bitmask

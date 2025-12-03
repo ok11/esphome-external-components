@@ -2,6 +2,12 @@
 
 Custom ESPHome component for controlling Woleix air conditioners via infrared remote control.
 
+## Recent Changes
+
+- Removed the `control` method from the `WoleixClimate` class.
+- Updated the `transmit_state` method to handle all state changes directly.
+- Removed related unit tests for the `control` method.
+
 ## 📁 Project Structure
 
 ```text

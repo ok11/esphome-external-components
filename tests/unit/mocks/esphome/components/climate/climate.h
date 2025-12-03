@@ -1,0 +1,26 @@
+#pragma once
+
+namespace esphome
+{
+namespace climate
+{
+
+// Mock ClimateCall class
+class ClimateCall {
+public:
+  void set_mode(ClimateMode mode) { mode_ = mode; }
+  void set_target_temperature(float temp) { target_temperature_ = temp; }
+  void set_fan_mode(ClimateFanMode fan_mode) { fan_mode_ = fan_mode; }
+
+  std::optional<ClimateMode> get_mode() const { return mode_; }
+  std::optional<float> get_target_temperature() const { return target_temperature_; }
+  std::optional<ClimateFanMode> get_fan_mode() const { return fan_mode_; }
+
+private:
+  std::optional<ClimateMode> mode_;
+  std::optional<float> target_temperature_;
+  std::optional<ClimateFanMode> fan_mode_;
+};
+
+}
+}

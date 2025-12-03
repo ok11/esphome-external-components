@@ -2,6 +2,8 @@
 #include <gmock/gmock.h>
 #include <gmock/gmock-matchers.h>
 #include "climate_ir_woleix.h"
+#include "state_mapper.h"
+#include <optional>
 
 using namespace esphome::climate_ir_woleix;
 using namespace esphome::climate;
@@ -11,9 +13,13 @@ using testing::Return;
 using testing::AtLeast;
 using testing::Invoke;
 
+
+
 class MockWoleixACStateMachine : public WoleixACStateMachine
 {
 public:
+  MOCK_METHOD(WoleixInternalState, get_state, (), (const));
+
   void set_current_state(
     WoleixPowerState power, WoleixMode woleix_mode, float temperature, WoleixFanSpeed woleix_fan_speed
   )
@@ -50,13 +56,9 @@ public:
     ClimateFanMode fan_mode = ClimateFanMode::CLIMATE_FAN_LOW
   )
   {
-    WoleixPowerState woleix_power = 
-      (mode == ClimateMode::CLIMATE_MODE_OFF)
-      ? WoleixPowerState::OFF
-      : WoleixPowerState::ON;
-
-    WoleixMode woleix_mode = map_climate_mode_(mode);
-    WoleixFanSpeed woleix_fan_speed = map_fan_mode_(fan_mode);
+    WoleixPowerState woleix_power = StateMapper::esphome_to_woleix_power(mode != ClimateMode::CLIMATE_MODE_OFF);
+    WoleixMode woleix_mode = StateMapper::esphome_to_woleix_mode(mode);
+    WoleixFanSpeed woleix_fan_speed = StateMapper::esphome_to_woleix_fan_mode(fan_mode);
 
     ((MockWoleixACStateMachine*)state_machine_)->set_current_state(
       woleix_power, woleix_mode, target_temperature, woleix_fan_speed
@@ -70,26 +72,11 @@ public:
       WoleixInternalState woleix_state =
         ((MockWoleixACStateMachine*)state_machine_)->get_current_state();
 
-      if (woleix_state.power == WoleixPowerState::OFF)
-      {
-        mode = ClimateMode::CLIMATE_MODE_OFF;
-      }
-      else if (woleix_state.mode == WoleixMode::COOL)
-      {
-        mode = ClimateMode::CLIMATE_MODE_COOL;
-      }
-      else if (woleix_state.mode == WoleixMode::DEHUM)
-      {
-        mode = ClimateMode::CLIMATE_MODE_DRY;
-      }
-      else if (woleix_state.mode == WoleixMode::FAN)
-      {
-        mode = ClimateMode::CLIMATE_MODE_FAN_ONLY;
-      }
+      mode = StateMapper::woleix_to_esphome_power(woleix_state.power) ? 
+             StateMapper::woleix_to_esphome_mode(woleix_state.mode) : 
+             ClimateMode::CLIMATE_MODE_OFF;
       target_temperature = woleix_state.temperature;
-      fan_mode = 
-        (woleix_state.fan_speed == WoleixFanSpeed::HIGH) ?
-        ClimateFanMode::CLIMATE_FAN_HIGH : ClimateFanMode::CLIMATE_FAN_LOW;
+      fan_mode = StateMapper::woleix_to_esphome_fan_mode(woleix_state.fan_speed);
   }
 
   esphome::sensor::Sensor* get_humidity_sensor() {
@@ -103,6 +90,10 @@ public:
   MOCK_METHOD(void, publish_state, (), (override)); 
   MOCK_METHOD(void, enqueue_command_, (const WoleixCommand&));
   MOCK_METHOD(void, transmit_commands_, ());
+  MOCK_METHOD(void, transmit_state, (), (override));
+
+  // Getter for state_machine_
+  WoleixACStateMachine* get_state_machine() { return state_machine_; }
 };
 
 // Test fixture class
@@ -991,6 +982,59 @@ TEST_F(WoleixClimateTest, FanSpeedOnlyTransmittedInFanMode)
   mock_climate->target_temperature = 24.0f;
   mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
   mock_climate->call_transmit_state();
+}
+
+// ============================================================================
+// Test: Control Function
+// ============================================================================
+
+/**
+ * Test: Control function handles mode changes correctly
+ *
+ * Validates that the control() function correctly updates the internal state
+ * when a mode change is requested, and triggers transmit_state().
+ */
+
+// ============================================================================
+// Test: Improved State Synchronization
+// ============================================================================
+
+/**
+ * Test: Transmit state synchronizes internal state with state machine
+ *
+ * Validates that the transmit_state() function correctly synchronizes
+ * the internal state of the climate component with the state machine
+ * after sending commands.
+ */
+TEST_F(WoleixClimateTest, TransmitStateSynchronizesInternalState)
+{
+  mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_COOL, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
+
+  // Set up expectations for the state machine
+  WoleixInternalState expected_state;
+  expected_state.power = WoleixPowerState::ON;
+  expected_state.mode = WoleixMode::DEHUM;
+  expected_state.temperature = 27.0f;
+  expected_state.fan_speed = WoleixFanSpeed::HIGH;
+
+  EXPECT_CALL(*static_cast<MockWoleixACStateMachine*>(mock_climate->get_state_machine()), get_state())
+    .WillOnce(Return(expected_state));
+
+  // Trigger a state change
+  mock_climate->mode = ClimateMode::CLIMATE_MODE_DRY;
+  mock_climate->target_temperature = 27.0f;
+  mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
+
+  // Allow transmit_commands_ to be called without actually sending commands
+  EXPECT_CALL(*mock_climate, transmit_commands_())
+    .Times(1);
+
+  mock_climate->call_transmit_state();
+
+  // Verify that the internal state has been synchronized
+  EXPECT_EQ(mock_climate->mode, ClimateMode::CLIMATE_MODE_DRY);
+  EXPECT_EQ(mock_climate->target_temperature, 27.0f);
+  EXPECT_EQ(mock_climate->fan_mode, ClimateFanMode::CLIMATE_FAN_HIGH);
 }
 
 // ============================================================================

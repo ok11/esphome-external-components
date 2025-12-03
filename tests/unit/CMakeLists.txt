@@ -45,6 +45,7 @@ target_include_directories(esphome_mocks INTERFACE
 set(COMPONENT_SOURCES
   ../../esphome/components/climate_ir_woleix/climate_ir_woleix.cpp
   ../../esphome/components/climate_ir_woleix/woleix_ac_state_machine.cpp
+  ../../esphome/components/climate_ir_woleix/state_mapper.cpp
 )
 
 # Create test executable for climate component

@@ -14,6 +14,7 @@
 #include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/remote_base/pronto_protocol.h"
 #include "woleix_ac_state_machine.h"
+#include "state_mapper.h"
 
 namespace esphome {
 namespace climate_ir_woleix {
@@ -195,6 +196,7 @@ public:
      */
     virtual void reset_state();
 
+
 protected:    
     /**
      * Transmit the current state via IR.
@@ -225,22 +227,6 @@ protected:
      * @param pronto_hex Pronto format IR command string
      */
     virtual void enqueue_command_(const WoleixCommand& command);
-    
-    /**
-     * Map ESPHome ClimateMode to WoleixMode.
-     * 
-     * @param climate_mode ESPHome climate mode
-     * @return Corresponding Woleix AC mode
-     */
-    WoleixMode map_climate_mode_(ClimateMode climate_mode);
-    
-    /**
-     * Map ESPHome ClimateFanMode to WoleixFanSpeed.
-     * 
-     * @param fan_mode ESPHome fan mode
-     * @return Corresponding Woleix fan speed
-     */
-    WoleixFanSpeed map_fan_mode_(ClimateFanMode fan_mode);
 
     WoleixACStateMachine *state_machine_{nullptr};  /**< State machine for command generation */
     sensor::Sensor *humidity_sensor_{nullptr};      /**< Optional humidity sensor */

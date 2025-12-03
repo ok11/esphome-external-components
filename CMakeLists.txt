@@ -192,6 +192,10 @@ endif()
 add_library(climate_ir_woleix STATIC
     esphome/components/climate_ir_woleix/climate_ir_woleix.cpp
     esphome/components/climate_ir_woleix/climate_ir_woleix.h
+    esphome/components/climate_ir_woleix/woleix_ac_state_machine.cpp
+    esphome/components/climate_ir_woleix/woleix_ac_state_machine.h
+    esphome/components/climate_ir_woleix/state_mapper.cpp
+    esphome/components/climate_ir_woleix/state_mapper.h
 )
 
 # Set include directories for the component
