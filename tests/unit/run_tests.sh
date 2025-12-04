@@ -4,7 +4,7 @@
 
 set -e
 
-echo "=== Building Woleix Climate IR Unit Tests ==="
+echo "=== Building Woleix Climate Unit Tests ==="
 
 # Create build directory
 mkdir -p build
@@ -22,6 +22,8 @@ echo ""
 
 # Run tests
 ./climate_ir_woleix_test
+./woleix_ac_state_machine_test
+./state_mapper_test
 
 echo ""
 echo "=== Tests Complete ==="

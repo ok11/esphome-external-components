@@ -62,6 +62,13 @@ add_executable(
   ../../esphome/components/climate_ir_woleix/woleix_ac_state_machine.cpp
 )
 
+# Create test executable for state mapper
+add_executable(
+  state_mapper_test
+  state_mapper_test.cpp
+  ../../esphome/components/climate_ir_woleix/state_mapper.cpp
+)
+
 # Set include directories with mocks having highest priority
 # Use BEFORE PRIVATE to ensure mocks are searched first, before any inherited paths
 target_include_directories(
@@ -95,7 +102,24 @@ target_link_libraries(
   esphome_mocks
 )
 
+# Set include directories for state mapper test
+target_include_directories(
+  state_mapper_test
+  BEFORE PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/mocks
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome/components/climate_ir_woleix
+)
+
+target_link_libraries(
+  state_mapper_test
+  GTest::gtest_main
+  GTest::gmock_main
+  esphome_mocks
+)
+
 # Enable testing
 include(GoogleTest)
 gtest_discover_tests(climate_ir_woleix_test)
 gtest_discover_tests(woleix_ac_state_machine_test)
+gtest_discover_tests(state_mapper_test)

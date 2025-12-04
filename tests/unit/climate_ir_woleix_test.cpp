@@ -90,7 +90,7 @@ public:
   MOCK_METHOD(void, publish_state, (), (override)); 
   MOCK_METHOD(void, enqueue_command_, (const WoleixCommand&));
   MOCK_METHOD(void, transmit_commands_, ());
-  MOCK_METHOD(void, transmit_state, (), (override));
+//  MOCK_METHOD(void, transmit_state, (), (override));
 
   // Getter for state_machine_
   WoleixACStateMachine* get_state_machine() { return state_machine_; }
@@ -247,7 +247,11 @@ TEST_F(WoleixClimateTest, TraitsConfiguredCorrectly)
 TEST_F(WoleixClimateTest, TurningOnFromOffSendsPowerCommand)
 {
   // Start in OFF mode - set state AFTER constructor has run
-  mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_OFF, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
+  mock_climate->set_last_state(
+    ClimateMode::CLIMATE_MODE_OFF,
+    25.0f,
+    ClimateFanMode::CLIMATE_FAN_LOW
+  );
 
   testing::InSequence seq;  // Enforce call order
   EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(POWER_COMMAND)))
@@ -275,7 +279,11 @@ TEST_F(WoleixClimateTest, TurningOnFromOffSendsPowerCommand)
 TEST_F(WoleixClimateTest, TurningOffSendsPowerCommand)
 {
   // Start in COOL mode
-  mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_COOL, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
+  mock_climate->set_last_state(
+    ClimateMode::CLIMATE_MODE_COOL,
+    25.0f,
+    ClimateFanMode::CLIMATE_FAN_LOW
+);
 
   testing::InSequence seq;  // Enforce call order
   EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(POWER_COMMAND)))
@@ -1008,22 +1016,14 @@ TEST_F(WoleixClimateTest, FanSpeedOnlyTransmittedInFanMode)
  */
 TEST_F(WoleixClimateTest, TransmitStateSynchronizesInternalState)
 {
-  mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_COOL, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
+  // Start in COOL mode at 20°C with LOW fan
+  mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_COOL, 20.0f, ClimateFanMode::CLIMATE_FAN_LOW);
 
-  // Set up expectations for the state machine
-  WoleixInternalState expected_state;
-  expected_state.power = WoleixPowerState::ON;
-  expected_state.mode = WoleixMode::DEHUM;
-  expected_state.temperature = 27.0f;
-  expected_state.fan_speed = WoleixFanSpeed::HIGH;
-
-  EXPECT_CALL(*static_cast<MockWoleixACStateMachine*>(mock_climate->get_state_machine()), get_state())
-    .WillOnce(Return(expected_state));
-
-  // Trigger a state change
-  mock_climate->mode = ClimateMode::CLIMATE_MODE_DRY;
-  mock_climate->target_temperature = 27.0f;
-  mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
+  // Trigger a state change: stay in COOL mode, change temperature to 24°C
+  // This ensures temperature commands are actually generated (only works in COOL mode)
+  mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
+  mock_climate->target_temperature = 24.0f;
+  mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
 
   // Allow transmit_commands_ to be called without actually sending commands
   EXPECT_CALL(*mock_climate, transmit_commands_())
@@ -1031,10 +1031,14 @@ TEST_F(WoleixClimateTest, TransmitStateSynchronizesInternalState)
 
   mock_climate->call_transmit_state();
 
-  // Verify that the internal state has been synchronized
-  EXPECT_EQ(mock_climate->mode, ClimateMode::CLIMATE_MODE_DRY);
-  EXPECT_EQ(mock_climate->target_temperature, 27.0f);
-  EXPECT_EQ(mock_climate->fan_mode, ClimateFanMode::CLIMATE_FAN_HIGH);
+  // Verify that the internal state has been synchronized with what the state machine computed
+  // After the state change, the state machine should have:
+  // - mode: COOL (unchanged)
+  // - temperature: 24.0 (changed from 20.0)
+  // - fan_speed: LOW (unchanged)
+  EXPECT_EQ(mock_climate->mode, ClimateMode::CLIMATE_MODE_COOL);
+  EXPECT_EQ(mock_climate->target_temperature, 24.0f);
+  EXPECT_EQ(mock_climate->fan_mode, ClimateFanMode::CLIMATE_FAN_LOW);
 }
 
 // ============================================================================
