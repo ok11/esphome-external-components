@@ -30,12 +30,12 @@ WoleixClimate::WoleixClimate()
 WoleixClimate::WoleixClimate(WoleixACStateMachine *state_machine)
     : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX)
 {
-    state_machine_ = state_machine;
+  state_machine_ = state_machine;
 }
 
 void WoleixClimate::reset_state()
 {
-    state_machine_->reset();
+  state_machine_->reset();
 }
 
 void WoleixClimate::setup()
@@ -67,6 +67,12 @@ void WoleixClimate::setup()
       if (state)
       {
         ESP_LOGI(TAG, "Reset button pressed - resetting the internal state");
+        commands_.clear();
+        if (mode != climate::CLIMATE_MODE_OFF)
+        {
+          commands_.push_back(POWER_COMMAND);
+          transmit_commands_();
+        }
         reset_state();
         publish_state();
       }
@@ -105,12 +111,12 @@ void WoleixClimate::transmit_state()
   
     // Sync internal state with state machine
     auto current_state = state_machine_->get_state();
-    this->mode = StateMapper::woleix_to_esphome_power(current_state.power) ? StateMapper::woleix_to_esphome_mode(current_state.mode) : ClimateMode::CLIMATE_MODE_OFF;
-    this->target_temperature = current_state.temperature;
-    this->fan_mode = StateMapper::woleix_to_esphome_fan_mode(current_state.fan_speed);
+    mode = StateMapper::woleix_to_esphome_power(current_state.power) ? StateMapper::woleix_to_esphome_mode(current_state.mode) : ClimateMode::CLIMATE_MODE_OFF;
+    target_temperature = current_state.temperature;
+    fan_mode = StateMapper::woleix_to_esphome_fan_mode(current_state.fan_speed);
     
     ESP_LOGD(TAG, "Synced internal state - Mode: %d, Temp: %.1f, Fan: %d",
-           static_cast<int>(this->mode), this->target_temperature, static_cast<int>(this->fan_mode.value()));
+           static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
 
     // Publish the new state
     publish_state();
@@ -123,12 +129,12 @@ void WoleixClimate::transmit_state()
 
 void WoleixClimate::enqueue_command_(const WoleixCommand& command)
 {
-  this->commands_.push_back(command);
+  commands_.push_back(command);
 }
 
 void WoleixClimate::transmit_commands_()
 {
-  for(const WoleixCommand& command: this->commands_)
+  for(const WoleixCommand& command: commands_)
   {
     for (const WoleixSequence& sequence: command.sequences)
     {
@@ -138,7 +144,7 @@ void WoleixClimate::transmit_commands_()
       pronto_data.delta = 0;
       
       // Transmit using ProntoProtocol
-      auto call = this->transmitter_->transmit();
+      auto call = transmitter_->transmit();
       auto data = call.get_data();
       
       // Set carrier frequency (38.03 kHz)
@@ -156,7 +162,7 @@ void WoleixClimate::transmit_commands_()
       delay(sequence.delay_ms); // Small delay between commands
     }
   }
-  this->commands_.clear();
+  commands_.clear();
 }
 
 ClimateTraits WoleixClimate::traits()

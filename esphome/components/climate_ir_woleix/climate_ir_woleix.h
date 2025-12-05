@@ -115,12 +115,12 @@ static const std::string TIMER_PRONTO =
 
 /** @} */
 
-static const WoleixCommand POWER_COMMAND      = {{{ POWER_PRONTO, 108 }}};
-static const WoleixCommand TEMP_UP_COMMAND    = {{{ TEMP_UP_PRONTO, 108 }, { TEMP_UP_PRONTO, 500 }}};
-static const WoleixCommand TEMP_DOWN_COMMAND  = {{{ TEMP_DOWN_PRONTO, 108 }, { TEMP_DOWN_PRONTO, 500 }}};
-static const WoleixCommand MODE_COMMAND       = {{{ MODE_PRONTO, 108 }}};
-static const WoleixCommand SPEED_COMMAND      = {{{ SPEED_PRONTO, 108 }}};
-static const WoleixCommand TIMER_COMMAND      = {{{ TIMER_PRONTO, 108 }}};
+static const WoleixCommand POWER_COMMAND      = {{{ POWER_PRONTO, 200 }}};
+static const WoleixCommand TEMP_UP_COMMAND    = {{{ TEMP_UP_PRONTO, 108 }, { TEMP_UP_PRONTO, 200 }}};
+static const WoleixCommand TEMP_DOWN_COMMAND  = {{{ TEMP_DOWN_PRONTO, 108 }, { TEMP_DOWN_PRONTO, 200 }}};
+static const WoleixCommand MODE_COMMAND       = {{{ MODE_PRONTO, 200 }}};
+static const WoleixCommand SPEED_COMMAND      = {{{ SPEED_PRONTO, 200 }}};
+static const WoleixCommand TIMER_COMMAND      = {{{ TIMER_PRONTO, 200 }}}; // Not currently used
 
 /**
  * Climate IR controller for Woleix air conditioners.

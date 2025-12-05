@@ -24,8 +24,9 @@ esphome-external-components/
 │           └── LICENSE                     # Component license
 ├── tests/                                  # Test suite
 │   ├── unit/                               # C++ unit tests
-│   │   ├── climate_ir_woleix_test.cpp      # Climate component tests (24 tests)
+│   │   ├── climate_ir_woleix_test.cpp      # Climate component tests (27 tests)
 │   │   ├── woleix_ac_state_machine_test.cpp # State machine tests (26 tests)
+│   │   ├── state_mapper_test.cpp           # State mapper tests (19 tests)
 │   │   ├── CMakeLists.txt                  # Test build configuration
 │   │   ├── run_tests.sh                    # Test execution script
 │   │   ├── generate_coverage.sh            # Coverage report generator
@@ -437,7 +438,12 @@ xdg-open build/coverage/html/index.html  # Linux
 
 #### Current Test Status
 
-As of the latest update, all 24 unit tests in the test suite are passing. This includes tests for:
+As of the latest update, all 72 unit tests in the test suite are passing:
+- **27 tests** in `climate_ir_woleix_test.cpp` (Climate component tests)
+- **26 tests** in `woleix_ac_state_machine_test.cpp` (State machine tests)
+- **19 tests** in `state_mapper_test.cpp` (State mapper tests)
+
+These tests cover:
 
 1. **Temperature Control**: Verifying that temperature changes are only processed in COOL mode and that the correct number of temperature adjustment commands are sent.
 
@@ -450,6 +456,8 @@ As of the latest update, all 24 unit tests in the test suite are passing. This i
 5. **Fan Speed Control**: Verifying proper fan speed adjustments across different modes.
 
 6. **Complex State Changes**: Testing scenarios involving multiple parameter changes simultaneously.
+
+7. **State Mapping**: Validating conversions between ESPHome and Woleix state representations.
 
 These passing tests demonstrate the reliability and correctness of the climate control component across various scenarios and edge cases.
 
