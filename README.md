@@ -92,19 +92,23 @@ The climate_ir_woleix component consists of two main parts:
 - Optional reset button for state reconciliation
 
 **Temperature Control Behavior:**
+
 The temperature control implementation sends multiple commands, one for each degree of change. This approach:
+
 - Mimics the behavior of pressing a physical remote button multiple times
 - Ensures compatibility with the AC unit's internal state tracking
 - Allows for precise control and feedback
 - Is consistent with the granular nature of temperature control compared to other binary or cyclic settings
 
 **State Machine Behavior:**
+
 - Power toggle affects all other states (turning ON resets to defaults)
 - Mode cycles through COOL→DEHUM→FAN→COOL in sequence
 - Temperature is only adjustable in COOL mode (15-30°C range)
 - Fan speed toggles between LOW and HIGH
 
 **Default Settings:**
+
 - Power: ON
 - Mode: COOL
 - Temperature: 25°C
@@ -126,11 +130,9 @@ cd esphome-external-components
 python3 -m venv .venv
 
 # Activate virtual environment
-# On macOS/Linux:
+# On macOS/Linux/WSL:
 source .venv/bin/activate
 
-# On Windows (WSL):
-source .venv/bin/activate
 ```
 
 #### Install ESPHome
@@ -170,7 +172,7 @@ brew install cmake
 brew install googletest
 ```
 
-**Linux (Ubuntu/Debian):**
+**Linux (Ubuntu/Debian) or WSL:**
 
 ```bash
 # Install build essentials
@@ -183,12 +185,6 @@ cd /usr/src/gtest
 sudo cmake CMakeLists.txt
 sudo make
 sudo cp lib/*.a /usr/lib
-```
-
-**Windows (WSL):**
-
-```bash
-# Follow Linux instructions above in WSL terminal
 ```
 
 #### Verify C++ Tools
@@ -262,7 +258,7 @@ cd tests
 
 ### 6. VS Code Configuration
 
-The project includes pre-configured VS Code settings:
+The project includes pre-configured VS Code settings (I tried to keep it portable as much as possible):
 
 - **`.vscode/settings.json`**: Python interpreter, CMake settings
 - **`.vscode/tasks.json`**: Build tasks (Cmd+Shift+B)
@@ -277,6 +273,103 @@ The project includes pre-configured VS Code settings:
 4. **ESPHome Snippets** (optional)
 
 ## 🚀 Using the Component
+
+### The Key Assumptions about the Hardware
+
+In the essence, my hardware is a combination of
+
+- (Required) **ESP32-C3 Super mini** for the entire control (very cheap on Aliexpress/Temu)
+- (Required) An **IR Transmitter** to transmit towards the Woleix
+- (Optional, but recommended) **DHT-11** (as the device is intended to be used indoor, DHT-22 measuring negative temperatures would be not required) for indicating current temperature and humidity
+- (Optional, but recommended) A **button** component (grounded via a pull-up resistor of 220 Ohm) for reconciling the state
+
+### On the State Reconciliation
+
+Since Woleix has no back channel to the remote, the remote can only operate in "fire-and-forget" mode and must assume device state changes based on the commands it has sent. This state assumption (managed by the `woleix_ac_state_machine` in the component) can be easily broken if:
+
+- IR signals are lost
+- The native remote control is used
+- Power interruptions occur
+- ...
+
+This leads to inconsistency between the assumed state and the actual device state. The Woleix offers no easy way to reset the device, except for:
+
+1. Power off the device
+2. Cut power for 30 seconds (to allow internal capacitors to discharge)
+
+After powering on, the device returns to its *default* state:
+
+- **Mode**: COOL
+- **Temperature**: 25°C
+- **Fan speed** (if then switched to FAN mode): LOW
+
+To maintain synchronization, you need a mechanism to bring your WoleixIR component to the same *default* state. I have automated this at the Home Assistant level by controlling the device through a smart socket. The reconciliation process works as follows:
+
+- The reset button (a `binary_sensor`) is clicked (actually a long press of 3 seconds to avoid accidental resets), which initiates:
+  - Sending a power OFF command to Woleix if it is currently on
+  - After a 30-second delay (according to the user's manual), a Home Assistant automation switches off the smart socket
+  - After another 30-second delay, the smart socket is powered back on
+  - If the device was powered on before the reset, it is powered on again
+  - The internal (assumed) state is reset to the defaults
+- The states are now reconciled
+
+#### Reconciliation Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant ResetButton as Reset Button<br/>(Binary Sensor)
+    participant WoleixIR as WoleixIR Component
+    participant Woleix as Woleix AC Unit
+    participant HA as Home Assistant<br/>Automation
+    participant SmartSocket as Smart Socket
+
+    Note over User,SmartSocket: State Reconciliation Process
+
+    User->>ResetButton: Click reset button
+    activate ResetButton
+    ResetButton->>WoleixIR: Button pressed event
+    activate WoleixIR
+    
+    alt Woleix AC is powered ON
+        WoleixIR->>Woleix: Send power OFF command
+        Note right of Woleix: AC powers off
+    end
+    
+    WoleixIR->>HA: Trigger reset automation
+    deactivate WoleixIR
+    deactivate ResetButton
+    
+    activate HA
+    Note over HA: Wait 30 seconds<br/>(capacitor discharge)
+    HA->>SmartSocket: Power OFF
+    activate SmartSocket
+    Note right of SmartSocket: Cut power to device
+    SmartSocket-->>Woleix: Power disconnected
+    
+    Note over HA,SmartSocket: Wait 30 seconds<br/>(ensure full reset)
+    
+    HA->>SmartSocket: Power ON
+    SmartSocket-->>Woleix: Power restored
+    Note right of Woleix: Device boots to<br/>default state:<br/>- Mode: COOL<br/>- Temp: 25°C<br/>- Fan: LOW
+    deactivate SmartSocket
+    
+    alt Device was powered ON before reset
+        HA->>WoleixIR: Send power ON command
+        activate WoleixIR
+        WoleixIR->>Woleix: Send power ON command
+        Note right of Woleix: AC powers on
+        deactivate WoleixIR
+    end
+    
+    HA->>WoleixIR: Reset internal state
+    activate WoleixIR
+    Note right of WoleixIR: Internal state reset to:<br/>- Mode: COOL<br/>- Temp: 25°C<br/>- Fan: LOW
+    deactivate WoleixIR
+    deactivate HA
+    
+    Note over User,SmartSocket: ✓ States Reconciled<br/>Physical device and assumed state now match
+```
 
 ### In Your ESPHome Configuration
 
@@ -303,6 +396,15 @@ sensor:
       name: "Room Humidity"
       id: room_humidity
     update_interval: 60s
+
+# Reset button
+binary_sensor:
+  - platform: gpio
+    id: ac_reset_button
+    pin: GPIO5
+    filters:
+      - delayed_on: 3s
+      - delayed_off: 10ms
 
 # Climate control
 climate:
