@@ -196,8 +196,9 @@ public:
      */
     virtual void reset_state();
 
+    virtual bool is_on() { return this->state_machine_->get_state().power == WoleixPowerState::ON; }
 
-protected:    
+protected:
     /**
      * Transmit the current state via IR.
      * 

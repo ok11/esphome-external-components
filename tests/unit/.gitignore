@@ -7,3 +7,6 @@ build/
 *.gcov
 
 # Coverage reports
+coverage/
+
+test_compile
