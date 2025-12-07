@@ -107,7 +107,7 @@ public:
      * @note Turning power OFF will queue power command only, ignoring other parameters
      * @note Turning power ON from OFF will reset all settings to defaults
      */
-    void set_target_state(WoleixPowerState power, WoleixMode mode, 
+    void transit_to_state(WoleixPowerState power, WoleixMode mode, 
         float temperature, WoleixFanSpeed fan_speed);
     
     /**

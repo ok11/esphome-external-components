@@ -80,22 +80,39 @@ void WoleixClimate::setup()
   }
 }
 
-
-void WoleixClimate::transmit_state()
+const std::vector<WoleixCommand>& WoleixClimate::calculate_commands_()
 {
-  ESP_LOGD(TAG, "Transmitting state - Mode: %d, Temp: %.1f, Fan: %d",
-           static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
-
   // Map ESPHome Climate states to Woleix AC states
   WoleixPowerState woleix_power = StateMapper::esphome_to_woleix_power(mode != ClimateMode::CLIMATE_MODE_OFF);
   WoleixMode woleix_mode = StateMapper::esphome_to_woleix_mode(mode);
   WoleixFanSpeed woleix_fan_speed = StateMapper::esphome_to_woleix_fan_mode(fan_mode.value());
   
   // Generate command sequence via state machine
-  state_machine_->set_target_state(woleix_power, woleix_mode, target_temperature, woleix_fan_speed);
+  state_machine_->transit_to_state(woleix_power, woleix_mode, target_temperature, woleix_fan_speed);
   
   // Get commands from state machine and transmit them
-  auto commands = state_machine_->get_commands();
+  return state_machine_->get_commands();
+}
+
+void WoleixClimate::update_state_()
+{
+    // Sync internal state with state machine
+    auto current_state = state_machine_->get_state();
+    mode = StateMapper::woleix_to_esphome_power(current_state.power) ? StateMapper::woleix_to_esphome_mode(current_state.mode) : ClimateMode::CLIMATE_MODE_OFF;
+    target_temperature = current_state.temperature;
+    fan_mode = StateMapper::woleix_to_esphome_fan_mode(current_state.fan_speed);
+    
+    ESP_LOGD(TAG, "Synced internal state - Mode: %d, Temp: %.1f, Fan: %d",
+           static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
+}
+
+void WoleixClimate::transmit_state()
+{
+  ESP_LOGD(TAG, "Transmitting state - Mode: %d, Temp: %.1f, Fan: %d",
+           static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
+
+  auto commands = calculate_commands_();
+
   if (!commands.empty())
   {
     for (const auto& cmd : commands)
@@ -109,14 +126,7 @@ void WoleixClimate::transmit_state()
     ESP_LOGD(TAG, "Transmitted climate state - Mode: %d, Temp: %.1f, Fan: %d",
            static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
   
-    // Sync internal state with state machine
-    auto current_state = state_machine_->get_state();
-    mode = StateMapper::woleix_to_esphome_power(current_state.power) ? StateMapper::woleix_to_esphome_mode(current_state.mode) : ClimateMode::CLIMATE_MODE_OFF;
-    target_temperature = current_state.temperature;
-    fan_mode = StateMapper::woleix_to_esphome_fan_mode(current_state.fan_speed);
-    
-    ESP_LOGD(TAG, "Synced internal state - Mode: %d, Temp: %.1f, Fan: %d",
-           static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
+    update_state_();
 
     // Publish the new state
     publish_state();

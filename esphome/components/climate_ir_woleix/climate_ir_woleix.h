@@ -228,6 +228,9 @@ protected:
      */
     virtual void enqueue_command_(const WoleixCommand& command);
 
+    virtual const std::vector<WoleixCommand>& calculate_commands_();
+    virtual void update_state_();
+
     WoleixACStateMachine *state_machine_{nullptr};  /**< State machine for command generation */
     sensor::Sensor *humidity_sensor_{nullptr};      /**< Optional humidity sensor */
     binary_sensor::BinarySensor *reset_button_{nullptr};  /**< Optional reset button */

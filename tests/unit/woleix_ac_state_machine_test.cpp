@@ -17,6 +17,8 @@ public:
     current_state_.temperature = temperature;
     current_state_.fan_speed = fan_speed;
   }
+
+  using WoleixACStateMachine::transit_to_state;
 };
 
 // Test fixture for WoleixACStateMachine
@@ -69,15 +71,14 @@ TEST_F(WoleixACStateMachineTest, InitialStateIsCorrect)
  */
 TEST_F(WoleixACStateMachineTest, ResetRestoresDefaultState)
 {
-    // Change state
-    state_machine_->set_target_state(
+    // Set state
+    state_machine_->set_current_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         20.0f,
         WoleixFanSpeed::HIGH
     );
-    state_machine_->get_commands(); // Clear commands
-    
+
     // Reset
     state_machine_->reset();
     
@@ -100,8 +101,15 @@ TEST_F(WoleixACStateMachineTest, ResetRestoresDefaultState)
  */
 TEST_F(WoleixACStateMachineTest, PowerOffFromOnSendsPowerCommand)
 {
+    state_machine_->set_current_state(
+        WoleixPowerState::ON,
+        WoleixMode::COOL,
+        25.0f,
+        WoleixFanSpeed::LOW
+    );
+
     // Start from ON (default state)
-    state_machine_->set_target_state(
+    state_machine_->transit_to_state(
         WoleixPowerState::OFF,
         WoleixMode::COOL,
         25.0f,
@@ -128,16 +136,15 @@ TEST_F(WoleixACStateMachineTest, PowerOffFromOnSendsPowerCommand)
 TEST_F(WoleixACStateMachineTest, PowerOnFromOffSendsPowerCommand)
 {
     // First turn off
-    state_machine_->set_target_state(
+    state_machine_->set_current_state(
         WoleixPowerState::OFF,
         WoleixMode::COOL,
         25.0f,
         WoleixFanSpeed::LOW
     );
-    state_machine_->get_commands(); // Clear commands
     
     // Now turn back on
-    state_machine_->set_target_state(
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,  // Request FAN mode
         20.0f,
@@ -162,11 +169,18 @@ TEST_F(WoleixACStateMachineTest, PowerOnFromOffSendsPowerCommand)
  */
 TEST_F(WoleixACStateMachineTest, PowerOffIgnoresOtherStateChanges)
 {
-    state_machine_->set_target_state(
+    state_machine_->set_current_state(
+        WoleixPowerState::ON,
+        WoleixMode::COOL,
+        25.0f,
+        WoleixFanSpeed::LOW
+    );
+
+    state_machine_->transit_to_state(
         WoleixPowerState::OFF,
         WoleixMode::FAN,     // These should be ignored
-        30.0f,
-        WoleixFanSpeed::HIGH
+        30.0f,               // These should be ignored
+        WoleixFanSpeed::HIGH // These should be ignored
     );
     
     auto commands = state_machine_->get_commands();
@@ -190,8 +204,14 @@ TEST_F(WoleixACStateMachineTest, PowerOffIgnoresOtherStateChanges)
  */
 TEST_F(WoleixACStateMachineTest, ModeTransitionCoolToDehum)
 {
-    // Start in COOL (default)
-    state_machine_->set_target_state(
+    state_machine_->set_current_state(
+        WoleixPowerState::ON,
+        WoleixMode::COOL,
+        25.0f,
+        WoleixFanSpeed::LOW
+    );
+
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::DEHUM,
         25.0f,
@@ -212,8 +232,14 @@ TEST_F(WoleixACStateMachineTest, ModeTransitionCoolToDehum)
  */
 TEST_F(WoleixACStateMachineTest, ModeTransitionCoolToFan)
 {
-    // Start in COOL (default)
-    state_machine_->set_target_state(
+    state_machine_->set_current_state(
+        WoleixPowerState::ON,
+        WoleixMode::COOL,
+        25.0f,
+        WoleixFanSpeed::LOW
+    );
+
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         25.0f,
@@ -234,17 +260,15 @@ TEST_F(WoleixACStateMachineTest, ModeTransitionCoolToFan)
  */
 TEST_F(WoleixACStateMachineTest, ModeTransitionDehumToFan)
 {
-    // First go to DEHUM
-    state_machine_->set_target_state(
+     state_machine_->set_current_state(
         WoleixPowerState::ON,
         WoleixMode::DEHUM,
         25.0f,
         WoleixFanSpeed::LOW
     );
-    state_machine_->get_commands(); // Clear commands
-    
+
     // Now go to FAN
-    state_machine_->set_target_state(
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         25.0f,
@@ -265,17 +289,15 @@ TEST_F(WoleixACStateMachineTest, ModeTransitionDehumToFan)
  */
 TEST_F(WoleixACStateMachineTest, ModeTransitionFanToCool)
 {
-    // First go to FAN
-    state_machine_->set_target_state(
+    state_machine_->set_current_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         25.0f,
         WoleixFanSpeed::LOW
     );
-    state_machine_->get_commands(); // Clear commands
     
     // Now go to COOL
-    state_machine_->set_target_state(
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         25.0f,
@@ -296,17 +318,15 @@ TEST_F(WoleixACStateMachineTest, ModeTransitionFanToCool)
  */
 TEST_F(WoleixACStateMachineTest, ModeTransitionDehumToCool)
 {
-    // First go to DEHUM
-    state_machine_->set_target_state(
+    state_machine_->set_current_state(
         WoleixPowerState::ON,
         WoleixMode::DEHUM,
         25.0f,
         WoleixFanSpeed::LOW
     );
-    state_machine_->get_commands(); // Clear commands
     
     // Now go to COOL
-    state_machine_->set_target_state(
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         25.0f,
@@ -327,8 +347,14 @@ TEST_F(WoleixACStateMachineTest, ModeTransitionDehumToCool)
  */
 TEST_F(WoleixACStateMachineTest, NoModeChangeGeneratesNoModeCommands)
 {
-    // Stay in COOL mode
-    state_machine_->set_target_state(
+    state_machine_->set_current_state(
+        WoleixPowerState::ON,
+        WoleixMode::COOL,
+        25.0f,
+        WoleixFanSpeed::LOW
+    );
+
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         25.0f,
@@ -353,8 +379,14 @@ TEST_F(WoleixACStateMachineTest, NoModeChangeGeneratesNoModeCommands)
  */
 TEST_F(WoleixACStateMachineTest, TemperatureIncreaseInCoolMode)
 {
-    // Start in COOL at 25°C (default)
-    state_machine_->set_target_state(
+    state_machine_->set_current_state(
+        WoleixPowerState::ON,
+        WoleixMode::COOL,
+        25.0f,
+        WoleixFanSpeed::LOW
+    );
+
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         28.0f,  // +3 degrees
@@ -378,8 +410,14 @@ TEST_F(WoleixACStateMachineTest, TemperatureIncreaseInCoolMode)
  */
 TEST_F(WoleixACStateMachineTest, TemperatureDecreaseInCoolMode)
 {
-    // Start in COOL at 25°C (default)
-    state_machine_->set_target_state(
+    state_machine_->set_current_state(
+        WoleixPowerState::ON,
+        WoleixMode::COOL,
+        25.0f,
+        WoleixFanSpeed::LOW
+    );
+
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         20.0f,  // -5 degrees
@@ -403,7 +441,14 @@ TEST_F(WoleixACStateMachineTest, TemperatureDecreaseInCoolMode)
  */
 TEST_F(WoleixACStateMachineTest, TemperatureClampedToMinimum)
 {
-    state_machine_->set_target_state(
+    state_machine_->set_current_state(
+        WoleixPowerState::ON,
+        WoleixMode::COOL,
+        25.0f,
+        WoleixFanSpeed::LOW
+    );
+
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         10.0f,  // Below min (15°C)
@@ -425,7 +470,14 @@ TEST_F(WoleixACStateMachineTest, TemperatureClampedToMinimum)
  */
 TEST_F(WoleixACStateMachineTest, TemperatureClampedToMaximum)
 {
-    state_machine_->set_target_state(
+    state_machine_->set_current_state(
+        WoleixPowerState::ON,
+        WoleixMode::COOL,
+        25.0f,
+        WoleixFanSpeed::LOW
+    );
+
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         35.0f,  // Above max (30°C)
@@ -447,17 +499,15 @@ TEST_F(WoleixACStateMachineTest, TemperatureClampedToMaximum)
  */
 TEST_F(WoleixACStateMachineTest, TemperatureIgnoredInDehumMode)
 {
-    // First switch to DEHUM mode
-    state_machine_->set_target_state(
+    state_machine_->set_current_state(
         WoleixPowerState::ON,
         WoleixMode::DEHUM,
         25.0f,
         WoleixFanSpeed::LOW
     );
-    state_machine_->get_commands(); // Clear commands
     
     // Now try to change temperature
-    state_machine_->set_target_state(
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::DEHUM,
         30.0f,  // Temperature change should be ignored
@@ -480,17 +530,15 @@ TEST_F(WoleixACStateMachineTest, TemperatureIgnoredInDehumMode)
  */
 TEST_F(WoleixACStateMachineTest, TemperatureIgnoredInFanMode)
 {
-    // First switch to FAN mode
-    state_machine_->set_target_state(
+    state_machine_->set_current_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         25.0f,
         WoleixFanSpeed::LOW
     );
-    state_machine_->get_commands(); // Clear commands
     
     // Now try to change temperature
-    state_machine_->set_target_state(
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         20.0f,  // Temperature change should be ignored
@@ -522,7 +570,7 @@ TEST_F(WoleixACStateMachineTest, FanSpeedLowToHigh)
         25.0f,
         WoleixFanSpeed::LOW
     );
-    state_machine_->set_target_state(
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         25.0f,
@@ -553,7 +601,7 @@ TEST_F(WoleixACStateMachineTest, FanSpeedHighToLow)
     );
     
     // Now go to LOW
-    state_machine_->set_target_state(
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         25.0f,
@@ -576,8 +624,14 @@ TEST_F(WoleixACStateMachineTest, FanSpeedHighToLow)
  */
 TEST_F(WoleixACStateMachineTest, NoFanSpeedChangeGeneratesNoCommands)
 {
-    // Stay at LOW
-    state_machine_->set_target_state(
+    state_machine_->set_current_state(
+        WoleixPowerState::ON,
+        WoleixMode::COOL,
+        25.0f,
+        WoleixFanSpeed::LOW
+    );
+
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         25.0f,
@@ -602,8 +656,10 @@ TEST_F(WoleixACStateMachineTest, NoFanSpeedChangeGeneratesNoCommands)
  */
 TEST_F(WoleixACStateMachineTest, CompleteStateChangeFromDefaults)
 {
+    state_machine_->reset();
+
     // Change everything from defaults
-    state_machine_->set_target_state(
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,        // COOL -> FAN (2 steps)
         30.0f,                  // 25 -> 30 (5 steps, but ignored in FAN mode)
@@ -636,7 +692,7 @@ TEST_F(WoleixACStateMachineTest, MultipleSequentialChanges)
         WoleixFanSpeed::LOW
     );
 
-    state_machine_->set_target_state(
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         25.0f,
@@ -645,7 +701,7 @@ TEST_F(WoleixACStateMachineTest, MultipleSequentialChanges)
     auto commands1 = state_machine_->get_commands();
     
     // Change 2: Mode and temperature
-    state_machine_->set_target_state(
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         20.0f,
@@ -654,7 +710,7 @@ TEST_F(WoleixACStateMachineTest, MultipleSequentialChanges)
     auto commands2 = state_machine_->get_commands();
     
     // Change 3: Power off
-    state_machine_->set_target_state(
+    state_machine_->transit_to_state(
         WoleixPowerState::OFF,
         WoleixMode::COOL,
         20.0f,
@@ -688,9 +744,8 @@ TEST_F(WoleixACStateMachineTest, CommandOrderingIsCorrect)
         25.0f,
         WoleixFanSpeed::LOW
     );
-    state_machine_->get_commands(); // Turn off
     
-    state_machine_->set_target_state(
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         28.0f,
@@ -718,17 +773,15 @@ TEST_F(WoleixACStateMachineTest, CommandOrderingIsCorrect)
  */
 TEST_F(WoleixACStateMachineTest, EmptyCommandsAfterNoChange)
 {
-    // Set a state
-    state_machine_->set_target_state(
+    state_machine_->set_current_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         25.0f,
         WoleixFanSpeed::LOW
     );
-    state_machine_->get_commands();
     
     // Set same state again
-    state_machine_->set_target_state(
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         25.0f,
@@ -762,7 +815,7 @@ TEST_F(WoleixACStateMachineTest, GetCommandsClearsQueue)
         WoleixFanSpeed::HIGH
     );
 
-    state_machine_->set_target_state(
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         25.0f,
@@ -786,8 +839,14 @@ TEST_F(WoleixACStateMachineTest, GetCommandsClearsQueue)
  */
 TEST_F(WoleixACStateMachineTest, TemperatureRoundingHandled)
 {
-    // Test fractional temperatures
-    state_machine_->set_target_state(
+     state_machine_->set_current_state(
+        WoleixPowerState::ON,
+        WoleixMode::COOL,
+        25.0f,
+        WoleixFanSpeed::LOW
+    );
+
+    state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         27.5f,  // Should round to 28

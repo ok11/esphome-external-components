@@ -24,7 +24,7 @@ WoleixACStateMachine::WoleixACStateMachine()
     reset();
 }
 
-void WoleixACStateMachine::set_target_state
+void WoleixACStateMachine::transit_to_state
 (
     WoleixPowerState power, WoleixMode mode, float temperature, WoleixFanSpeed fan_speed
 )
@@ -52,7 +52,7 @@ void WoleixACStateMachine::set_target_state
             generate_fan_commands_(fan_speed);
         }
         
-        ESP_LOGD(TAG, "Generated %zu commands to reach the target state: power=%d, mode=%d, temp=%.1f, fan=%d",
+        ESP_LOGD(TAG, "Calculated and queued %zu commands for state transition: power=%d, mode=%d, temp=%.1f, fan=%d",
                 command_queue_.size(),
                 static_cast<int>(power),
                 static_cast<int>(mode),
