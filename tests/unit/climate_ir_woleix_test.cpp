@@ -72,9 +72,9 @@ public:
       WoleixInternalState woleix_state =
         ((MockWoleixACStateMachine*)state_machine_)->get_current_state();
 
-      mode = StateMapper::woleix_to_esphome_power(woleix_state.power) ? 
-             StateMapper::woleix_to_esphome_mode(woleix_state.mode) : 
-             ClimateMode::CLIMATE_MODE_OFF;
+      mode = StateMapper::woleix_to_esphome_power(woleix_state.power) 
+             ? StateMapper::woleix_to_esphome_mode(woleix_state.mode) 
+             : ClimateMode::CLIMATE_MODE_OFF;
       target_temperature = woleix_state.temperature;
       fan_mode = StateMapper::woleix_to_esphome_fan_mode(woleix_state.fan_speed);
   }
@@ -691,20 +691,42 @@ TEST_F(WoleixClimateTest, TemperatureBoundsAreCorrect)
  * Validates that after transmitting IR commands, the climate component
  * calls publish_state() to update ESPHome with the new state.
  */
-TEST_F(WoleixClimateTest, TransmitStateCallsPublishState)
+TEST_F(WoleixClimateTest, ControlCallsPublishState)
 {
+  auto call = ClimateCall();
+  call.set_mode(ClimateMode::CLIMATE_MODE_COOL);
+  call.set_target_temperature(25.0f);
+  call.set_fan_mode(ClimateFanMode::CLIMATE_FAN_LOW);
   // Turning on sends: Power, Mode, Speed commands
   mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_OFF, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
 
   EXPECT_CALL(*mock_climate, publish_state())
       .Times(1);  // Expect exactly 1 call
   
-  mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
-  mock_climate->target_temperature = 25.0f;
-  mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
-  mock_climate->call_transmit_state();
+  mock_climate->control(call);
 }
 
+/**
+ * Test: transmit_state() calls publish_state() to notify ESPHome
+ * 
+ * Validates that after transmitting IR commands, the climate component
+ * calls publish_state() to update ESPHome with the new state.
+ */
+TEST_F(WoleixClimateTest, ControlUpdatesState)
+{
+  auto call = ClimateCall();
+  call.set_mode(ClimateMode::CLIMATE_MODE_COOL);
+  call.set_target_temperature(25.0f);
+  call.set_fan_mode(ClimateFanMode::CLIMATE_FAN_LOW);
+
+  // Turning on sends: Power, Mode, Speed commands
+  mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_OFF, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
+  mock_climate->control(call);
+
+  EXPECT_EQ(mock_climate->mode, ClimateMode::CLIMATE_MODE_COOL);
+  EXPECT_EQ(mock_climate->target_temperature, 25.0f);
+  EXPECT_EQ(mock_climate->fan_mode, ClimateFanMode::CLIMATE_FAN_LOW);
+}
 
 // ============================================================================
 // Test: Humidity Sensor Callback

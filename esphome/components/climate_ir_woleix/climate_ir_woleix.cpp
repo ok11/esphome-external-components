@@ -98,7 +98,9 @@ void WoleixClimate::update_state_()
 {
     // Sync internal state with state machine
     auto current_state = state_machine_->get_state();
-    mode = StateMapper::woleix_to_esphome_power(current_state.power) ? StateMapper::woleix_to_esphome_mode(current_state.mode) : ClimateMode::CLIMATE_MODE_OFF;
+    mode = StateMapper::woleix_to_esphome_power(current_state.power) 
+      ? StateMapper::woleix_to_esphome_mode(current_state.mode)
+      : ClimateMode::CLIMATE_MODE_OFF;
     target_temperature = current_state.temperature;
     fan_mode = StateMapper::woleix_to_esphome_fan_mode(current_state.fan_speed);
     
@@ -109,7 +111,7 @@ void WoleixClimate::update_state_()
 void WoleixClimate::transmit_state()
 {
   ESP_LOGD(TAG, "Transmitting state - Mode: %d, Temp: %.1f, Fan: %d",
-           static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
+    static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
 
   auto commands = calculate_commands_();
 
@@ -124,16 +126,13 @@ void WoleixClimate::transmit_state()
     transmit_commands_();
   
     ESP_LOGD(TAG, "Transmitted climate state - Mode: %d, Temp: %.1f, Fan: %d",
-           static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
+      static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
   
     update_state_();
-
-    // Publish the new state
-    publish_state();
   }
   else
   {
-    ESP_LOGW(TAG, "No commands generated to reach the target state");
+    ESP_LOGI(TAG, "No commands generated to reach the target state");
   }
 }
 

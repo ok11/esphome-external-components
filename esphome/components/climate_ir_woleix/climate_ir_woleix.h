@@ -113,11 +113,14 @@ static const std::string TIMER_PRONTO =
     "0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 "
     "0014 0483";
 
+/** Repeat frame */
+static const std::string REPEAT_PRONTO = "0000 006D 0002 0000 0159 0056 0014 0483";
+
 /** @} */
 
-static const WoleixCommand POWER_COMMAND      = {{{ POWER_PRONTO, 200 }}};
-static const WoleixCommand TEMP_UP_COMMAND    = {{{ TEMP_UP_PRONTO, 108 }, { TEMP_UP_PRONTO, 200 }}};
-static const WoleixCommand TEMP_DOWN_COMMAND  = {{{ TEMP_DOWN_PRONTO, 108 }, { TEMP_DOWN_PRONTO, 200 }}};
+static const WoleixCommand POWER_COMMAND      = {{{ POWER_PRONTO, 40 }, { REPEAT_PRONTO, 200 }}};
+static const WoleixCommand TEMP_UP_COMMAND    = {{{ TEMP_UP_PRONTO, 40 }, { REPEAT_PRONTO, 200 }}};
+static const WoleixCommand TEMP_DOWN_COMMAND  = {{{ TEMP_DOWN_PRONTO, 40 }, { REPEAT_PRONTO, 200 }}};
 static const WoleixCommand MODE_COMMAND       = {{{ MODE_PRONTO, 200 }}};
 static const WoleixCommand SPEED_COMMAND      = {{{ SPEED_PRONTO, 200 }}};
 static const WoleixCommand TIMER_COMMAND      = {{{ TIMER_PRONTO, 200 }}}; // Not currently used
