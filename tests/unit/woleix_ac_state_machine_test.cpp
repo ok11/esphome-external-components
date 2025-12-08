@@ -395,7 +395,8 @@ TEST_F(WoleixACStateMachineTest, TemperatureIncreaseInCoolMode)
     
     auto commands = state_machine_->get_commands();
     
-    EXPECT_EQ(count_command(commands, TEMP_UP_COMMAND), 3);
+    EXPECT_EQ(count_command(commands, TEMP_UP_COMMAND), 1);
+    EXPECT_EQ(count_command(commands, REPEAT_COMMAND), 2);
     
     auto state = state_machine_->get_state();
     EXPECT_FLOAT_EQ(state.temperature, 28.0f);
@@ -426,7 +427,8 @@ TEST_F(WoleixACStateMachineTest, TemperatureDecreaseInCoolMode)
     
     auto commands = state_machine_->get_commands();
     
-    EXPECT_EQ(count_command(commands, TEMP_DOWN_COMMAND), 5);
+    EXPECT_EQ(count_command(commands, TEMP_DOWN_COMMAND), 1);
+    EXPECT_EQ(count_command(commands, REPEAT_COMMAND), 4);
     
     auto state = state_machine_->get_state();
     EXPECT_FLOAT_EQ(state.temperature, 20.0f);
@@ -458,7 +460,8 @@ TEST_F(WoleixACStateMachineTest, TemperatureClampedToMinimum)
     auto commands = state_machine_->get_commands();
     
     // Should go from 25°C to 15°C (minimum)
-    EXPECT_EQ(count_command(commands, TEMP_DOWN_COMMAND), 10);
+    EXPECT_EQ(count_command(commands, TEMP_DOWN_COMMAND), 1);
+    EXPECT_EQ(count_command(commands, REPEAT_COMMAND), 9);
 }
 
 /**
@@ -487,7 +490,8 @@ TEST_F(WoleixACStateMachineTest, TemperatureClampedToMaximum)
     auto commands = state_machine_->get_commands();
     
     // Should go from 25°C to 30°C (maximum)
-    EXPECT_EQ(count_command(commands, TEMP_UP_COMMAND), 5);
+    EXPECT_EQ(count_command(commands, TEMP_UP_COMMAND), 1);
+    EXPECT_EQ(count_command(commands, REPEAT_COMMAND), 4);
 }
 
 /**
@@ -723,7 +727,8 @@ TEST_F(WoleixACStateMachineTest, MultipleSequentialChanges)
     EXPECT_EQ(count_command(commands1, SPEED_COMMAND), 1);  // LOW->HIGH
     
     EXPECT_EQ(count_command(commands2, MODE_COMMAND), 1);   // DEHUM->FAN->COOL
-    EXPECT_EQ(count_command(commands2, TEMP_DOWN_COMMAND), 5); // 25->20
+    EXPECT_EQ(count_command(commands2, TEMP_DOWN_COMMAND), 1); // 25->20
+    EXPECT_EQ(count_command(commands2, REPEAT_COMMAND), 4); // 25->20
     
     EXPECT_EQ(count_command(commands3, POWER_COMMAND), 1);  // Turn off
 }
@@ -856,7 +861,8 @@ TEST_F(WoleixACStateMachineTest, TemperatureRoundingHandled)
     auto commands = state_machine_->get_commands();
     
     // 25 -> 28 = 3 steps (rounds up)
-    EXPECT_EQ(count_command(commands, TEMP_UP_COMMAND), 3);
+    EXPECT_EQ(count_command(commands, TEMP_UP_COMMAND), 1);
+    EXPECT_EQ(count_command(commands, REPEAT_COMMAND), 2);
 }
 
 // ============================================================================

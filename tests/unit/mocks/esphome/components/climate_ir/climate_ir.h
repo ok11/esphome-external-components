@@ -7,19 +7,21 @@
 #include "esphome/core/optional.h"
 #include "esphome/core/log.h"
 
+#include "esphome/components/climate/climate.h"
 #include "esphome/components/climate/climate_mode.h"
 #include "esphome/components/remote_base/remote_base.h"
 
 namespace esphome {
 namespace climate_ir {
 
+using climate::Climate;
 using climate::ClimateMode;
 using climate::ClimateFanMode;
 using climate::ClimateSwingMode;
 using climate::ClimateTraits;
 
 // Mock ClimateIR base class
-class ClimateIR {
+class ClimateIR: public Climate {
 public:
   ClimateIR(float min_temp, float max_temp)
     : temperature_step_(1.0f),
@@ -52,7 +54,16 @@ public:
   // Setup method (can be overridden)
   virtual void setup() {}
   
-protected:
+  void control(const climate::ClimateCall &call) {
+    if (call.get_mode().has_value())
+      this->mode = *call.get_mode();
+    if (call.get_target_temperature().has_value())
+      this->target_temperature = *call.get_target_temperature();
+    if (call.get_fan_mode().has_value())
+      this->fan_mode = *call.get_fan_mode();
+    this->transmit_state();
+    this->publish_state();
+  }
   // Override these in derived classes
   virtual void transmit_state() = 0;
   virtual ClimateTraits traits() {

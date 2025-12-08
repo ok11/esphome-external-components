@@ -344,7 +344,9 @@ TEST_F(WoleixClimateTest, IncreasingTemperatureSendsTempUpCommands)
 
   testing::InSequence seq;  // Enforce call order
   EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(TEMP_UP_COMMAND)))
-    .Times(3);
+    .Times(1);
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(REPEAT_COMMAND)))
+    .Times(2);
   EXPECT_CALL(*mock_climate, transmit_commands_())
     .Times(1);
 
@@ -373,7 +375,9 @@ TEST_F(WoleixClimateTest, DecreasingTemperatureSendsTempDownCommands)
 
   testing::InSequence seq;  // Enforce call order
   EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(TEMP_DOWN_COMMAND)))
-    .Times(2);
+    .Times(1);
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(REPEAT_COMMAND)))
+    .Times(1);
   EXPECT_CALL(*mock_climate, transmit_commands_())
     .Times(1);
 
@@ -641,7 +645,9 @@ TEST_F(WoleixClimateTest, CompleteStateChangeSequence)
   EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(MODE_COMMAND)))
     .Times(2);
   EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(TEMP_UP_COMMAND)))
-    .Times(4);
+    .Times(1);
+  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(REPEAT_COMMAND)))
+    .Times(3);
   EXPECT_CALL(*mock_climate, transmit_commands_())
     .Times(1);
 
@@ -691,11 +697,12 @@ TEST_F(WoleixClimateTest, TemperatureBoundsAreCorrect)
  */
 TEST_F(WoleixClimateTest, ControlCallsPublishState)
 {
-  auto call = climate::ClimateCall();
-  call.set_mode(ClimateMode::CLIMATE_MODE_COOL);
-  call.set_target_temperature(25.0f);
-  call.set_fan_mode(ClimateFanMode::CLIMATE_FAN_LOW);
-  // Turning on sends: Power, Mode, Speed commands
+  auto call = mock_climate->make_call();
+  call.set_mode(ClimateMode::CLIMATE_MODE_COOL)
+      .set_target_temperature(25.0f)
+      .set_fan_mode(ClimateFanMode::CLIMATE_FAN_LOW);
+
+    // Turning on sends: Power, Mode, Speed commands
   mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_OFF, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
 
   EXPECT_CALL(*mock_climate, publish_state())
@@ -712,10 +719,10 @@ TEST_F(WoleixClimateTest, ControlCallsPublishState)
  */
 TEST_F(WoleixClimateTest, ControlUpdatesState)
 {
-  auto call = ClimateCall();
-  call.set_mode(ClimateMode::CLIMATE_MODE_COOL);
-  call.set_target_temperature(25.0f);
-  call.set_fan_mode(ClimateFanMode::CLIMATE_FAN_LOW);
+  auto call = mock_climate->make_call();
+  call.set_mode(ClimateMode::CLIMATE_MODE_COOL)
+      .set_target_temperature(25.0f)
+      .set_fan_mode(ClimateFanMode::CLIMATE_FAN_LOW);
 
   // Turning on sends: Power, Mode, Speed commands
   mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_OFF, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
