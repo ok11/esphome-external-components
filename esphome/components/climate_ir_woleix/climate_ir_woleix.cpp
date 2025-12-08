@@ -60,24 +60,6 @@ void WoleixClimate::setup()
       }
     });
   }
-  if (reset_button_ != nullptr)
-  {
-    reset_button_->add_on_state_callback([this](bool state)
-    {
-      if (state)
-      {
-        ESP_LOGI(TAG, "Reset button pressed - resetting the internal state");
-        commands_.clear();
-        if (mode != climate::CLIMATE_MODE_OFF)
-        {
-          commands_.push_back(POWER_COMMAND);
-          transmit_commands_();
-        }
-        reset_state();
-        publish_state();
-      }
-    });
-  }
 }
 
 const std::vector<WoleixCommand>& WoleixClimate::calculate_commands_()
@@ -88,10 +70,7 @@ const std::vector<WoleixCommand>& WoleixClimate::calculate_commands_()
   WoleixFanSpeed woleix_fan_speed = StateMapper::esphome_to_woleix_fan_mode(fan_mode.value());
   
   // Generate command sequence via state machine
-  state_machine_->transit_to_state(woleix_power, woleix_mode, target_temperature, woleix_fan_speed);
-  
-  // Get commands from state machine and transmit them
-  return state_machine_->get_commands();
+  return state_machine_->transit_to_state(woleix_power, woleix_mode, target_temperature, woleix_fan_speed);
 }
 
 void WoleixClimate::update_state_()
@@ -99,8 +78,8 @@ void WoleixClimate::update_state_()
     // Sync internal state with state machine
     auto current_state = state_machine_->get_state();
     mode = StateMapper::woleix_to_esphome_power(current_state.power) 
-      ? StateMapper::woleix_to_esphome_mode(current_state.mode)
-      : ClimateMode::CLIMATE_MODE_OFF;
+            ? StateMapper::woleix_to_esphome_mode(current_state.mode)
+            : ClimateMode::CLIMATE_MODE_OFF;
     target_temperature = current_state.temperature;
     fan_mode = StateMapper::woleix_to_esphome_fan_mode(current_state.fan_speed);
     
@@ -117,13 +96,8 @@ void WoleixClimate::transmit_state()
 
   if (!commands.empty())
   {
-    for (const auto& cmd : commands)
-    {
-      enqueue_command_(cmd);
-    }
-  
     // Send them over the IR transmitter
-    transmit_commands_();
+    transmit_commands_(commands);
   
     ESP_LOGD(TAG, "Transmitted climate state - Mode: %d, Temp: %.1f, Fan: %d",
       static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
@@ -136,14 +110,9 @@ void WoleixClimate::transmit_state()
   }
 }
 
-void WoleixClimate::enqueue_command_(const WoleixCommand& command)
+void WoleixClimate::transmit_commands_(std::vector<WoleixCommand>& commands)
 {
-  commands_.push_back(command);
-}
-
-void WoleixClimate::transmit_commands_()
-{
-  for(const WoleixCommand& command: commands_)
+  for(const WoleixCommand& command: commands)
   {
     for (const WoleixSequence& sequence: command.sequences)
     {
@@ -171,7 +140,6 @@ void WoleixClimate::transmit_commands_()
       delay(sequence.delay_ms); // Small delay between commands
     }
   }
-  commands_.clear();
 }
 
 ClimateTraits WoleixClimate::traits()

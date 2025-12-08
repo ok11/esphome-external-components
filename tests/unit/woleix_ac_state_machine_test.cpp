@@ -109,14 +109,12 @@ TEST_F(WoleixACStateMachineTest, PowerOffFromOnSendsPowerCommand)
     );
 
     // Start from ON (default state)
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::OFF,
         WoleixMode::COOL,
         25.0f,
         WoleixFanSpeed::LOW
     );
-    
-    auto commands = state_machine_->get_commands();
     
     EXPECT_EQ(commands.size(), 1);
     EXPECT_EQ(count_command(commands, POWER_COMMAND), 1);
@@ -144,14 +142,12 @@ TEST_F(WoleixACStateMachineTest, PowerOnFromOffSendsPowerCommand)
     );
     
     // Now turn back on
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,  // Request FAN mode
         20.0f,
         WoleixFanSpeed::HIGH
     );
-    
-    auto commands = state_machine_->get_commands();
     
     // Should send: POWER (on), MODE x2 (COOL->DEHUM->FAN), TEMP_DOWN x5, SPEED
     EXPECT_EQ(count_command(commands, POWER_COMMAND), 1);
@@ -176,14 +172,12 @@ TEST_F(WoleixACStateMachineTest, PowerOffIgnoresOtherStateChanges)
         WoleixFanSpeed::LOW
     );
 
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::OFF,
         WoleixMode::FAN,     // These should be ignored
         30.0f,               // These should be ignored
         WoleixFanSpeed::HIGH // These should be ignored
     );
-    
-    auto commands = state_machine_->get_commands();
     
     // Only POWER command should be sent
     EXPECT_EQ(commands.size(), 1);
@@ -211,14 +205,12 @@ TEST_F(WoleixACStateMachineTest, ModeTransitionCoolToDehum)
         WoleixFanSpeed::LOW
     );
 
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::DEHUM,
         25.0f,
         WoleixFanSpeed::LOW
     );
-    
-    auto commands = state_machine_->get_commands();
     
     // COOL -> DEHUM = 1 step
     EXPECT_EQ(count_command(commands, MODE_COMMAND), 1);
@@ -239,14 +231,12 @@ TEST_F(WoleixACStateMachineTest, ModeTransitionCoolToFan)
         WoleixFanSpeed::LOW
     );
 
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         25.0f,
         WoleixFanSpeed::LOW
     );
-    
-    auto commands = state_machine_->get_commands();
     
     // COOL -> DEHUM -> FAN = 2 steps
     EXPECT_EQ(count_command(commands, MODE_COMMAND), 2);
@@ -268,14 +258,12 @@ TEST_F(WoleixACStateMachineTest, ModeTransitionDehumToFan)
     );
 
     // Now go to FAN
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         25.0f,
         WoleixFanSpeed::LOW
     );
-    
-    auto commands = state_machine_->get_commands();
     
     // DEHUM -> FAN = 1 step
     EXPECT_EQ(count_command(commands, MODE_COMMAND), 1);
@@ -297,14 +285,12 @@ TEST_F(WoleixACStateMachineTest, ModeTransitionFanToCool)
     );
     
     // Now go to COOL
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         25.0f,
         WoleixFanSpeed::LOW
     );
-    
-    auto commands = state_machine_->get_commands();
     
     // FAN -> COOL = 1 step (wraps around)
     EXPECT_EQ(count_command(commands, MODE_COMMAND), 1);
@@ -326,14 +312,12 @@ TEST_F(WoleixACStateMachineTest, ModeTransitionDehumToCool)
     );
     
     // Now go to COOL
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         25.0f,
         WoleixFanSpeed::LOW
     );
-    
-    auto commands = state_machine_->get_commands();
     
     // DEHUM -> FAN -> COOL = 2 steps
     EXPECT_EQ(count_command(commands, MODE_COMMAND), 2);
@@ -354,14 +338,12 @@ TEST_F(WoleixACStateMachineTest, NoModeChangeGeneratesNoModeCommands)
         WoleixFanSpeed::LOW
     );
 
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         25.0f,
         WoleixFanSpeed::LOW
     );
-    
-    auto commands = state_machine_->get_commands();
     
     EXPECT_EQ(count_command(commands, MODE_COMMAND), 0);
 }
@@ -386,17 +368,14 @@ TEST_F(WoleixACStateMachineTest, TemperatureIncreaseInCoolMode)
         WoleixFanSpeed::LOW
     );
 
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         28.0f,  // +3 degrees
         WoleixFanSpeed::LOW
     );
     
-    auto commands = state_machine_->get_commands();
-    
-    EXPECT_EQ(count_command(commands, TEMP_UP_COMMAND), 1);
-    EXPECT_EQ(count_command(commands, REPEAT_COMMAND), 2);
+    EXPECT_EQ(count_command(commands, TEMP_UP_COMMAND), 3);
     
     auto state = state_machine_->get_state();
     EXPECT_FLOAT_EQ(state.temperature, 28.0f);
@@ -418,17 +397,14 @@ TEST_F(WoleixACStateMachineTest, TemperatureDecreaseInCoolMode)
         WoleixFanSpeed::LOW
     );
 
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         20.0f,  // -5 degrees
         WoleixFanSpeed::LOW
     );
     
-    auto commands = state_machine_->get_commands();
-    
-    EXPECT_EQ(count_command(commands, TEMP_DOWN_COMMAND), 1);
-    EXPECT_EQ(count_command(commands, REPEAT_COMMAND), 4);
+    EXPECT_EQ(count_command(commands, TEMP_DOWN_COMMAND), 5);
     
     auto state = state_machine_->get_state();
     EXPECT_FLOAT_EQ(state.temperature, 20.0f);
@@ -450,18 +426,15 @@ TEST_F(WoleixACStateMachineTest, TemperatureClampedToMinimum)
         WoleixFanSpeed::LOW
     );
 
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         10.0f,  // Below min (15°C)
         WoleixFanSpeed::LOW
     );
     
-    auto commands = state_machine_->get_commands();
-    
     // Should go from 25°C to 15°C (minimum)
-    EXPECT_EQ(count_command(commands, TEMP_DOWN_COMMAND), 1);
-    EXPECT_EQ(count_command(commands, REPEAT_COMMAND), 9);
+    EXPECT_EQ(count_command(commands, TEMP_DOWN_COMMAND), 10);
 }
 
 /**
@@ -480,18 +453,15 @@ TEST_F(WoleixACStateMachineTest, TemperatureClampedToMaximum)
         WoleixFanSpeed::LOW
     );
 
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         35.0f,  // Above max (30°C)
         WoleixFanSpeed::LOW
     );
     
-    auto commands = state_machine_->get_commands();
-    
     // Should go from 25°C to 30°C (maximum)
-    EXPECT_EQ(count_command(commands, TEMP_UP_COMMAND), 1);
-    EXPECT_EQ(count_command(commands, REPEAT_COMMAND), 4);
+    EXPECT_EQ(count_command(commands, TEMP_UP_COMMAND), 5);
 }
 
 /**
@@ -511,14 +481,12 @@ TEST_F(WoleixACStateMachineTest, TemperatureIgnoredInDehumMode)
     );
     
     // Now try to change temperature
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::DEHUM,
         30.0f,  // Temperature change should be ignored
         WoleixFanSpeed::LOW
     );
-    
-    auto commands = state_machine_->get_commands();
     
     // No temperature commands in DEHUM mode
     EXPECT_EQ(count_command(commands, TEMP_UP_COMMAND), 0);
@@ -542,14 +510,12 @@ TEST_F(WoleixACStateMachineTest, TemperatureIgnoredInFanMode)
     );
     
     // Now try to change temperature
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         20.0f,  // Temperature change should be ignored
         WoleixFanSpeed::LOW
     );
-    
-    auto commands = state_machine_->get_commands();
     
     // No temperature commands in FAN mode
     EXPECT_EQ(count_command(commands, TEMP_UP_COMMAND), 0);
@@ -574,14 +540,12 @@ TEST_F(WoleixACStateMachineTest, FanSpeedLowToHigh)
         25.0f,
         WoleixFanSpeed::LOW
     );
-    state_machine_->transit_to_state(
+     auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         25.0f,
         WoleixFanSpeed::HIGH
     );
-    
-    auto commands = state_machine_->get_commands();
     
     EXPECT_EQ(count_command(commands, SPEED_COMMAND), 1);
     
@@ -605,14 +569,12 @@ TEST_F(WoleixACStateMachineTest, FanSpeedHighToLow)
     );
     
     // Now go to LOW
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         25.0f,
         WoleixFanSpeed::LOW
     );
-    
-    auto commands = state_machine_->get_commands();
     
     EXPECT_EQ(count_command(commands, SPEED_COMMAND), 1);
     
@@ -635,14 +597,12 @@ TEST_F(WoleixACStateMachineTest, NoFanSpeedChangeGeneratesNoCommands)
         WoleixFanSpeed::LOW
     );
 
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         25.0f,
         WoleixFanSpeed::LOW
     );
-    
-    auto commands = state_machine_->get_commands();
     
     EXPECT_EQ(count_command(commands, SPEED_COMMAND), 0);
 }
@@ -663,14 +623,12 @@ TEST_F(WoleixACStateMachineTest, CompleteStateChangeFromDefaults)
     state_machine_->reset();
 
     // Change everything from defaults
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,        // COOL -> FAN (2 steps)
         30.0f,                  // 25 -> 30 (5 steps, but ignored in FAN mode)
         WoleixFanSpeed::HIGH    // LOW -> HIGH (1 step)
     );
-    
-    auto commands = state_machine_->get_commands();
     
     // Should have: 2x MODE, 1x SPEED
     // Temperature is ignored because target mode is FAN
@@ -696,39 +654,35 @@ TEST_F(WoleixACStateMachineTest, MultipleSequentialChanges)
         WoleixFanSpeed::LOW
     );
 
-    state_machine_->transit_to_state(
+    auto commands1 = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         25.0f,
         WoleixFanSpeed::HIGH
     );
-    auto commands1 = state_machine_->get_commands();
     
     // Change 2: Mode and temperature
-    state_machine_->transit_to_state(
+    auto commands2 = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         20.0f,
         WoleixFanSpeed::HIGH
     );
-    auto commands2 = state_machine_->get_commands();
     
     // Change 3: Power off
-    state_machine_->transit_to_state(
+    auto commands3 = state_machine_->transit_to_state(
         WoleixPowerState::OFF,
         WoleixMode::COOL,
         20.0f,
         WoleixFanSpeed::HIGH
     );
-    auto commands3 = state_machine_->get_commands();
     
     // Verify each sequence
     EXPECT_EQ(count_command(commands1, MODE_COMMAND), 1);   // COOL->DEHUM
     EXPECT_EQ(count_command(commands1, SPEED_COMMAND), 1);  // LOW->HIGH
     
     EXPECT_EQ(count_command(commands2, MODE_COMMAND), 1);   // DEHUM->FAN->COOL
-    EXPECT_EQ(count_command(commands2, TEMP_DOWN_COMMAND), 1); // 25->20
-    EXPECT_EQ(count_command(commands2, REPEAT_COMMAND), 4); // 25->20
+    EXPECT_EQ(count_command(commands2, TEMP_DOWN_COMMAND), 5); // 25->20
     
     EXPECT_EQ(count_command(commands3, POWER_COMMAND), 1);  // Turn off
 }
@@ -750,14 +704,12 @@ TEST_F(WoleixACStateMachineTest, CommandOrderingIsCorrect)
         WoleixFanSpeed::LOW
     );
     
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::FAN,
         28.0f,
         WoleixFanSpeed::HIGH
     );
-    
-    auto commands = state_machine_->get_commands();
     
     EXPECT_EQ(commands.size(), 3);
 
@@ -786,14 +738,12 @@ TEST_F(WoleixACStateMachineTest, EmptyCommandsAfterNoChange)
     );
     
     // Set same state again
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         25.0f,
         WoleixFanSpeed::LOW
     );
-    
-    auto commands = state_machine_->get_commands();
     
     // No state change, no commands
     EXPECT_EQ(commands.size(), 0);
@@ -802,38 +752,6 @@ TEST_F(WoleixACStateMachineTest, EmptyCommandsAfterNoChange)
 // ============================================================================
 // Test: Edge Cases
 // ============================================================================
-
-/**
- * Test: get_commands() clears the command queue
- * 
- * Validates that calling get_commands() is side-effect free,
- * in this case returns the queued commands until the next target 
- * state is set. Subsequent calls should return the same vector
- * until new state changes generate other commands.
- */
-TEST_F(WoleixACStateMachineTest, GetCommandsClearsQueue)
-{
-    state_machine_->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::COOL,
-        25.0f,
-        WoleixFanSpeed::HIGH
-    );
-
-    state_machine_->transit_to_state(
-        WoleixPowerState::ON,
-        WoleixMode::FAN,
-        25.0f,
-        WoleixFanSpeed::HIGH
-    );
-    
-    auto commands1 = state_machine_->get_commands();
-    auto commands2 = state_machine_->get_commands();
-    
-    EXPECT_GT(commands1.size(), 0);
-    EXPECT_GT(commands2.size(), 0);  // Queue should be not empty
-    EXPECT_EQ(commands1, commands2); // Both calls return the same commands
-}
 
 /**
  * Test: Fractional temperatures are rounded correctly
@@ -851,18 +769,15 @@ TEST_F(WoleixACStateMachineTest, TemperatureRoundingHandled)
         WoleixFanSpeed::LOW
     );
 
-    state_machine_->transit_to_state(
+    auto commands = state_machine_->transit_to_state(
         WoleixPowerState::ON,
         WoleixMode::COOL,
         27.5f,  // Should round to 28
         WoleixFanSpeed::LOW
     );
     
-    auto commands = state_machine_->get_commands();
-    
     // 25 -> 28 = 3 steps (rounds up)
-    EXPECT_EQ(count_command(commands, TEMP_UP_COMMAND), 1);
-    EXPECT_EQ(count_command(commands, REPEAT_COMMAND), 2);
+    EXPECT_EQ(count_command(commands, TEMP_UP_COMMAND), 3);
 }
 
 // ============================================================================

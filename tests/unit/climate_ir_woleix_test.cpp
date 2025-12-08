@@ -344,9 +344,7 @@ TEST_F(WoleixClimateTest, IncreasingTemperatureSendsTempUpCommands)
 
   testing::InSequence seq;  // Enforce call order
   EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(TEMP_UP_COMMAND)))
-    .Times(1);
-  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(REPEAT_COMMAND)))
-    .Times(2);
+    .Times(3);
   EXPECT_CALL(*mock_climate, transmit_commands_())
     .Times(1);
 
@@ -375,9 +373,7 @@ TEST_F(WoleixClimateTest, DecreasingTemperatureSendsTempDownCommands)
 
   testing::InSequence seq;  // Enforce call order
   EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(TEMP_DOWN_COMMAND)))
-    .Times(1);
-  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(REPEAT_COMMAND)))
-    .Times(1);
+    .Times(2);
   EXPECT_CALL(*mock_climate, transmit_commands_())
     .Times(1);
 
@@ -645,9 +641,7 @@ TEST_F(WoleixClimateTest, CompleteStateChangeSequence)
   EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(MODE_COMMAND)))
     .Times(2);
   EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(TEMP_UP_COMMAND)))
-    .Times(1);
-  EXPECT_CALL(*mock_climate, enqueue_command_(testing::Eq(REPEAT_COMMAND)))
-    .Times(3);
+    .Times(4);
   EXPECT_CALL(*mock_climate, transmit_commands_())
     .Times(1);
 
@@ -715,7 +709,7 @@ TEST_F(WoleixClimateTest, ControlCallsPublishState)
  * Test: transmit_state() calls publish_state() to notify ESPHome
  * 
  * Validates that after transmitting IR commands, the climate component
- * calls publish_state() to update ESPHome with the new state.
+ * updates ESPHome with the new state.
  */
 TEST_F(WoleixClimateTest, ControlUpdatesState)
 {

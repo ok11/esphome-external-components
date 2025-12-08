@@ -24,7 +24,7 @@ WoleixACStateMachine::WoleixACStateMachine()
     reset();
 }
 
-void WoleixACStateMachine::transit_to_state
+const std::vector<WoleixCommand>& WoleixACStateMachine::transit_to_state
 (
     WoleixPowerState power, WoleixMode mode, float temperature, WoleixFanSpeed fan_speed
 )
@@ -60,10 +60,6 @@ void WoleixACStateMachine::transit_to_state
                 static_cast<int>(fan_speed));
 
     }
-}
-
-const std::vector<WoleixCommand>& WoleixACStateMachine::get_commands()
-{
     return command_queue_;
 }
 
@@ -81,6 +77,8 @@ void WoleixACStateMachine::generate_power_commands_(WoleixPowerState target_powe
     {
         // Power state change required
         enqueue_command_(POWER_COMMAND);
+        enqueue_command_(CONFIRM);
+
         current_state_.power = target_power;
 
         ESP_LOGD(TAG, "Power switched to %s", 
@@ -100,6 +98,8 @@ void WoleixACStateMachine::generate_mode_commands_(WoleixMode target_mode)
             [this](int) { enqueue_command_(MODE_COMMAND); }
         );
 
+        enqueue_command_(CONFIRM);
+
         current_state_.mode = target_mode;
         
         ESP_LOGD(TAG, "Mode change: %d steps to reach mode %d", 
@@ -112,7 +112,6 @@ void WoleixACStateMachine::generate_temperature_commands_(float target_temp)
     // Temperature is only adjustable in COOL mode
     if (current_state_.mode == WoleixMode::COOL)
     {
-
         // Clamp temperature to valid range
         target_temp = std::clamp(target_temp, WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX);
 
@@ -124,12 +123,14 @@ void WoleixACStateMachine::generate_temperature_commands_(float target_temp)
             int steps = std::lround(std::abs(temp_diff));  // Round to nearest integer
 
             enqueue_command_(TEMP_UP_COMMAND);
-            
+
             std::ranges::for_each(
-                std::views::iota(1, steps),
-                [this](int) { enqueue_command_(REPEAT_COMMAND); }
+                std::views::iota(0, steps),
+                [this](int) { enqueue_command_(REPEAT); }
             );
             
+            enqueue_command_(CONFIRM);
+
             current_state_.temperature += steps;
             
             ESP_LOGD(TAG, "Temperature UP: %d steps to %.1f°C", steps, current_state_.temperature);
@@ -143,10 +144,12 @@ void WoleixACStateMachine::generate_temperature_commands_(float target_temp)
             enqueue_command_(TEMP_DOWN_COMMAND);
 
             std::ranges::for_each(
-                std::views::iota(1, steps),
-                [this](int) { enqueue_command_(REPEAT_COMMAND); }
+                std::views::iota(0, steps),
+                [this](int) { enqueue_command_(REPEAT); }
             );
             
+            enqueue_command_(CONFIRM);
+
             current_state_.temperature -= steps;
             
             ESP_LOGD(TAG, "Temperature DOWN: %d steps to %.1f°C", steps, current_state_.temperature);
@@ -160,6 +163,7 @@ void WoleixACStateMachine::generate_fan_commands_(WoleixFanSpeed target_fan)
     {
         // Fan speed toggles between LOW and HIGH with single SPEED command
         enqueue_command_(SPEED_COMMAND);
+        enqueue_command_(CONFIRM);
         
         current_state_.fan_speed = target_fan;
         

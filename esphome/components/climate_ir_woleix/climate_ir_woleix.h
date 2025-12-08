@@ -114,17 +114,19 @@ static const std::string TIMER_PRONTO =
     "0014 0483";
 
 /** Repeat frame */
-static const std::string REPEAT_PRONTO = "0000 006D 0002 0000 0159 0056 0014 0483";
+static const std::string CONFIRM_PRONTO = "0000 006D 0002 0000 0159 0056 0014 0483";
 
 /** @} */
 
-static const WoleixCommand POWER_COMMAND      = {{{ POWER_PRONTO, 40 }, { REPEAT_PRONTO, 200 }}};
-static const WoleixCommand TEMP_UP_COMMAND    = {{{ TEMP_UP_PRONTO, 40 }, { REPEAT_PRONTO, 200 }}};
-static const WoleixCommand TEMP_DOWN_COMMAND  = {{{ TEMP_DOWN_PRONTO, 40 }, { REPEAT_PRONTO, 200 }}};
-static const WoleixCommand MODE_COMMAND       = {{{ MODE_PRONTO, 40 }, { REPEAT_PRONTO, 200 }}};
-static const WoleixCommand SPEED_COMMAND      = {{{ SPEED_PRONTO, 40 }, { REPEAT_PRONTO, 200 }}};
-static const WoleixCommand REPEAT_COMMAND     = {{{ REPEAT_PRONTO, 200 }}};
-static const WoleixCommand TIMER_COMMAND      = {{{ TIMER_PRONTO, 40 }, { REPEAT_PRONTO, 200 }}}; // Not currently used
+static const WoleixCommand POWER_COMMAND      = {{{ POWER_PRONTO, 40 }}};
+static const WoleixCommand TEMP_UP_COMMAND    = {{{ TEMP_UP_PRONTO, 40 }}};
+static const WoleixCommand TEMP_DOWN_COMMAND  = {{{ TEMP_DOWN_PRONTO, 40 }}};
+static const WoleixCommand MODE_COMMAND       = {{{ MODE_PRONTO, 40 }}};
+static const WoleixCommand SPEED_COMMAND      = {{{ SPEED_PRONTO, 40 }}};
+static const WoleixCommand TIMER_COMMAND      = {{{ TIMER_PRONTO, 40 }}}; // Not currently used
+
+static const WoleixCommand CONFIRM     = {{{ CONFIRM_PRONTO, 200 }}};
+static const WoleixCommand REPEAT     = {{{ CONFIRM_PRONTO, 40 }}};
 
 /**
  * Climate IR controller for Woleix air conditioners.
@@ -224,22 +226,14 @@ protected:
      * Sends each command in the queue with appropriate delays between transmissions
      * to ensure the AC unit processes each command correctly.
      */
-    virtual void transmit_commands_();
+    virtual void transmit_commands_(std::vector<WoleixCommand>& commands);
     
-    /**
-     * Queue a Pronto hex command for later transmission.
-     * 
-     * @param pronto_hex Pronto format IR command string
-     */
-    virtual void enqueue_command_(const WoleixCommand& command);
-
     virtual const std::vector<WoleixCommand>& calculate_commands_();
     virtual void update_state_();
 
     WoleixACStateMachine *state_machine_{nullptr};  /**< State machine for command generation */
     sensor::Sensor *humidity_sensor_{nullptr};      /**< Optional humidity sensor */
     binary_sensor::BinarySensor *reset_button_{nullptr};  /**< Optional reset button */
-    std::vector<WoleixCommand> commands_;           /**< Queue of commands to transmit */
 };
 
 }  // namespace climate_ir_woleix
