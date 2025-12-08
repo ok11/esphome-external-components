@@ -12,7 +12,7 @@ namespace climate_ir_woleix {
 static const char *const TAG = "woleix_ac_state_machine";
 
 // Mode sequence for circular transitions
-static const std::vector<WoleixMode> MODE_SEQUENCE = 
+static const std::vector<WoleixMode> MODE_SWITCH_SEQUENCE = 
 {
     WoleixMode::COOL,
     WoleixMode::DEHUM,
@@ -122,10 +122,12 @@ void WoleixACStateMachine::generate_temperature_commands_(float target_temp)
         {
             // Temperature increase needed
             int steps = std::lround(std::abs(temp_diff));  // Round to nearest integer
+
+            enqueue_command_(TEMP_UP_COMMAND);
             
             std::ranges::for_each(
-                std::views::iota(0, steps),
-                [this](int) { enqueue_command_(TEMP_UP_COMMAND); }
+                std::views::iota(1, steps),
+                [this](int) { enqueue_command_(REPEAT_COMMAND); }
             );
             
             current_state_.temperature += steps;
@@ -138,9 +140,11 @@ void WoleixACStateMachine::generate_temperature_commands_(float target_temp)
             // Temperature decrease needed
             int steps = std::lround(std::abs(temp_diff));  // Round to nearest integer
             
+            enqueue_command_(TEMP_DOWN_COMMAND);
+
             std::ranges::for_each(
-                std::views::iota(0, steps),
-                [this](int) { enqueue_command_(TEMP_DOWN_COMMAND); }
+                std::views::iota(1, steps),
+                [this](int) { enqueue_command_(REPEAT_COMMAND); }
             );
             
             current_state_.temperature -= steps;
@@ -166,11 +170,11 @@ void WoleixACStateMachine::generate_fan_commands_(WoleixFanSpeed target_fan)
 
 int WoleixACStateMachine::calculate_mode_steps_(WoleixMode from_mode, WoleixMode to_mode)
 {
-    auto from_it = std::ranges::find(MODE_SEQUENCE, from_mode);
-    auto to_it = std::ranges::find(MODE_SEQUENCE, to_mode);
+    auto from_it = std::ranges::find(MODE_SWITCH_SEQUENCE, from_mode);
+    auto to_it = std::ranges::find(MODE_SWITCH_SEQUENCE, to_mode);
     
     // Check if both modes were found
-    if (from_it == MODE_SEQUENCE.end() || to_it == MODE_SEQUENCE.end())
+    if (from_it == MODE_SWITCH_SEQUENCE.end() || to_it == MODE_SWITCH_SEQUENCE.end())
     {
         ESP_LOGW(TAG, "Invalid mode in sequence: from=%d, to=%d", 
             static_cast<int>(from_mode), static_cast<int>(to_mode));
@@ -178,11 +182,11 @@ int WoleixACStateMachine::calculate_mode_steps_(WoleixMode from_mode, WoleixMode
     }
     
     // Calculate indices using std::ranges::distance
-    int from_index = std::ranges::distance(MODE_SEQUENCE.begin(), from_it);
-    int to_index = std::ranges::distance(MODE_SEQUENCE.begin(), to_it);
+    int from_index = std::ranges::distance(MODE_SWITCH_SEQUENCE.begin(), from_it);
+    int to_index = std::ranges::distance(MODE_SWITCH_SEQUENCE.begin(), to_it);
     
     // Calculate forward distance with wrap-around
-    int size = static_cast<int>(MODE_SEQUENCE.size());
+    int size = static_cast<int>(MODE_SWITCH_SEQUENCE.size());
     int steps = (to_index - from_index + size) % size;
     
     return steps;

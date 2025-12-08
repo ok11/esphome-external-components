@@ -8,13 +8,11 @@
 using namespace esphome::climate_ir_woleix;
 using namespace esphome::climate;
 using namespace esphome::remote_base;
+
 using testing::_;
 using testing::Return;
 using testing::AtLeast;
 using testing::Invoke;
-
-
-
 class MockWoleixACStateMachine : public WoleixACStateMachine
 {
 public:
@@ -693,7 +691,7 @@ TEST_F(WoleixClimateTest, TemperatureBoundsAreCorrect)
  */
 TEST_F(WoleixClimateTest, ControlCallsPublishState)
 {
-  auto call = ClimateCall();
+  auto call = climate::ClimateCall();
   call.set_mode(ClimateMode::CLIMATE_MODE_COOL);
   call.set_target_temperature(25.0f);
   call.set_fan_mode(ClimateFanMode::CLIMATE_FAN_LOW);
