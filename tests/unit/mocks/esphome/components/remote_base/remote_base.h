@@ -1,12 +1,13 @@
 #pragma once
 
-#include <gmock/gmock.h>
 #include <vector>
+
+#include "pronto_protocol.h"
+#include "nec_protocol.h"
 
 namespace esphome {
 namespace remote_base {
 
-// Mock RemoteTransmitData
 class RemoteTransmitData {
 public:
   void set_carrier_frequency(uint32_t freq) { carrier_frequency_ = freq; }
@@ -21,46 +22,54 @@ private:
   std::vector<uint32_t> data_;
 };
 
-// Mock RemoteTransmitter
-class RemoteTransmitter {
+
+// Mock RemoteTransmitterBase
+class RemoteTransmitterBase
+{
 public:
-  class TransmitCall {
-  public:
-    explicit TransmitCall(RemoteTransmitter* parent) : parent_(parent) {}
-    
-    RemoteTransmitData* get_data() { return &data_; }
-    
-    void perform();
-    
-  private:
-    RemoteTransmitter* parent_;
-    RemoteTransmitData data_;
-  };
+  virtual ~RemoteTransmitterBase() = default;
   
-  virtual ~RemoteTransmitter() = default;
-  
-  TransmitCall transmit() { return TransmitCall(this); }
-  
-  // Virtual method for GMock
-  virtual void transmit_raw(const RemoteTransmitData& data) {
-    if (on_transmit_) {
-      on_transmit_(data);
-    }
+  template<typename Protocol>
+  void transmit(const typename Protocol::ProtocolData &data, uint32_t send_times, uint32_t send_wait);
+  virtual void send_(const ProntoProtocol::ProtocolData& data, uint32_t send_times, uint32_t send_wait)
+  {
+    // Mock implementation
   }
-  
-  // For testing: set a callback to capture transmitted data
-  void set_transmit_callback(std::function<void(const RemoteTransmitData&)> callback) {
-    on_transmit_ = callback;
+  virtual void send_(const NECProtocol::ProtocolData& data, uint32_t send_times, uint32_t send_wait)
+  {
+    // Mock implementation
   }
-  
-private:
-  std::function<void(const RemoteTransmitData&)> on_transmit_;
 };
 
-// TransmitCall::perform implementation (needs to be after RemoteTransmitter definition)
-inline void RemoteTransmitter::TransmitCall::perform() {
-  parent_->transmit_raw(data_);
+
+template<>
+inline void RemoteTransmitterBase::transmit<ProntoProtocol>(const ProntoProtocol::ProtocolData &data, uint32_t send_times, uint32_t send_wait)
+{
+  send_(data, send_times, send_wait);
 }
+
+template<>
+inline void RemoteTransmitterBase::transmit<NECProtocol>(const NECProtocol::ProtocolData &data, uint32_t send_times, uint32_t send_wait)
+{
+  send_(data, send_times, send_wait);
+}
+
+// Mock class that can be used with GMock
+class RemoteTransmittable
+{
+ public:
+  RemoteTransmittable() {}
+  RemoteTransmittable(RemoteTransmitterBase *transmitter) : transmitter_(transmitter) {}
+  void set_transmitter(RemoteTransmitterBase *transmitter) { this->transmitter_ = transmitter; }
+
+ protected:
+  template<typename Protocol>
+  void transmit_(const typename Protocol::ProtocolData &data, uint32_t send_times = 1, uint32_t send_wait = 0)
+  {
+    this->transmitter_->transmit<Protocol>(data, send_times, send_wait);
+  }
+  RemoteTransmitterBase *transmitter_;
+};
 
 
 } // namespace remote_base

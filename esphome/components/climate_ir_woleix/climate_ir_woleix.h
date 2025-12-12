@@ -13,8 +13,11 @@
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/remote_base/pronto_protocol.h"
-#include "woleix_ac_state_machine.h"
-#include "state_mapper.h"
+
+#include "woleix_constants.h"
+#include "woleix_state_mapper.h"
+#include "woleix_state_machine.h"
+#include "woleix_comm.h"
 
 namespace esphome {
 namespace climate_ir_woleix {
@@ -23,110 +26,6 @@ using climate::ClimateMode;
 using climate::ClimateFanMode;
 using climate::ClimateTraits;
 using climate_ir::ClimateIR;
-
-const float_t WOLEIX_TEMP_MIN = 15.0f;  /**< Minimum temperature in Celsius */
-const float_t WOLEIX_TEMP_MAX = 30.0f;  /**< Maximum temperature in Celsius */
-
-struct WoleixSequence {
-    const std::string& pronto_hex;   /**< Pronto hex format IR command (reference to constant) */
-    uint16_t delay_ms;               /**< Delay after command in milliseconds (0-65535) */
-    
-    /**
-     * Equality comparison operator.
-     * Compares both the string content and delay value.
-     */
-    bool operator==(const WoleixSequence& other) const {
-        return pronto_hex == other.pronto_hex && delay_ms == other.delay_ms;
-    }
-};
-
-struct WoleixCommand {
-    const std::vector<WoleixSequence>& sequences;
-
-    /**
-     * Equality comparison operator.
-     * Compares all sequences.
-     */
-    bool operator==(const WoleixCommand& other) const {
-        return sequences == other.sequences;
-    }
-};
-
-/**
- * @name IR Command Definitions
- * Pronto hex format IR commands for Woleix AC remote control.
- * Carrier frequency: 38.03 kHz (0x006D)
- * @{
- */
-
-/** Power button - toggles AC unit on/off */
-static const std::string POWER_PRONTO = 
-    "0000 006D 0022 0000 0158 00AF 0014 0018 0014 0018 0014 0042 0014 0018 "
-    "0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018 "
-    "0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0018 0014 0018 "
-    "0014 0042 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 "
-    "0014 0042 0014 0018 0014 0043 0013 0042 0014 0042 0014 0042 0014 0042 "
-    "0014 0483";
-
-/** Temperature Up button - increases temperature by 1°C */
-static const std::string TEMP_UP_PRONTO = 
-    "0000 006D 0022 0000 0158 00B0 0013 0018 0014 0017 0014 0043 0013 0018 "
-    "0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018 "
-    "0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0018 "
-    "0014 0042 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 "
-    "0014 0042 0014 0018 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 "
-    "0014 0483";
-
-/** Temperature Down button - decreases temperature by 1°C */
-static const std::string TEMP_DOWN_PRONTO = 
-    "0000 006D 0022 0000 0158 00AF 0014 0018 0014 0018 0014 0043 0013 0018 "
-    "0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018 "
-    "0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0018 "
-    "0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 "
-    "0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 "
-    "0014 0483";
-
-/** Mode button - cycles through COOL -> DEHUM -> FAN modes */
-static const std::string MODE_PRONTO = 
-    "0000 006D 0022 0000 0159 00AF 0014 0018 0014 0018 0014 0043 0013 0018 "
-    "0014 0018 0014 0018 0014 0018 0014 0018 0014 0043 0013 0043 0013 0018 "
-    "0014 0043 0013 0043 0013 0043 0013 0043 0013 0043 0013 0043 0013 0018 "
-    "0014 0043 0013 0043 0013 0018 0014 0018 0014 0018 0014 0018 0014 0018 "
-    "0014 0043 0013 0018 0014 0018 0014 0043 0013 0043 0013 0043 0013 0042 "
-    "0014 0483";
-
-/** Speed/Fan button - toggles between LOW and HIGH fan speed */
-static const std::string SPEED_PRONTO = 
-    "0000 006D 0022 0000 0158 00B0 0013 0018 0014 0018 0014 0041 0014 0018 "
-    "0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018 "
-    "0014 0040 0016 0043 0013 0043 0013 003D 0019 0040 0015 0018 0014 003E "
-    "0018 0043 0013 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0043 "
-    "0013 0018 0014 0018 0014 0043 0013 0043 0013 0041 0014 0043 0013 0043 "
-    "0013 0483";
-
-/** Timer button - controls timer function (not currently used) */
-static const std::string TIMER_PRONTO = 
-    "0000 006D 0022 0000 0159 00AF 0014 0018 0014 0018 0014 0043 0013 0018 "
-    "0014 0018 0014 0018 0014 0018 0014 0018 0014 0043 0013 0043 0013 0018 "
-    "0014 0043 0013 0043 0013 0043 0013 0043 0013 0042 0014 0018 0014 0018 "
-    "0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 "
-    "0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 "
-    "0014 0483";
-
-/** Repeat frame */
-static const std::string CONFIRM_PRONTO = "0000 006D 0002 0000 0159 0056 0014 0483";
-
-/** @} */
-
-static const WoleixCommand POWER_COMMAND      = {{{ POWER_PRONTO, 40 }}};
-static const WoleixCommand TEMP_UP_COMMAND    = {{{ TEMP_UP_PRONTO, 40 }}};
-static const WoleixCommand TEMP_DOWN_COMMAND  = {{{ TEMP_DOWN_PRONTO, 40 }}};
-static const WoleixCommand MODE_COMMAND       = {{{ MODE_PRONTO, 40 }}};
-static const WoleixCommand SPEED_COMMAND      = {{{ SPEED_PRONTO, 40 }}};
-static const WoleixCommand TIMER_COMMAND      = {{{ TIMER_PRONTO, 40 }}}; // Not currently used
-
-static const WoleixCommand CONFIRM     = {{{ CONFIRM_PRONTO, 200 }}};
-static const WoleixCommand REPEAT     = {{{ CONFIRM_PRONTO, 40 }}};
 
 /**
  * Climate IR controller for Woleix air conditioners.
@@ -170,7 +69,7 @@ public:
      * 
      * @param state_machine Pointer to external state machine (for testing)
      */
-    WoleixClimate(WoleixACStateMachine* state_machine);
+    WoleixClimate(WoleixStateMachine* state_machine);
     
     /**
      * Setup method called once during initialization.
@@ -231,9 +130,10 @@ protected:
     virtual const std::vector<WoleixCommand>& calculate_commands_();
     virtual void update_state_();
 
-    WoleixACStateMachine *state_machine_{nullptr};  /**< State machine for command generation */
+    WoleixStateMachine *state_machine_{nullptr};  /**< State machine for command generation */
     sensor::Sensor *humidity_sensor_{nullptr};      /**< Optional humidity sensor */
     binary_sensor::BinarySensor *reset_button_{nullptr};  /**< Optional reset button */
+    std::vector<WoleixCommand> commands_;           /**< Queue of commands to transmit */
 };
 
 }  // namespace climate_ir_woleix

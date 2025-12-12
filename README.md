@@ -563,6 +563,29 @@ export CC=gcc
 export CXX=g++
 cmake ..
 ```
+## Codes
+
+### Pronto
+
+### NEC
+
+speeed:
+Address: 0xFB04
+Command: 0xF906
+
+Temp+:
+0xFA05
+
+Temp-:
+0xFE01
+
+Mode:
+0xF20D
+
+Power
+FB04
+
+Timer FF00
 
 ## 📚 Resources
 

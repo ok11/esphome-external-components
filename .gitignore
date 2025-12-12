@@ -52,3 +52,6 @@ build/
 # VS Code user-specific settings (keep project configs like settings.json, tasks.json, c_cpp_properties.json, launch.json)
 .vscode/*.log
 .vscode/.cmaketools.json
+
+.DS_Store
+*.log

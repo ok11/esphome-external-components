@@ -37,7 +37,7 @@ public:
   optional<ClimateSwingMode> swing_mode;
   
   // Setter for transmitter (used by tests)
-  void set_transmitter(remote_base::RemoteTransmitter* transmitter) {
+  void set_transmitter(remote_base::RemoteTransmitterBase* transmitter) {
     transmitter_ = transmitter;
   }
   
@@ -71,7 +71,7 @@ public:
   }
   virtual void publish_state() {}
   // Protected members accessible to derived classes
-  remote_base::RemoteTransmitter* transmitter_ = nullptr;
+  remote_base::RemoteTransmitterBase* transmitter_ = nullptr;
   float temperature_step_;
   float min_temperature_;
   float max_temperature_;

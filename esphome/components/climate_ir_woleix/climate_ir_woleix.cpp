@@ -5,7 +5,6 @@
 #include "esphome/components/climate/climate.h"
 
 #include "climate_ir_woleix.h"
-#include "state_mapper.h"
 
 namespace esphome
 {
@@ -17,17 +16,15 @@ using esphome::climate::ClimateFanMode;
 using esphome::climate::ClimateFeature;
 using esphome::climate::ClimateTraits;
 
-static const char *const TAG = "climate_ir_woleix.climate";
-
 WoleixClimate::WoleixClimate()
-    : WoleixClimate(new WoleixACStateMachine())
+    : WoleixClimate(new WoleixStateMachine())
 {
     target_temperature = WOLEIX_TEMP_DEFAULT;
     mode = climate::CLIMATE_MODE_OFF;
     fan_mode = climate::CLIMATE_FAN_LOW;
 }
 
-WoleixClimate::WoleixClimate(WoleixACStateMachine *state_machine)
+WoleixClimate::WoleixClimate(WoleixStateMachine *state_machine)
     : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX)
 {
   state_machine_ = state_machine;
@@ -98,7 +95,7 @@ void WoleixClimate::transmit_state()
   {
     // Send them over the IR transmitter
     transmit_commands_(commands);
-  
+
     ESP_LOGD(TAG, "Transmitted climate state - Mode: %d, Temp: %.1f, Fan: %d",
       static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
   
@@ -112,34 +109,8 @@ void WoleixClimate::transmit_state()
 
 void WoleixClimate::transmit_commands_(std::vector<WoleixCommand>& commands)
 {
-  for(const WoleixCommand& command: commands)
-  {
-    for (const WoleixSequence& sequence: command.sequences)
-    {
-      // Create ProntoData from the hex string
-      remote_base::ProntoData pronto_data;
-      pronto_data.data = sequence.pronto_hex;
-      pronto_data.delta = 0;
-      
-      // Transmit using ProntoProtocol
-      auto call = transmitter_->transmit();
-      auto data = call.get_data();
-      
-      // Set carrier frequency (38.03 kHz)
-      data->set_carrier_frequency(38030);
-      
-      // Encode the Pronto data
-      remote_base::ProntoProtocol().encode(data, pronto_data);
-
-      ESP_LOGD(TAG, "Transmitting %s", pronto_data.data.c_str());
-
-      // Perform the transmission
-      call.perform();
-
-      ESP_LOGD(TAG, "Delay of %d", sequence.delay_ms);
-      delay(sequence.delay_ms); // Small delay between commands
-    }
-  }
+    auto wt = WoleixCommandTransmitter(transmitter_);
+    wt.transmit_(commands);
 }
 
 ClimateTraits WoleixClimate::traits()
