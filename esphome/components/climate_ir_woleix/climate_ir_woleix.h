@@ -31,8 +31,8 @@ using climate_ir::ClimateIR;
  * Climate IR controller for Woleix air conditioners.
  * 
  * This class provides ESPHome integration for Woleix AC units via infrared
- * remote control. It implements the Climate interface and coordinates with
- * the WoleixACStateMachine for IR command generation.
+ * remote control. It implements the Climate interface and uses an internal
+ * WoleixStateMachine for IR command generation and state management.
  * 
  * Features:
  * - Temperature control (15-30°C in COOL mode)
@@ -40,6 +40,7 @@ using climate_ir::ClimateIR;
  * - Fan speed control (LOW, HIGH)
  * - Temperature sensor integration (required)
  * - Humidity sensor integration (optional)
+ * - Reset button functionality (optional)
  * - Pronto hex format IR transmission
  * 
  * Usage in ESPHome YAML:
@@ -50,9 +51,10 @@ using climate_ir::ClimateIR;
  *     transmitter_id: ir_transmitter
  *     sensor: room_temp
  *     humidity_sensor: room_humidity  # optional
+ *     reset_button: reset_btn  # optional
  * @endcode
  * 
- * @see WoleixACStateMachine
+ * @see WoleixStateMachine
  */
 class WoleixClimate : public ClimateIR {
 
@@ -60,21 +62,23 @@ public:
     /**
      * Default constructor.
      * 
-     * Creates a new WoleixClimate instance with its own internal state machine.
+     * Creates a new WoleixClimate instance with its own internal state machine and command transmitter.
      */
     WoleixClimate();
     
     /**
-     * Constructor with custom state machine.
+     * Constructor with custom state machine and command transmitter.
      * 
      * @param state_machine Pointer to external state machine (for testing)
+     * @param command_transmitter Pointer to external command transmitter (for testing)
      */
     WoleixClimate(WoleixStateMachine* state_machine, WoleixCommandTransmitter* command_transmitter);
     
     /**
      * Setup method called once during initialization.
      * 
-     * Initializes the humidity sensor callback if a humidity sensor is configured.
+     * Calls the parent ClimateIR::setup() method and then initializes the
+     * humidity sensor callback if a humidity sensor is configured.
      * This allows the climate controller to track current humidity levels.
      */
     void setup() override;
@@ -89,26 +93,33 @@ public:
     /**
      * Set the reset button to reconcile the state with the physical device.
      * 
-     * @param humidity_sensor Pointer to the reset button
+     * @param btn Pointer to the reset button
      */
     void set_reset_button(binary_sensor::BinarySensor *btn) { this->reset_button_ = btn; }
 
     /**
      * Reset the state machine to default values.
      * 
-     * Resets internal state to: power=ON, mode=COOL, temperature=25°C, fan_speed=LOW
+     * Calls the reset() method of the internal state machine.
+     * Note: This may not explicitly set all values to defaults,
+     * but relies on the state machine's reset implementation.
      * Does not transmit any IR commands.
      */
     virtual void reset_state();
 
+    /**
+     * Check if the climate device is currently on.
+     * 
+     * @return true if the device is on, false otherwise
+     */
     virtual bool is_on() { return this->state_machine_->get_state().power == WoleixPowerState::ON; }
 
 protected:
     /**
      * Transmit the current state via IR.
      * 
-     * Called by ESPHome when the climate state changes. Generates the necessary
-     * IR command sequence and transmits it to the AC unit.
+     * Called by ESPHome when the climate state changes. Calculates necessary commands,
+     * transmits them, and updates internal state.
      */
     void transmit_state() override;
     
@@ -127,14 +138,23 @@ protected:
      */
     virtual void transmit_commands_(std::vector<WoleixCommand>& commands);
     
+    /**
+     * Calculate commands needed to reach the target state.
+     * 
+     * @return Vector of WoleixCommand objects representing the necessary IR commands.
+     */
     virtual const std::vector<WoleixCommand>& calculate_commands_();
+
+    /**
+     * Update internal state based on the current state machine state.
+     */
     virtual void update_state_();
 
-    WoleixStateMachine *state_machine_{nullptr};  /**< State machine for command generation */
-    WoleixCommandTransmitter *command_transmitter_{nullptr};
-    sensor::Sensor *humidity_sensor_{nullptr};      /**< Optional humidity sensor */
+    WoleixStateMachine *state_machine_{nullptr};  /**< State machine for command generation and state management */
+    WoleixCommandTransmitter *command_transmitter_{nullptr};  /**< Command transmitter for sending IR commands */
+    sensor::Sensor *humidity_sensor_{nullptr};  /**< Optional humidity sensor */
     binary_sensor::BinarySensor *reset_button_{nullptr};  /**< Optional reset button */
-    std::vector<WoleixCommand> commands_;           /**< Queue of commands to transmit */
+    std::vector<WoleixCommand> commands_;  /**< Queue of commands to transmit */
 };
 
 }  // namespace climate_ir_woleix

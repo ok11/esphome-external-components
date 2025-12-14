@@ -5,10 +5,20 @@
 namespace esphome {
 namespace climate_ir_woleix {
 
+/**
+ * @brief Tag for logging messages related to the Woleix climate component.
+ */
 static const char *const TAG = "climate_ir_woleix.climate";
 
-const float WOLEIX_TEMP_MIN = 15.0f;  /**< Minimum temperature in Celsius */
-const float WOLEIX_TEMP_MAX = 30.0f;  /**< Maximum temperature in Celsius */
+/**
+ * @brief Minimum temperature supported by the Woleix AC unit in Celsius.
+ */
+const float WOLEIX_TEMP_MIN = 15.0f;
+
+/**
+ * @brief Maximum temperature supported by the Woleix AC unit in Celsius.
+ */
+const float WOLEIX_TEMP_MAX = 30.0f;
 
 /**
  * @name IR Command Definitions
@@ -82,26 +92,40 @@ static const std::string REPEAT_PRONTO = "0000 006D 0002 0000 0159 0056 0014 048
  * @{
  */
 
-/** Woleix NEC address */
-static uint16_t ADDRESS_NEC   = 0xFB04;
+/**
+ * @brief Woleix NEC address for IR communication.
+ */
+static const uint16_t ADDRESS_NEC   = 0xFB04;
 
-/** Power button - toggles AC unit on/off */
-static uint16_t POWER_NEC     = 0xFB04;
+/**
+ * @brief NEC code for Power button (toggles AC unit on/off).
+ */
+static const uint16_t POWER_NEC     = 0xFB04;
 
-/** Temperature Up button - increases temperature by 1°C */
-static uint16_t TEMP_UP_NEC   = 0xFA05;
+/**
+ * @brief NEC code for Temperature Up button (increases temperature by 1°C).
+ */
+static const uint16_t TEMP_UP_NEC   = 0xFA05;
 
-/** Temperature Down button - decreases temperature by 1°C */
-static uint16_t TEMP_DOWN_NEC = 0xFE01;
+/**
+ * @brief NEC code for Temperature Down button (decreases temperature by 1°C).
+ */
+static const uint16_t TEMP_DOWN_NEC = 0xFE01;
 
-/** Mode button - cycles through COOL -> DEHUM -> FAN modes */
-static uint16_t MODE_NEC      = 0xF20D;
+/**
+ * @brief NEC code for Mode button (cycles through COOL -> DEHUM -> FAN modes).
+ */
+static const uint16_t MODE_NEC      = 0xF20D;
 
-/** Speed/Fan button - toggles between LOW and HIGH fan speed */
-static uint16_t SPEED_NEC     = 0xF906;
+/**
+ * @brief NEC code for Speed/Fan button (toggles between LOW and HIGH fan speed).
+ */
+static const uint16_t SPEED_NEC     = 0xF906;
 
-/** Timer button - controls timer function (not currently used) */
-static uint16_t TIMER_NEC     = 0xFF00;
+/**
+ * @brief NEC code for Timer button (controls timer function, not currently used).
+ */
+static const uint16_t TIMER_NEC     = 0xFF00;
 
 /** @} */  // End of IR Command Definitions
 

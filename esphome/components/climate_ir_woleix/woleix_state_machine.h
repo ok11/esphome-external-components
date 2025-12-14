@@ -8,20 +8,26 @@
 namespace esphome {
 namespace climate_ir_woleix {
 
-/** Power state of the AC unit */
+/**
+ * @brief Represents the power state of the AC unit.
+ */
 enum class WoleixPowerState {
     OFF,  /**< AC unit is powered off */
     ON    /**< AC unit is powered on */
 };
 
-/** Operating mode of the AC unit */
+/**
+ * @brief Represents the operating mode of the AC unit.
+ */
 enum class WoleixMode {
     COOL,   /**< Cooling mode - temperature adjustable (15-30°C) */
     DEHUM,  /**< Dehumidify/Dry mode - removes moisture from air */
     FAN     /**< Fan only mode - circulates air without cooling */
 };
 
-/** Fan speed settings */
+/**
+ * @brief Represents the fan speed settings of the AC unit.
+ */
 enum class WoleixFanSpeed {
     LOW,   /**< Low fan speed */
     HIGH   /**< High fan speed */
@@ -33,7 +39,7 @@ const float WOLEIX_TEMP_DEFAULT = 25.0f;                              /**< Defau
 const WoleixFanSpeed WOLEIX_FAN_DEFAULT = WoleixFanSpeed::LOW;        /**< Default fan speed */
 
 /**
- * Complete internal state of the AC unit.
+ * @brief Complete internal state of the AC unit.
  * 
  * This structure holds all the state variables that define the current
  * operating configuration of the air conditioner unit.
@@ -58,10 +64,10 @@ struct WoleixInternalState {
 };
 
 /**
- * State machine for Woleix AC unit control via IR commands.
+ * @brief State machine for Woleix AC unit control via IR commands.
  * 
  * This class manages the internal state of the AC unit and generates
- * the necessary sequence of Pronto hex format IR commands to transition
+ * the necessary sequence of IR commands to transition
  * from the current state to a desired target state.
  * 
  * Key behaviors:
@@ -72,8 +78,8 @@ struct WoleixInternalState {
  * 
  * Usage example:
  * @code
- * WoleixACStateMachine state_machine;
- * state_machine.set_target_state(WoleixPowerState::ON, WoleixMode::COOL, 24.0f, WoleixFanSpeed::HIGH);
+ * WoleixStateMachine state_machine;
+ * state_machine.transit_to_state(WoleixPowerState::ON, WoleixMode::COOL, 24.0f, WoleixFanSpeed::HIGH);
  * auto commands = state_machine.get_commands();
  * // Transmit commands via IR
  * @endcode

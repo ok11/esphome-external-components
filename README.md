@@ -13,36 +13,42 @@ esphome-external-components/
 │           ├── climate.py                  # ESPHome climate platform
 │           ├── climate_ir_woleix.h         # C++ header file
 │           ├── climate_ir_woleix.cpp       # C++ implementation
-│           ├── woleix_ac_state_machine.h   # State machine header
-│           ├── woleix_ac_state_machine.cpp # State machine implementation
+│           ├── woleix_constants.h          # Constants definition
+│           ├── woleix_state_machine.h      # State machine header
+│           ├── woleix_state_machine.cpp    # State machine implementation
+│           ├── woleix_state_mapper.h       # State mapper header
+│           ├── woleix_state_mapper.cpp     # State mapper implementation
+│           ├── woleix_comm.h               # Communication header
+│           ├── woleix_comm.cpp             # Communication implementation
 │           └── LICENSE                     # Component license
-├── tests/                                  # Test suite
+├── tests/
 │   ├── unit/                               # C++ unit tests
-│   │   ├── climate_ir_woleix_test.cpp      # Climate component tests (27 tests)
-│   │   ├── woleix_ac_state_machine_test.cpp # State machine tests (26 tests)
-│   │   ├── state_mapper_test.cpp           # State mapper tests (19 tests)
+│   │   ├── climate_ir_woleix_test.cpp      # Climate component tests
+│   │   ├── woleix_state_machine_test.cpp   # State machine tests
+│   │   ├── woleix_state_mapper_test.cpp    # State mapper tests
+│   │   ├── woleix_comm_test.cpp            # Communication tests
 │   │   ├── CMakeLists.txt                  # Test build configuration
 │   │   ├── run_tests.sh                    # Test execution script
 │   │   ├── generate_coverage.sh            # Coverage report generator
+│   │   ├── README.md                       # Unit testing documentation
 │   │   └── mocks/                          # Mock ESPHome headers
 │   ├── integration/                        # Integration tests
 │   │   ├── test_configs/                   # ESPHome test configurations
 │   │   ├── test_runner.py                  # Test orchestration script
 │   │   ├── run_tests.sh                    # Integration test runner
-│   │   └── docker-compose.yml              # Docker environment
-│   └── README.md                           # Testing documentation
-├── .vscode/                            # VS Code configuration
-│   ├── settings.json                   # Editor settings
-│   ├── tasks.json                      # Build tasks
-│   ├── launch.json                     # Debug configurations
-│   └── c_cpp_properties.json           # C++ IntelliSense config
-├── platformio_install_deps_locally.py  # PlatformIO dependency installer
-├── prepare_esphome.sh                  # ESPHome setup helper script
-├── .venv/                              # Python virtual environment
-├── CMakeLists.txt                      # Root CMake configuration
-├── .gitignore                          # Git ignore rules
-├── .env                                # Environment variables (not in git)
-└── README.md                           # This file
+│   │   ├── run_tests.py                    # Python test runner
+│   │   ├── docker-compose.yml              # Docker environment
+│   │   ├── Dockerfile                      # Docker configuration
+│   │   └── README.md                       # Integration testing documentation
+│   └── README.md                           # General testing documentation
+├── .vscode/                                # VS Code configuration
+├── CMakeLists.txt                          # Root CMake configuration
+├── platformio_install_deps_locally.py      # PlatformIO dependency installer
+├── prepare_esphome.sh                      # ESPHome setup helper script
+├── requirements.txt                        # Python dependencies
+├── .gitignore                              # Git ignore rules
+├── .env.example                            # Example environment variables
+└── README.md                               # This file
 ```
 
 ## 🛠️ Development Setup
@@ -432,10 +438,13 @@ xdg-open build/coverage/html/index.html  # Linux
 
 #### Current Test Status
 
-As of the latest update, all 72 unit tests in the test suite are passing:
-- **27 tests** in `climate_ir_woleix_test.cpp` (Climate component tests)
-- **26 tests** in `woleix_ac_state_machine_test.cpp` (State machine tests)
-- **19 tests** in `state_mapper_test.cpp` (State mapper tests)
+As of the latest update, all unit tests in the test suite are passing:
+- **28 tests** in `climate_ir_woleix_test.cpp` (Climate component tests)
+- **26 tests** in `woleix_state_machine_test.cpp` (State machine tests)
+- **19 tests** in `woleix_state_mapper_test.cpp` (State mapper tests)
+- **12 tests** in `woleix_comm_test.cpp` (Communication tests)
+
+A total of 85 tests are now passing, including a recently resolved segmentation fault issue.
 
 These tests cover:
 

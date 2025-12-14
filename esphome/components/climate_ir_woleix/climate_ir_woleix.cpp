@@ -17,7 +17,9 @@ using esphome::climate::ClimateFeature;
 using esphome::climate::ClimateTraits;
 
 WoleixClimate::WoleixClimate()
-    : WoleixClimate(new WoleixStateMachine(), new WoleixCommandTransmitter(transmitter_))
+    : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX),
+      state_machine_(new WoleixStateMachine()),
+      command_transmitter_(new WoleixCommandTransmitter(nullptr))
 {
     target_temperature = WOLEIX_TEMP_DEFAULT;
     mode = climate::CLIMATE_MODE_OFF;
@@ -25,10 +27,10 @@ WoleixClimate::WoleixClimate()
 }
 
 WoleixClimate::WoleixClimate(WoleixStateMachine *state_machine, WoleixCommandTransmitter *command_transmitter)
-    : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX)
+    : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX),
+      state_machine_(state_machine),
+      command_transmitter_(command_transmitter)
 {
-  state_machine_ = state_machine;
-  command_transmitter_ = command_transmitter;
 }
 
 void WoleixClimate::reset_state()
@@ -110,8 +112,9 @@ void WoleixClimate::transmit_state()
 
 void WoleixClimate::transmit_commands_(std::vector<WoleixCommand>& commands)
 {
-    if (command_transmitter_->get_transmitter() == nullptr)
-      command_transmitter_->set_transmitter(transmitter_);
+    if (command_transmitter_->get_transmitter() == nullptr) {
+        command_transmitter_->set_transmitter(transmitter_);
+    }
     command_transmitter_->transmit_(commands);
 }
 

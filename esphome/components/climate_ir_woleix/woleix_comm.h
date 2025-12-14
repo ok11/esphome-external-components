@@ -20,7 +20,14 @@ namespace climate_ir_woleix {
 
 using remote_base::RemoteTransmitterBase;
 
+/**
+ * @brief Base class for Woleix IR command transmitters.
+ */
 class WoleixTransmitter;
+
+/**
+ * @brief Base class for Woleix IR commands.
+ */
 
 class WoleixCommandBase {
 public:
@@ -61,6 +68,9 @@ protected:
     uint8_t repeat_count_{1};  /**< Number of times to repeat the command */
 };
 
+/**
+ * @brief Represents a Woleix IR command in Pronto hex format.
+ */
 class WoleixProntoCommand: public WoleixCommandBase {
 public:
     WoleixProntoCommand(Type type, uint32_t delay_ms, uint32_t repeat_count = 1)
@@ -94,6 +104,9 @@ protected:
     std::string pronto_hex_;  /**< Pronto format IR command string */
 };
 
+/**
+ * @brief Represents a Woleix IR command in NEC format.
+ */
 class WoleixNecCommand: public WoleixCommandBase {
 public:
     WoleixNecCommand(Type type, uint16_t address, uint32_t delay_ms, uint32_t repeat_count = 1)
@@ -137,6 +150,9 @@ protected:
 // Variant holding all possible types
 using WoleixCommand = std::variant<WoleixProntoCommand, WoleixNecCommand>;
 
+/**
+ * @brief Base class for Woleix IR transmitters.
+ */
 class WoleixTransmitter {
 public:
     WoleixTransmitter(RemoteTransmitterBase* transmitter)
@@ -154,6 +170,9 @@ protected:
     RemoteTransmitterBase* transmitter_;
 };
 
+/**
+ * @brief Transmitter class for sending Woleix IR commands.
+ */
 class WoleixCommandTransmitter: public WoleixTransmitter {
 public:
     WoleixCommandTransmitter(RemoteTransmitterBase* transmitter)
@@ -172,10 +191,11 @@ public:
     virtual void operator()(const WoleixNecCommand& command);
 };
 
-/** @name WoleixProntoTransmitter
- * Transmits IR commands in Pronto hex format for Woleix AC units.
+/**
+ * @brief Transmits IR commands in Pronto hex format for Woleix AC units.
+ * 
  * Uses a carrier frequency of 38.03 kHz.
- * @{ */
+ */
 
 class WoleixProntoTransmitter : WoleixCommandTransmitter {
 public:
@@ -186,9 +206,9 @@ public:
 };
 /** @} */
 
-/** @name WoleixNecTransmitter
- * Transmits IR commands in NEC format for Woleix AC units.
- * @{ */
+/**
+ * @brief Transmits IR commands in NEC format for Woleix AC units.
+ */
 
 class WoleixNecTransmitter : WoleixCommandTransmitter {
 public:
