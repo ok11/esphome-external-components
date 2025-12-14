@@ -64,22 +64,67 @@ esphome-external-components/
 
 ## 📖 Component Architecture
 
-The climate_ir_woleix component consists of two main parts:
+The climate_ir_woleix component consists of four main parts:
 
-### Climate IR Component (`climate_ir_woleix.h/cpp`)
+### 1. Climate IR Component (`climate_ir_woleix.h/cpp`)
 
-- Implements ESPHome's Climate interface
-- Handles user interactions and state management
+- Implements ESPHome's Climate interface by extending ClimateIR
+- Handles user interactions and overall state management
 - Integrates with temperature/humidity sensors
-- Coordinates IR command transmission
+- Coordinates IR command transmission using WoleixCommandTransmitter
 - Supports an optional reset button for state reconciliation
+- Uses WoleixStateMachine to manage state transitions and command generation
+- Utilizes StateMapper for converting between ESPHome and Woleix-specific states
 
-### State Machine (`woleix_ac_state_machine.h/cpp`)
+### 2. State Machine (`woleix_state_machine.h/cpp`)
 
 - Manages internal AC state (power, mode, temperature, fan speed)
 - Generates optimal command sequences for state transitions
-- Provides Pronto hex format IR commands
 - Handles mode cycling and temperature adjustments
+- Provides methods for state transitions and retrieving current state
+
+### 3. Communication (`woleix_comm.h/cpp`)
+
+- Defines classes for IR command representation (WoleixProntoCommand, WoleixNecCommand)
+- Implements WoleixCommandTransmitter for sending IR commands
+- Supports both Pronto hex format and NEC protocol for IR transmission
+
+### 4. State Mapper (`woleix_state_mapper.h/cpp`)
+
+- Provides utility functions for mapping between ESPHome climate states and Woleix-specific states
+- Handles conversions for modes, fan speeds, and power states
+
+### Shared Resources
+
+- Constants (`woleix_constants.h`): Defines constant values used throughout the component, including temperature limits and IR command codes.
+
+### Interaction Between Components
+
+The following sequence diagram illustrates the collaboration between the components:
+
+```mermaid
+sequenceDiagram
+    participant ESPHome
+    participant WoleixClimate
+    participant StateMapper
+    participant WoleixStateMachine
+    participant WoleixCommandTransmitter
+    participant Woleix AC
+
+    ESPHome->>WoleixClimate: Update climate state
+    WoleixClimate->>StateMapper: Convert ESPHome state to Woleix state
+    StateMapper-->>WoleixClimate: Woleix-specific state
+    WoleixClimate->>WoleixStateMachine: Set target state
+    WoleixStateMachine-->>WoleixClimate: Generated command sequence
+    WoleixClimate->>WoleixCommandTransmitter: Transmit IR commands
+    WoleixCommandTransmitter->>Woleix AC: Send IR signals
+    WoleixClimate->>WoleixStateMachine: Update internal state
+    WoleixClimate->>StateMapper: Convert Woleix state to ESPHome state
+    StateMapper-->>WoleixClimate: ESPHome-compatible state
+    WoleixClimate->>ESPHome: Publish updated state
+```
+
+This diagram shows how user interactions flow through the system, from ESPHome through the various components, resulting in IR commands being sent and the state being updated and published back to ESPHome.
 
 **Key Features:**
 

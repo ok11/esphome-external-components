@@ -7,8 +7,10 @@ This directory contains comprehensive tests for the climate_ir_woleix ESPHome ex
 ```text
 tests/
 ├── unit/                               # Fast, isolated unit tests
-│   ├── climate_ir_woleix_test.cpp      # Climate component tests (21 tests)
-│   ├── woleix_ac_state_machine_test.cpp # State machine tests (26 tests)
+│   ├── climate_ir_woleix_test.cpp      # Climate component tests (28 tests)
+│   ├── woleix_state_machine_test.cpp   # State machine tests (26 tests)
+│   ├── woleix_state_mapper_test.cpp    # State mapper tests (19 tests)
+│   ├── woleix_comm_test.cpp            # Communication tests (12 tests)
 │   ├── CMakeLists.txt
 │   ├── run_tests.sh                    # Quick test runner
 │   ├── generate_coverage.sh            # Coverage report generator
@@ -33,9 +35,11 @@ tests/
 
 **Test Files:**
 
-- `climate_ir_woleix_test.cpp` - 21 tests for climate component
-- `woleix_ac_state_machine_test.cpp` - 26 tests for state machine
-- **Total: 47 unit tests**
+- `climate_ir_woleix_test.cpp` - 28 tests for climate component
+- `woleix_state_machine_test.cpp` - 26 tests for state machine
+- `woleix_state_mapper_test.cpp` - 19 tests for state mapper
+- `woleix_comm_test.cpp` - 12 tests for communication
+- **Total: 85 unit tests**
 
 **Characteristics:**
 
@@ -337,22 +341,57 @@ TEST_F(WoleixClimateTest, YourNewTest) {
 }
 ```
 
-**For State Machine** - Edit `tests/unit/woleix_ac_state_machine_test.cpp`:
+**For State Machine** - Edit `tests/unit/woleix_state_machine_test.cpp`:
 
 ```cpp
-TEST(WoleixACStateMachineTest, YourNewTest) {
+TEST(WoleixStateMachineTest, YourNewTest) {
   // Setup
-  WoleixACStateMachine state_machine;
+  WoleixStateMachine state_machine;
   
   // Execute
-  state_machine.set_target_state(WoleixPowerState::ON, 
-                                  WoleixMode::COOL, 
-                                  25.0f, 
-                                  WoleixFanSpeed::LOW);
+  state_machine.transit_to_state(WoleixPowerState::ON, 
+                                 WoleixMode::COOL, 
+                                 25.0f, 
+                                 WoleixFanSpeed::LOW);
   
   // Verify
   auto commands = state_machine.get_commands();
   EXPECT_EQ(commands.size(), expected_count);
+}
+```
+
+**For State Mapper** - Edit `tests/unit/woleix_state_mapper_test.cpp`:
+
+```cpp
+TEST(StateMapperTest, YourNewTest) {
+  // Setup
+  WoleixMode woleix_mode = WoleixMode::COOL;
+  
+  // Execute
+  ClimateMode esphome_mode = StateMapper::woleix_to_esphome_mode(woleix_mode);
+  
+  // Verify
+  EXPECT_EQ(esphome_mode, ClimateMode::CLIMATE_MODE_COOL);
+}
+```
+
+**For Communication** - Edit `tests/unit/woleix_comm_test.cpp`:
+
+```cpp
+TEST(WoleixCommandTransmitterTest, YourNewTest) {
+  // Setup
+  MockRemoteTransmitterBase mock_transmitter;
+  WoleixCommandTransmitter transmitter(&mock_transmitter);
+  
+  // Expectations
+  EXPECT_CALL(mock_transmitter, send_(testing::_, testing::_, testing::_))
+      .Times(1);
+  
+  // Execute
+  WoleixProntoCommand command(WoleixCommandBase::Type::POWER, 200, 1);
+  transmitter.transmit_(command);
+  
+  // Verify is handled by the EXPECT_CALL
 }
 ```
 
