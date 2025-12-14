@@ -48,6 +48,7 @@ build/
 
 # Python virtual environment
 .venv/
+venv/
 
 # VS Code user-specific settings (keep project configs like settings.json, tasks.json, c_cpp_properties.json, launch.json)
 .vscode/*.log

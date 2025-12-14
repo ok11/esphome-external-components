@@ -69,7 +69,7 @@ public:
      * 
      * @param state_machine Pointer to external state machine (for testing)
      */
-    WoleixClimate(WoleixStateMachine* state_machine);
+    WoleixClimate(WoleixStateMachine* state_machine, WoleixCommandTransmitter* command_transmitter);
     
     /**
      * Setup method called once during initialization.
@@ -131,6 +131,7 @@ protected:
     virtual void update_state_();
 
     WoleixStateMachine *state_machine_{nullptr};  /**< State machine for command generation */
+    WoleixCommandTransmitter *command_transmitter_{nullptr};
     sensor::Sensor *humidity_sensor_{nullptr};      /**< Optional humidity sensor */
     binary_sensor::BinarySensor *reset_button_{nullptr};  /**< Optional reset button */
     std::vector<WoleixCommand> commands_;           /**< Queue of commands to transmit */

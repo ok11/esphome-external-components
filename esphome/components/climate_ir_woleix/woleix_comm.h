@@ -142,12 +142,19 @@ public:
     WoleixTransmitter(RemoteTransmitterBase* transmitter)
         : transmitter_(transmitter) {}
     virtual ~WoleixTransmitter() = default;
-
+    virtual void set_transmitter(RemoteTransmitterBase* transmitter)
+    {
+        transmitter_ = transmitter;
+    }
+    virtual RemoteTransmitterBase* get_transmitter() const
+    {
+        return transmitter_;
+    }
 protected:
     RemoteTransmitterBase* transmitter_;
 };
 
-class WoleixCommandTransmitter: WoleixTransmitter {
+class WoleixCommandTransmitter: public WoleixTransmitter {
 public:
     WoleixCommandTransmitter(RemoteTransmitterBase* transmitter)
         : WoleixTransmitter(transmitter) {}

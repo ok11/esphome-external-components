@@ -1,7 +1,8 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "climate_ir_woleix.h"
+#include <numeric>
 
+#include "climate_ir_woleix.h"
 #include "woleix_state_machine.h"
 
 using namespace esphome::climate_ir_woleix;
@@ -51,12 +52,12 @@ protected:
     
     MockWoleixStateMachine* state_machine_;
     
-    // Helper to count specific commands in a vector
+    // Helper to count specific commands in a vector and sum their repeat counts
     int count_command(const std::vector<WoleixCommand>& commands, WoleixCommandBase::Type type) {
-        return std::count_if(commands.begin(), commands.end(), 
-            [type](const WoleixCommand& cmd) {
-                return std::visit([type](const auto& c) { 
-                    return c.get_type() == type; 
+        return std::accumulate(commands.begin(), commands.end(), 0,
+            [type](int sum, const WoleixCommand& cmd) {
+                return sum + std::visit([type](const auto& c) -> int { 
+                    return c.get_type() == type ? c.get_repeat_count() : 0;
                 }, cmd);
             });
     }
