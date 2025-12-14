@@ -7,6 +7,11 @@ namespace esphome {
 namespace climate_ir_woleix {
 
 /**
+ * @brief Current component version.
+ */
+static const char *const VERSION = "0.2.4";
+
+/**
  * @brief Tag for logging messages related to the Woleix climate component.
  */
 static const char *const TAG = "climate_ir_woleix.climate";

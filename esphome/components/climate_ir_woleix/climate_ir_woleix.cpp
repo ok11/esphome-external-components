@@ -40,6 +40,9 @@ void WoleixClimate::reset_state()
 
 void WoleixClimate::setup()
 {
+  // Print out current version
+  ESP_LOGI(TAG, "Vesrion: %s", VERSION);
+
   // Call parent setup first
   ClimateIR::setup();
   
