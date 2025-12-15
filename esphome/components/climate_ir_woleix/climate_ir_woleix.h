@@ -88,15 +88,37 @@ public:
      * 
      * @param humidity_sensor Pointer to sensor providing humidity data
      */
-    void set_humidity_sensor(sensor::Sensor *humidity_sensor) { this->humidity_sensor_ = humidity_sensor; }
+    void set_humidity_sensor(sensor::Sensor *humidity_sensor) { humidity_sensor_ = humidity_sensor; }
 
     /**
      * Set the reset button to reconcile the state with the physical device.
      * 
      * @param btn Pointer to the reset button
      */
-    void set_reset_button(binary_sensor::BinarySensor *btn) { this->reset_button_ = btn; }
+    void set_reset_button(binary_sensor::BinarySensor *btn) { reset_button_ = btn; }
 
+    void set_protocol(Protocol protocol)
+    {
+        if (protocol_ == protocol)
+        {
+            ESP_LOGI
+            (
+                TAG,
+                "Protocol %u is requested, but is is already set", 
+                static_cast<unsigned int>(protocol)
+            );
+            return;
+        }
+        if (protocol == Protocol::NEC)
+        {
+            state_machine_->set_creator(std::make_unique<WoleixNecCommandCreator>());
+        }
+        else
+        {
+            state_machine_->set_creator(std::make_unique<WoleixProntoCommandCreator>());
+        }
+        protocol_ = protocol;
+    }
     /**
      * Reset the state machine to default values.
      * 
@@ -155,6 +177,7 @@ protected:
     sensor::Sensor *humidity_sensor_{nullptr};  /**< Optional humidity sensor */
     binary_sensor::BinarySensor *reset_button_{nullptr};  /**< Optional reset button */
     std::vector<WoleixCommand> commands_;  /**< Queue of commands to transmit */
+    Protocol protocol_;
 };
 
 }  // namespace climate_ir_woleix

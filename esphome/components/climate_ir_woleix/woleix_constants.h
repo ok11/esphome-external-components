@@ -6,6 +6,12 @@
 namespace esphome {
 namespace climate_ir_woleix {
 
+enum class Protocol: uint8_t
+{
+    NEC,
+    PRONTO
+};
+
 /**
  * @brief Current component version.
  */
@@ -134,6 +140,7 @@ static const uint16_t SPEED_NEC     = 0xF906;
 static const uint16_t TIMER_NEC     = 0xFF00;
 
 /** @} */  // End of IR Command Definitions
+
 
 }  // namespace climate_ir_woleix
 }  // namespace esphome

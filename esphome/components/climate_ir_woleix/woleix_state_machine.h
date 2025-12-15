@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 
 #include "woleix_comm.h"
 
@@ -62,7 +63,44 @@ struct WoleixInternalState {
           fan_speed(WOLEIX_FAN_DEFAULT)
     {}
 };
+struct WoleixCommandCreator
+{
+    virtual WoleixCommand create(WoleixCommandBase::Type type, uint32_t delay, uint32_t repeats) const = 0;
+};
 
+struct WoleixNecCommandCreator: WoleixCommandCreator
+{
+    virtual WoleixCommand create(WoleixCommandBase::Type type, uint32_t delay, uint32_t repeats) const override
+    {
+        return WoleixNecCommand(type, delay, repeats);
+    }
+};
+
+struct WoleixProntoCommandCreator: WoleixCommandCreator
+{
+    virtual WoleixCommand create(WoleixCommandBase::Type type, uint32_t delay, uint32_t repeats) const override
+    {
+        return WoleixProntoCommand(type, delay, repeats);
+    }
+};
+
+class WoleixCommandFactory
+{
+public:
+    WoleixCommandFactory()
+    {
+        creator_ = std::make_unique<WoleixNecCommandCreator>();
+    }
+
+    virtual WoleixCommand create(WoleixCommandBase::Type type, uint32_t delay, uint32_t repeats) const
+    {
+        return creator_->create(type, delay, repeats);
+    }
+
+    virtual void set_creator(std::unique_ptr<WoleixCommandCreator> creator) { creator_ = std::move(creator); }
+protected:
+    std::unique_ptr<WoleixCommandCreator> creator_;
+};
 /**
  * @brief State machine for Woleix AC unit control via IR commands.
  * 
@@ -95,6 +133,15 @@ public:
      * power=ON, mode=COOL, temperature=25°C, fan_speed=LOW
      */
     WoleixStateMachine();
+
+    /**
+     * Factory constructor.
+     * 
+     * Initializes the state machine with default device settings:
+     * power=ON, mode=COOL, temperature=25°C, fan_speed=LOW
+     * and sets the command factory
+     */
+    WoleixStateMachine(WoleixCommandFactory* factory);
     
     /**
      * Set the target state and generate the command sequence needed.
@@ -138,9 +185,15 @@ public:
      */
     const WoleixInternalState& get_state() const { return current_state_; }
 
+    void set_creator(std::unique_ptr<WoleixCommandCreator> creator)
+    {
+        command_factory_->set_creator(std::move(creator));
+    }
+
 protected:
 
     WoleixInternalState current_state_;  /**< Current tracked state of the AC unit */
+    WoleixCommandFactory* command_factory_;
 
 private:
     std::vector<WoleixCommand> command_queue_;  /**< Queue of IR commands to be transmitted */

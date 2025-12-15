@@ -1,3 +1,7 @@
+#include <ranges>
+#include <algorithm>
+#include <cmath>
+
 #include "esphome/core/hal.h"
 #include "esphome/core/log.h"
 #include "woleix_comm.h"
@@ -15,7 +19,7 @@ void WoleixCommandTransmitter::operator()(const WoleixProntoCommand& command)
     ProntoData pronto_data;
     pronto_data.data = command.get_pronto_hex();
     pronto_data.delta = 0;
-    uint16_t repeats = command.get_repeat_count();
+    int repeats = command.get_repeat_count();
     uint16_t delay_ms = command.get_delay_ms();
 
     ESP_LOGD
@@ -30,7 +34,18 @@ void WoleixCommandTransmitter::operator()(const WoleixProntoCommand& command)
         repeats
     );
 
-    transmitter_->transmit<ProntoProtocol>(pronto_data, repeats, delay_ms);
+    transmitter_->transmit<ProntoProtocol>(pronto_data, 1, 40);
+            
+    std::ranges::for_each
+    (
+        std::views::iota(1, repeats),
+        [this](int)
+        {
+            transmitter_->transmit<ProntoProtocol>(ProntoData{ REPEAT_PRONTO, 0 }, 1, 40); 
+        }
+    );
+
+    delay(delay_ms - 40);
 }
 
 void WoleixCommandTransmitter::operator()(const WoleixNecCommand& command)
@@ -53,7 +68,7 @@ void WoleixCommandTransmitter::operator()(const WoleixNecCommand& command)
         nec_data.command_repeats
     );
 
-    transmitter_->transmit<NECProtocol>(nec_data, nec_data.command_repeats, delay_ms);
+    transmitter_->transmit<NECProtocol>(nec_data, 1, delay_ms);
 }
 
 }  // namespace climate_ir_woleix

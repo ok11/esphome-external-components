@@ -73,7 +73,7 @@ protected:
  */
 class WoleixProntoCommand: public WoleixCommandBase {
 public:
-    WoleixProntoCommand(Type type, uint32_t delay_ms, uint32_t repeat_count = 1)
+    WoleixProntoCommand(Type type, uint32_t delay_ms = 0, uint32_t repeat_count = 1)
         : WoleixCommandBase(type, delay_ms, repeat_count),
           pronto_hex_(get_pronto_hex_for_type(type)) {}
     
@@ -109,7 +109,7 @@ protected:
  */
 class WoleixNecCommand: public WoleixCommandBase {
 public:
-    WoleixNecCommand(Type type, uint16_t address, uint32_t delay_ms, uint32_t repeat_count = 1)
+    WoleixNecCommand(Type type, const uint16_t address, uint32_t delay_ms = 0, uint32_t repeat_count = 1)
         : WoleixCommandBase(type, delay_ms, repeat_count),
           address_(address),
           command_code_(get_value_for_type(type)) {}
@@ -125,11 +125,11 @@ public:
         return pronto_map.at(type);
     }
 
-    const uint16_t& get_command_code() const {
+    uint32_t get_command_code() const {
         return command_code_;
     }
 
-    uint16_t get_address() const {
+    uint32_t get_address() const {
         return address_;
     }
     /**

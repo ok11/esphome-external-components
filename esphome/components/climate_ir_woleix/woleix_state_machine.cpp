@@ -1,6 +1,3 @@
-#include <ranges>
-#include <algorithm>
-#include <cmath>
 
 #include "esphome/core/log.h"
 
@@ -17,10 +14,14 @@ static const std::vector<WoleixMode> MODE_SWITCH_SEQUENCE =
     WoleixMode::FAN
 };
 
-WoleixStateMachine::WoleixStateMachine()
+WoleixStateMachine::WoleixStateMachine(WoleixCommandFactory* command_factory)
+    : command_factory_(command_factory)
 {
     reset();
 }
+
+WoleixStateMachine::WoleixStateMachine() : WoleixStateMachine(new WoleixCommandFactory())
+{}
 
 const std::vector<WoleixCommand>& WoleixStateMachine::transit_to_state
 (
@@ -90,7 +91,7 @@ void WoleixStateMachine::generate_mode_commands_(WoleixMode target_mode)
         int steps = calculate_mode_steps_(current_state_.mode, target_mode);
         
         // Send MODE commands to cycle through modes
-        enqueue_command_(WoleixProntoCommand(WoleixCommandBase::Type::MODE, 200, steps));
+        enqueue_command_(command_factory_->create(WoleixCommandBase::Type::MODE, 200, steps));
 
         current_state_.mode = target_mode;
         
