@@ -63,21 +63,28 @@ struct WoleixInternalState {
           fan_speed(WOLEIX_FAN_DEFAULT)
     {}
 };
-struct WoleixCommandCreator
+
+class WoleixCommandFactory
 {
+public:
+    virtual ~WoleixCommandFactory() = default;
     virtual WoleixCommand create(WoleixCommandBase::Type type, uint32_t delay, uint32_t repeats) const = 0;
 };
 
-struct WoleixNecCommandCreator: WoleixCommandCreator
+class WoleixNecCommandFactory : public WoleixCommandFactory
 {
+public:
+    WoleixNecCommandFactory(uint16_t address) : address_(address) {}
     virtual WoleixCommand create(WoleixCommandBase::Type type, uint32_t delay, uint32_t repeats) const override
     {
-        return WoleixNecCommand(type, delay, repeats);
+        return WoleixNecCommand(type, address_, delay, repeats);
     }
+private:
+    uint16_t address_;
 };
-
-struct WoleixProntoCommandCreator: WoleixCommandCreator
+class WoleixProntoCommandFactory : public WoleixCommandFactory
 {
+public:
     virtual WoleixCommand create(WoleixCommandBase::Type type, uint32_t delay, uint32_t repeats) const override
     {
         return WoleixProntoCommand(type, delay, repeats);
@@ -141,7 +148,7 @@ public:
      * power=ON, mode=COOL, temperature=25°C, fan_speed=LOW
      * and sets the command factory
      */
-    WoleixStateMachine(WoleixCommandFactory* factory);
+    WoleixStateMachine(std::unique_ptr<WoleixCommandFactory> command_factory);
     
     /**
      * Set the target state and generate the command sequence needed.
@@ -185,15 +192,15 @@ public:
      */
     const WoleixInternalState& get_state() const { return current_state_; }
 
-    void set_creator(std::unique_ptr<WoleixCommandCreator> creator)
+    void set_command_factory(std::unique_ptr<WoleixCommandFactory> command_factory)
     {
-        command_factory_->set_creator(std::move(creator));
+        command_factory_ = std::move(command_factory);
     }
 
 protected:
 
     WoleixInternalState current_state_;  /**< Current tracked state of the AC unit */
-    WoleixCommandFactory* command_factory_;
+    std::unique_ptr<WoleixCommandFactory> command_factory_;
 
 private:
     std::vector<WoleixCommand> command_queue_;  /**< Queue of IR commands to be transmitted */

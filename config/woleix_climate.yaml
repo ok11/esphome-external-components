@@ -110,54 +110,54 @@ button:
     name: "Power NEC"
     on_press:
       - remote_transmitter.transmit_nec:
-        address: 0xFB04
-        command: 0xFB04
-        command_repeats: 1
+          address: 0xFB04
+          command: 0xFB04
+          command_repeats: 1
   
   - platform: template
     id: speed
     name: "Speed NEC"
     on_press:
       - remote_transmitter.transmit_nec:
-        address: 0xFB04
-        command: 0xF906
-        command_repeats: 1
+          address: 0xFB04
+          command: 0xF906
+          command_repeats: 1
 
   - platform: template
     id: temp_up
     name: "Temp+ NEC"
     on_press:
       - remote_transmitter.transmit_nec:
-        address: 0xFB04
-        command: 0xFA05
-        command_repeats: 1
+          address: 0xFB04
+          command: 0xFA05
+          command_repeats: 1
 
   - platform: template
     id: mode
     name: "Mode NEC"
     on_press:
       - remote_transmitter.transmit_nec:
-        address: 0xFB04
-        command: 0xF20D
-        command_repeats: 1
+          address: 0xFB04
+          command: 0xF20D
+          command_repeats: 1
 
   - platform: template
     id: temp_down
     name: "Temp- NEC"
     on_press:
       - remote_transmitter.transmit_nec:
-        address: 0xFB04
-        command: 0xFE01
-        command_repeats: 1
+          address: 0xFB04
+          command: 0xFE01
+          command_repeats: 1
 
   - platform: template
     id: timer
     name: "Timer NEC"
     on_press:
       - remote_transmitter.transmit_nec:
-        address: 0xFB04
-        command: 0xFF00
-        command_repeats: 1
+          address: 0xFB04
+          command: 0xFF00
+          command_repeats: 1
 
 
 climate:

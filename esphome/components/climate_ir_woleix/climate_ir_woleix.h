@@ -111,11 +111,11 @@ public:
         }
         if (protocol == Protocol::NEC)
         {
-            state_machine_->set_creator(std::make_unique<WoleixNecCommandCreator>());
+            state_machine_->set_command_factory(std::make_unique<WoleixNecCommandFactory>(ADDRESS_NEC));
         }
         else
         {
-            state_machine_->set_creator(std::make_unique<WoleixProntoCommandCreator>());
+            state_machine_->set_command_factory(std::make_unique<WoleixProntoCommandFactory>());
         }
         protocol_ = protocol;
     }

@@ -14,14 +14,11 @@ static const std::vector<WoleixMode> MODE_SWITCH_SEQUENCE =
     WoleixMode::FAN
 };
 
-WoleixStateMachine::WoleixStateMachine(WoleixCommandFactory* command_factory)
-    : command_factory_(command_factory)
+WoleixStateMachine::WoleixStateMachine()
+    : command_factory_(std::make_unique<WoleixCommandFactory>()) 
 {
     reset();
 }
-
-WoleixStateMachine::WoleixStateMachine() : WoleixStateMachine(new WoleixCommandFactory())
-{}
 
 const std::vector<WoleixCommand>& WoleixStateMachine::transit_to_state
 (

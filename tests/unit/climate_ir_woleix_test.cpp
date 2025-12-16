@@ -955,6 +955,254 @@ TEST_F(WoleixClimateTest, TransmitStateSynchronizesInternalState)
 }
 
 // ============================================================================
+// Test: Protocol Selection
+// ============================================================================
+
+/**
+ * Test: Default protocol generates NEC commands
+ * 
+ * Validates that without explicitly setting a protocol, the climate component
+ * uses the default NEC protocol for command generation.
+ */
+TEST_F(WoleixClimateTest, DefaultProtocolGeneratesNecCommands)
+{
+  // Don't call set_protocol - use default (NEC)
+  mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_OFF, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
+  
+  // Expect NEC command (detected by checking if it's a WoleixNecCommand variant)
+  EXPECT_CALL(*mock_transmitter, transmit_(testing::_))
+    .Times(AtLeast(1))
+    .WillRepeatedly(Invoke([](const WoleixCommand& cmd) {
+      // Verify this is a NEC command by checking variant index
+      EXPECT_TRUE(std::holds_alternative<WoleixNecCommand>(cmd));
+      
+      // Also verify NEC-specific properties
+      auto& nec_cmd = std::get<WoleixNecCommand>(cmd);
+      EXPECT_EQ(nec_cmd.get_address(), ADDRESS_NEC);
+    }));
+  
+  mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
+  mock_climate->target_temperature = 25.0f;
+  mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
+  mock_climate->call_transmit_state();
+}
+
+/**
+ * Test: Set NEC protocol generates NEC commands
+ * 
+ * Validates that after calling set_protocol(Protocol::NEC), the climate
+ * component generates NEC format commands instead of Pronto commands.
+ */
+TEST_F(WoleixClimateTest, SetProtocolNecGeneratesNecCommands)
+{
+  // Set NEC protocol
+  mock_climate->set_protocol(Protocol::NEC);
+  
+  mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_OFF, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
+  
+  // Expect NEC command (detected by checking if it's a WoleixNecCommand variant)
+  EXPECT_CALL(*mock_transmitter, transmit_(testing::_))
+    .Times(AtLeast(1))
+    .WillRepeatedly(Invoke([](const WoleixCommand& cmd) {
+      // Verify this is a NEC command by checking variant index
+      EXPECT_TRUE(std::holds_alternative<WoleixNecCommand>(cmd));
+      
+      // Also verify NEC-specific properties
+      auto& nec_cmd = std::get<WoleixNecCommand>(cmd);
+      EXPECT_EQ(nec_cmd.get_address(), ADDRESS_NEC);
+    }));
+  
+  mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
+  mock_climate->target_temperature = 25.0f;
+  mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
+  mock_climate->call_transmit_state();
+}
+
+/**
+ * Test: Set Pronto protocol explicitly generates Pronto commands
+ * 
+ * Validates that explicitly calling set_protocol(Protocol::PRONTO)
+ * ensures Pronto format commands are generated.
+ */
+TEST_F(WoleixClimateTest, SetProtocolProntoGeneratesProntoCommands)
+{
+  // Explicitly set Pronto protocol
+  mock_climate->set_protocol(Protocol::PRONTO);
+  
+  mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_OFF, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
+  
+  // Expect Pronto command
+  EXPECT_CALL(*mock_transmitter, transmit_(testing::_))
+    .Times(AtLeast(1))
+    .WillRepeatedly(Invoke([](const WoleixCommand& cmd) {
+      // Verify this is a Pronto command
+      EXPECT_TRUE(std::holds_alternative<WoleixProntoCommand>(cmd));
+      
+      // Also verify Pronto-specific properties
+      auto& pronto_cmd = std::get<WoleixProntoCommand>(cmd);
+      EXPECT_FALSE(pronto_cmd.get_pronto_hex().empty());
+    }));
+  
+  mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
+  mock_climate->target_temperature = 25.0f;
+  mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
+  mock_climate->call_transmit_state();
+}
+
+/**
+ * Test: Protocol switch mid-operation changes command type
+ * 
+ * Validates that switching protocols during operation correctly changes
+ * the type of commands generated. Tests switching from default (NEC)
+ * to Pronto and verifying both produce correct command types.
+ */
+TEST_F(WoleixClimateTest, ProtocolSwitchChangesCommandType)
+{
+  mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_OFF, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
+  
+  // First transmission: Default NEC protocol
+  EXPECT_CALL(*mock_transmitter, transmit_(testing::_))
+    .Times(AtLeast(1))
+    .WillRepeatedly(Invoke([](const WoleixCommand& cmd) {
+      EXPECT_TRUE(std::holds_alternative<WoleixNecCommand>(cmd));
+      auto& nec_cmd = std::get<WoleixNecCommand>(cmd);
+      EXPECT_EQ(nec_cmd.get_address(), ADDRESS_NEC);
+    }));
+  
+  mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
+  mock_climate->target_temperature = 25.0f;
+  mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
+  mock_climate->call_transmit_state();
+  
+  // Switch to Pronto protocol
+  mock_climate->set_protocol(Protocol::PRONTO);
+  
+  // Reset state for next transmission
+  mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_COOL, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
+  
+  // Second transmission: Pronto protocol
+  EXPECT_CALL(*mock_transmitter, transmit_(testing::_))
+    .Times(AtLeast(1))
+    .WillRepeatedly(Invoke([](const WoleixCommand& cmd) {
+      EXPECT_TRUE(std::holds_alternative<WoleixProntoCommand>(cmd));
+      auto& pronto_cmd = std::get<WoleixProntoCommand>(cmd);
+      EXPECT_FALSE(pronto_cmd.get_pronto_hex().empty());
+    }));
+  
+  mock_climate->mode = ClimateMode::CLIMATE_MODE_FAN_ONLY;
+  mock_climate->target_temperature = 25.0f;
+  mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
+  mock_climate->call_transmit_state();
+}
+
+/**
+ * Test: Verify NEC commands contain correct address and codes
+ * 
+ * When using NEC protocol, validates that generated commands have:
+ * - Correct NEC address (ADDRESS_NEC)
+ * - Correct command codes for each button type
+ */
+TEST_F(WoleixClimateTest, NecCommandsHaveCorrectAddressAndCodes)
+{
+  mock_climate->set_protocol(Protocol::NEC);
+  mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_COOL, 20.0f, ClimateFanMode::CLIMATE_FAN_LOW);
+  
+  // Capture all transmitted commands
+  std::vector<WoleixNecCommand> captured_commands;
+  
+  EXPECT_CALL(*mock_transmitter, transmit_(testing::_))
+    .Times(AtLeast(1))
+    .WillRepeatedly(Invoke([&captured_commands](const WoleixCommand& cmd) {
+      ASSERT_TRUE(std::holds_alternative<WoleixNecCommand>(cmd));
+      captured_commands.push_back(std::get<WoleixNecCommand>(cmd));
+    }));
+  
+  // Trigger state change that will generate TEMP_UP commands
+  mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
+  mock_climate->target_temperature = 23.0f;  // +3 degrees = TEMP_UP
+  mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
+  mock_climate->call_transmit_state();
+  
+  // Verify all commands have correct NEC address
+  for (const auto& cmd : captured_commands) {
+    EXPECT_EQ(cmd.get_address(), ADDRESS_NEC);
+    
+    // Verify command code matches the command type
+    if (cmd.get_type() == WoleixCommandBase::Type::TEMP_UP) {
+      EXPECT_EQ(cmd.get_command_code(), TEMP_UP_NEC);
+    }
+  }
+}
+
+/**
+ * Test: Verify Pronto commands contain correct hex strings
+ * 
+ * When using Pronto protocol, validates that generated commands have:
+ * - Non-empty Pronto hex strings
+ * - Correct hex string for each command type
+ */
+TEST_F(WoleixClimateTest, ProntoCommandsHaveCorrectHexStrings)
+{
+  mock_climate->set_protocol(Protocol::PRONTO);
+  mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_COOL, 20.0f, ClimateFanMode::CLIMATE_FAN_LOW);
+  
+  // Capture all transmitted commands
+  std::vector<WoleixProntoCommand> captured_commands;
+  
+  EXPECT_CALL(*mock_transmitter, transmit_(testing::_))
+    .Times(AtLeast(1))
+    .WillRepeatedly(Invoke([&captured_commands](const WoleixCommand& cmd) {
+      ASSERT_TRUE(std::holds_alternative<WoleixProntoCommand>(cmd));
+      captured_commands.push_back(std::get<WoleixProntoCommand>(cmd));
+    }));
+  
+  // Trigger state change that will generate TEMP_UP commands
+  mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
+  mock_climate->target_temperature = 23.0f;  // +3 degrees = TEMP_UP
+  mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
+  mock_climate->call_transmit_state();
+  
+  // Verify all commands have non-empty Pronto hex
+  for (const auto& cmd : captured_commands) {
+    EXPECT_FALSE(cmd.get_pronto_hex().empty());
+    
+    // Verify hex string matches the command type
+    if (cmd.get_type() == WoleixCommandBase::Type::TEMP_UP) {
+      EXPECT_EQ(cmd.get_pronto_hex(), TEMP_UP_PRONTO);
+    }
+  }
+}
+
+/**
+ * Test: Setting same protocol twice is idempotent
+ * 
+ * Validates that calling set_protocol with the same protocol multiple
+ * times doesn't cause issues and behaves correctly (should be a no-op).
+ */
+TEST_F(WoleixClimateTest, SettingSameProtocolTwiceIsIdempotent)
+{
+  // Set to NEC
+  mock_climate->set_protocol(Protocol::NEC);
+  
+  // Set to NEC again - should be no-op
+  mock_climate->set_protocol(Protocol::NEC);
+  
+  mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_OFF, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
+  
+  // Verify still generates NEC commands
+  EXPECT_CALL(*mock_transmitter, transmit_(testing::_))
+    .Times(AtLeast(1))
+    .WillRepeatedly(Invoke([](const WoleixCommand& cmd) {
+      EXPECT_TRUE(std::holds_alternative<WoleixNecCommand>(cmd));
+    }));
+  
+  mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
+  mock_climate->target_temperature = 25.0f;
+  mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
+  mock_climate->call_transmit_state();
+}
+
+// ============================================================================
 // Main
 // ============================================================================
 
