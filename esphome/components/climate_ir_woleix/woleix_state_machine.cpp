@@ -75,7 +75,7 @@ void WoleixStateMachine::generate_power_commands_(WoleixPowerState target_power)
     if (current_state_.power != target_power)
     {
         // Power state change required
-        enqueue_command_(WoleixProntoCommand(WoleixCommandBase::Type::POWER, 200, 1));
+        enqueue_command_(command_factory_->create(WoleixCommandBase::Type::POWER));
 
         current_state_.power = target_power;
 
@@ -115,7 +115,8 @@ void WoleixStateMachine::generate_temperature_commands_(float target_temp)
             // Temperature increase needed
             int steps = std::lround(std::abs(temp_diff));  // Round to nearest integer
 
-            enqueue_command_(WoleixProntoCommand(WoleixCommandBase::Type::TEMP_UP, 400, steps));
+            if (steps > 0)
+                enqueue_command_(command_factory_->create(WoleixCommandBase::Type::TEMP_UP, 150, steps + 1));
 
             current_state_.temperature += steps;
             
@@ -127,7 +128,8 @@ void WoleixStateMachine::generate_temperature_commands_(float target_temp)
             // Temperature decrease needed
             int steps = std::lround(std::abs(temp_diff));  // Round to nearest integer
             
-            enqueue_command_(WoleixProntoCommand(WoleixCommandBase::Type::TEMP_DOWN, 400, steps));
+            if (steps > 0)
+                enqueue_command_(command_factory_->create(WoleixCommandBase::Type::TEMP_DOWN, 150, steps + 1));
 
             current_state_.temperature -= steps;
             
@@ -141,7 +143,7 @@ void WoleixStateMachine::generate_fan_commands_(WoleixFanSpeed target_fan)
     if (current_state_.fan_speed != target_fan)
     {
         // Fan speed toggles between LOW and HIGH with single SPEED command
-        enqueue_command_(WoleixProntoCommand(WoleixCommandBase::Type::FAN_SPEED, 200, 1));
+        enqueue_command_(command_factory_->create(WoleixCommandBase::Type::FAN_SPEED));
         
         current_state_.fan_speed = target_fan;
         

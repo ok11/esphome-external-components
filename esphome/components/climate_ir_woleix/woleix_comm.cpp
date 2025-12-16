@@ -34,18 +34,18 @@ void WoleixCommandTransmitter::operator()(const WoleixProntoCommand& command)
         repeats
     );
 
-    transmitter_->transmit<ProntoProtocol>(pronto_data, 1, 40);
+    transmitter_->transmit<ProntoProtocol>(pronto_data, 1, 150);
             
     std::ranges::for_each
     (
         std::views::iota(1, repeats),
         [this](int)
         {
-            transmitter_->transmit<ProntoProtocol>(ProntoData{ REPEAT_PRONTO, 0 }, 1, 40); 
+            transmitter_->transmit<ProntoProtocol>(ProntoData{ REPEAT_PRONTO, 0 }, 1, 150); 
         }
     );
 
-    delay(delay_ms - 40);
+    delay(delay_ms - 150);
 }
 
 void WoleixCommandTransmitter::operator()(const WoleixNecCommand& command)
@@ -53,7 +53,7 @@ void WoleixCommandTransmitter::operator()(const WoleixNecCommand& command)
     NECData nec_data;
     nec_data.address = command.get_address();
     nec_data.command = command.get_command_code();
-    nec_data.command_repeats = command.get_repeat_count(); 
+    nec_data.command_repeats = 1; 
     uint16_t delay_ms = command.get_delay_ms();
 
     ESP_LOGD
@@ -68,7 +68,7 @@ void WoleixCommandTransmitter::operator()(const WoleixNecCommand& command)
         nec_data.command_repeats
     );
 
-    transmitter_->transmit<NECProtocol>(nec_data, 1, delay_ms);
+    transmitter_->transmit<NECProtocol>(nec_data, command.get_repeat_count(), delay_ms);
 }
 
 }  // namespace climate_ir_woleix

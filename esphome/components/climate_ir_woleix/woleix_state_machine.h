@@ -92,7 +92,7 @@ public:
         creator_ = std::make_unique<WoleixNecCommandCreator>();
     }
 
-    virtual WoleixCommand create(WoleixCommandBase::Type type, uint32_t delay, uint32_t repeats) const
+    virtual WoleixCommand create(WoleixCommandBase::Type type, uint32_t delay = 0, uint32_t repeats = 1) const
     {
         return creator_->create(type, delay, repeats);
     }
