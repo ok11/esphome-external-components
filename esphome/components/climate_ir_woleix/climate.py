@@ -23,9 +23,9 @@ CONFIG_SCHEMA = climate_ir.climate_ir_with_receiver_schema(WoleixClimate).extend
     {
         cv.Optional(CONF_HUMIDITY_SENSOR): cv.use_id(sensor.Sensor),
         cv.Optional(CONF_RESET_BUTTON): cv.use_id(binary_sensor.BinarySensor),
-        cv.Optional(CONF_OPTIONS): cv.Schema({
-            cv.Optional(CONF_PROTOCOL, default="nec"): cv.enum(PROTOCOLS, lower=True)
-        })
+        # cv.Optional(CONF_OPTIONS): cv.Schema({
+        #     cv.Optional(CONF_PROTOCOL, default="nec"): cv.enum(PROTOCOLS, lower=True)
+        # })
     }
 )
 
@@ -43,6 +43,6 @@ async def to_code(config):
         btn = await cg.get_variable(config[CONF_RESET_BUTTON])
         cg.add(var.set_reset_button(btn))
 
-    if CONF_OPTIONS in config:
-        options = config[CONF_OPTIONS]
-        cg.add(var.set_protocol(options[CONF_PROTOCOL]))
+    # if CONF_OPTIONS in config:
+    #     options = config[CONF_OPTIONS]
+    #     cg.add(var.set_protocol(options[CONF_PROTOCOL]))

@@ -115,66 +115,6 @@ protected:
   WoleixCommandTransmitter* mock_command_transmitter;
 
 };
-// ============================================================================
-// Test: WoleixProntoCommand
-// ============================================================================
-
-/**
- * Test: WoleixProntoCommand construction and getters
- * 
- * Validates that a WoleixProntoCommand is correctly constructed with the
- * specified type, delay, and repeat count, and that all getters return
- * the expected values.
- */
-TEST(WoleixProntoCommandTest, ConstructionAndGetters)
-{
-    WoleixProntoCommand cmd(WoleixCommandBase::Type::POWER, 200, 1);
-    
-    EXPECT_EQ(cmd.get_type(), WoleixCommandBase::Type::POWER);
-    EXPECT_EQ(cmd.get_delay_ms(), 200);
-    EXPECT_EQ(cmd.get_repeat_count(), 1);
-    EXPECT_EQ(cmd.get_pronto_hex(), POWER_PRONTO);
-}
-
-/**
- * Test: WoleixProntoCommand returns correct Pronto hex for each type
- * 
- * Validates that each command type returns the correct Pronto hex string
- * as defined in woleix_constants.h.
- */
-TEST(WoleixProntoCommandTest, CorrectProntoHexForAllTypes)
-{
-    WoleixProntoCommand power_cmd(WoleixCommandBase::Type::POWER, 200);
-    EXPECT_EQ(power_cmd.get_pronto_hex(), POWER_PRONTO);
-    
-    WoleixProntoCommand temp_up_cmd(WoleixCommandBase::Type::TEMP_UP, 200);
-    EXPECT_EQ(temp_up_cmd.get_pronto_hex(), TEMP_UP_PRONTO);
-    
-    WoleixProntoCommand temp_down_cmd(WoleixCommandBase::Type::TEMP_DOWN, 200);
-    EXPECT_EQ(temp_down_cmd.get_pronto_hex(), TEMP_DOWN_PRONTO);
-    
-    WoleixProntoCommand mode_cmd(WoleixCommandBase::Type::MODE, 200);
-    EXPECT_EQ(mode_cmd.get_pronto_hex(), MODE_PRONTO);
-    
-    WoleixProntoCommand speed_cmd(WoleixCommandBase::Type::FAN_SPEED, 200);
-    EXPECT_EQ(speed_cmd.get_pronto_hex(), SPEED_PRONTO);
-}
-
-/**
- * Test: WoleixProntoCommand equality operator
- * 
- * Validates that two WoleixProntoCommand objects are equal if and only if
- * they have the same type, delay, repeat count, and pronto hex string.
- */
-TEST(WoleixProntoCommandTest, EqualityOperator)
-{
-    WoleixProntoCommand cmd1(WoleixCommandBase::Type::POWER, 200, 1);
-    WoleixProntoCommand cmd2(WoleixCommandBase::Type::POWER, 200, 1);
-    WoleixProntoCommand cmd3(WoleixCommandBase::Type::MODE, 200, 1);
-    
-    EXPECT_TRUE(cmd1 == cmd2);
-    EXPECT_FALSE(cmd1 == cmd3);
-}
 
 // ============================================================================
 // Test: WoleixNecCommand
@@ -242,61 +182,6 @@ TEST(WoleixNecCommandTest, EqualityOperator)
     EXPECT_FALSE(cmd1 == cmd4);  // Different address
 }
 
-// ============================================================================
-// Test: WoleixCommandTransmitter with Pronto Commands
-// ============================================================================
-
-/**
- * Test: WoleixCommandTransmitter transmits Pronto commands correctly
- * 
- * Validates that when a WoleixProntoCommand is passed to the transmitter,
- * it correctly calls the underlying ProntoProtocol transmit method with
- * the expected parameters.
- */
-TEST(WoleixCommandTransmitterTest, DISABLED_TransmitsProntoCommand)
-{
-    MockRemoteTransmitterBase mock_transmitter;
-    WoleixCommandTransmitter transmitter(&mock_transmitter);
-    
-    // Create a POWER command
-    WoleixProntoCommand power_cmd(WoleixCommandBase::Type::POWER, 200, 1);
-    
-    // Expect the Pronto transmit method to be called with correct parameters
-    EXPECT_CALL(mock_transmitter, send_(testing::An<const ProntoProtocol::ProtocolData&>(), 1, 200))
-        .Times(1)
-        .WillOnce(testing::Invoke([&power_cmd](const ProntoProtocol::ProtocolData& data, 
-                                                 uint16_t repeats, uint16_t wait) {
-            EXPECT_EQ(data.data, power_cmd.get_pronto_hex());
-            EXPECT_EQ(repeats, power_cmd.get_repeat_count());
-            EXPECT_EQ(wait, power_cmd.get_delay_ms());
-        }));
-    
-    // Transmit the command
-    transmitter.transmit_(power_cmd);
-}
-
-/**
- * Test: WoleixCommandTransmitter handles multiple Pronto commands
- * 
- * Validates that the transmitter correctly transmits a sequence of
- * multiple Pronto commands.
- */
-TEST(WoleixCommandTransmitterTest, DISABLED_TransmitsMultipleProntoCommands)
-{
-    MockRemoteTransmitterBase mock_transmitter;
-    WoleixCommandTransmitter transmitter(&mock_transmitter);
-    
-    std::vector<WoleixCommand> commands;
-    commands.push_back(WoleixProntoCommand(WoleixCommandBase::Type::POWER, 200, 1));
-    commands.push_back(WoleixProntoCommand(WoleixCommandBase::Type::MODE, 200, 2));
-    
-    // Expect two Pronto transmit calls
-    EXPECT_CALL(mock_transmitter, send_(testing::An<const ProntoProtocol::ProtocolData&>(), 
-                                         testing::_, testing::_))
-        .Times(2);
-    
-    transmitter.transmit_(commands);
-}
 
 // ============================================================================
 // Test: WoleixCommandTransmitter with NEC Commands
@@ -354,35 +239,6 @@ TEST(WoleixCommandTransmitterTest, TransmitsMultipleNecCommands)
     EXPECT_CALL(mock_transmitter, send_(testing::An<const NECProtocol::ProtocolData&>(), 
                                          testing::_, testing::_))
         .Times(2);
-    
-    transmitter.transmit_(commands);
-}
-
-/**
- * Test: WoleixCommandTransmitter handles mixed Pronto and NEC commands
- * 
- * Validates that the transmitter correctly transmits a sequence containing
- * both Pronto and NEC commands.
- */
-TEST(WoleixCommandTransmitterTest, TransmitsMixedCommands)
-{
-    MockRemoteTransmitterBase mock_transmitter;
-    WoleixCommandTransmitter transmitter(&mock_transmitter);
-    
-    uint16_t address = 0x00FF;
-    std::vector<WoleixCommand> commands;
-    commands.push_back(WoleixProntoCommand(WoleixCommandBase::Type::POWER, 200, 1));
-    commands.push_back(WoleixNecCommand(WoleixCommandBase::Type::MODE, address, 200, 2));
-    commands.push_back(WoleixProntoCommand(WoleixCommandBase::Type::TEMP_UP, 400, 1));
-    
-    // Expect three transmit calls total (Pronto and NEC methods)
-    EXPECT_CALL(mock_transmitter, send_(testing::An<const ProntoProtocol::ProtocolData&>(), 
-                                         testing::_, testing::_))
-        .Times(2);  // 2 Pronto commands
-    
-    EXPECT_CALL(mock_transmitter, send_(testing::An<const NECProtocol::ProtocolData&>(), 
-                                         testing::_, testing::_))
-        .Times(1);  // 1 NEC command
     
     transmitter.transmit_(commands);
 }

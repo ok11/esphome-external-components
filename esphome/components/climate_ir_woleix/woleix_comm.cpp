@@ -14,40 +14,6 @@ using remote_base::NECData;
 using remote_base::ProntoProtocol;
 using remote_base::NECProtocol;
 
-void WoleixCommandTransmitter::operator()(const WoleixProntoCommand& command)
-{
-    ProntoData pronto_data;
-    pronto_data.data = command.get_pronto_hex();
-    pronto_data.delta = 0;
-    int repeats = command.get_repeat_count();
-    uint16_t delay_ms = command.get_delay_ms();
-
-    ESP_LOGD
-    (
-        TAG,
-        "Transmitting Pronto command: " 
-            "data=%s, "
-            "delta=%d, "
-            "repeats=%d", 
-        pronto_data.data.c_str(),
-        pronto_data.delta,
-        repeats
-    );
-
-    transmitter_->transmit<ProntoProtocol>(pronto_data, 1, 150);
-            
-    std::ranges::for_each
-    (
-        std::views::iota(1, repeats),
-        [this](int)
-        {
-            transmitter_->transmit<ProntoProtocol>(ProntoData{ REPEAT_PRONTO, 0 }, 1, 150); 
-        }
-    );
-
-    delay(delay_ms - 150);
-}
-
 void WoleixCommandTransmitter::operator()(const WoleixNecCommand& command)
 {
     NECData nec_data;

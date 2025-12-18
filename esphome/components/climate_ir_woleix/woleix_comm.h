@@ -69,42 +69,6 @@ protected:
 };
 
 /**
- * @brief Represents a Woleix IR command in Pronto hex format.
- */
-class WoleixProntoCommand: public WoleixCommandBase {
-public:
-    WoleixProntoCommand(Type type, uint32_t delay_ms = 0, uint32_t repeat_count = 1)
-        : WoleixCommandBase(type, delay_ms, repeat_count),
-          pronto_hex_(get_pronto_hex_for_type(type)) {}
-    
-    virtual const std::string& get_pronto_hex_for_type(Type type) const {
-        static const std::map<Type, std::string> pronto_map = {
-            {Type::POWER, POWER_PRONTO},
-            {Type::TEMP_UP, TEMP_UP_PRONTO},
-            {Type::TEMP_DOWN, TEMP_DOWN_PRONTO},
-            {Type::MODE, MODE_PRONTO},
-            {Type::FAN_SPEED, SPEED_PRONTO}
-        };
-        return pronto_map.at(type);
-    }
-
-    const std::string& get_pronto_hex() const {
-        return pronto_hex_;
-    }
-    /**
-     * Equality comparison operator.
-     * Compares both the string content and delay value.
-     */
-    bool operator==(const WoleixProntoCommand& other) const {
-        return WoleixCommandBase::operator==(other) && 
-            pronto_hex_ == other.pronto_hex_;
-    }
-
-protected:
-    std::string pronto_hex_;  /**< Pronto format IR command string */
-};
-
-/**
  * @brief Represents a Woleix IR command in NEC format.
  */
 class WoleixNecCommand: public WoleixCommandBase {
@@ -148,7 +112,7 @@ protected:
 };
 
 // Variant holding all possible types
-using WoleixCommand = std::variant<WoleixProntoCommand, WoleixNecCommand>;
+using WoleixCommand = std::variant<WoleixNecCommand>;
 
 /**
  * @brief Base class for Woleix IR transmitters.
@@ -187,7 +151,6 @@ public:
     virtual void transmit_(const WoleixCommand& command) {
         std::visit(std::ref(*this), command);
     };
-    virtual void operator()(const WoleixProntoCommand& command);
     virtual void operator()(const WoleixNecCommand& command);
 };
 

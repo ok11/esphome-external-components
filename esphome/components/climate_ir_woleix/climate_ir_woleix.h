@@ -97,28 +97,6 @@ public:
      */
     void set_reset_button(binary_sensor::BinarySensor *btn) { reset_button_ = btn; }
 
-    void set_protocol(Protocol protocol)
-    {
-        if (protocol_ == protocol)
-        {
-            ESP_LOGI
-            (
-                TAG,
-                "Protocol %u is requested, but is is already set", 
-                static_cast<unsigned int>(protocol)
-            );
-            return;
-        }
-        if (protocol == Protocol::NEC)
-        {
-            state_machine_->set_command_factory(std::make_unique<WoleixNecCommandFactory>(ADDRESS_NEC));
-        }
-        else
-        {
-            state_machine_->set_command_factory(std::make_unique<WoleixProntoCommandFactory>());
-        }
-        protocol_ = protocol;
-    }
     /**
      * Reset the state machine to default values.
      * 
@@ -177,7 +155,6 @@ protected:
     sensor::Sensor *humidity_sensor_{nullptr};  /**< Optional humidity sensor */
     binary_sensor::BinarySensor *reset_button_{nullptr};  /**< Optional reset button */
     std::vector<WoleixCommand> commands_;  /**< Queue of commands to transmit */
-    Protocol protocol_;
 };
 
 }  // namespace climate_ir_woleix

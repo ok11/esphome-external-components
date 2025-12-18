@@ -15,7 +15,12 @@ static const std::vector<WoleixMode> MODE_SWITCH_SEQUENCE =
 };
 
 WoleixStateMachine::WoleixStateMachine()
-    : command_factory_(std::make_unique<WoleixCommandFactory>()) 
+    : WoleixStateMachine(new WoleixCommandFactory(ADDRESS_NEC)) 
+{
+}
+
+WoleixStateMachine::WoleixStateMachine(WoleixCommandFactory* command_factory)
+    : command_factory_(command_factory) 
 {
     reset();
 }
