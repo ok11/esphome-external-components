@@ -19,14 +19,14 @@ using esphome::climate::ClimateTraits;
 WoleixClimate::WoleixClimate()
     : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX),
       state_machine_(new WoleixStateMachine()),
-      command_transmitter_(new WoleixCommandTransmitter(nullptr))
+      command_transmitter_(new WoleixTransmitter(nullptr))
 {
     target_temperature = WOLEIX_TEMP_DEFAULT;
     mode = climate::CLIMATE_MODE_OFF;
     fan_mode = climate::CLIMATE_FAN_LOW;
 }
 
-WoleixClimate::WoleixClimate(WoleixStateMachine *state_machine, WoleixCommandTransmitter *command_transmitter)
+WoleixClimate::WoleixClimate(WoleixStateMachine *state_machine, WoleixTransmitter *command_transmitter)
     : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX),
       state_machine_(state_machine),
       command_transmitter_(command_transmitter)

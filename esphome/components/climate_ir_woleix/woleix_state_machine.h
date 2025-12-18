@@ -70,9 +70,9 @@ public:
     WoleixCommandFactory(uint16_t address) : address_(address) {}
     virtual ~WoleixCommandFactory() = default;
 
-    virtual WoleixCommand create(WoleixCommandBase::Type type, uint32_t delay = 0, uint32_t repeats = 1) const
+    virtual WoleixCommand create(WoleixCommand::Type type, uint32_t delay = 0, uint32_t repeats = 1) const
     {
-        return WoleixNecCommand(type, address_, delay, repeats);
+        return WoleixCommand(type, address_, delay, repeats);
     }
 private:
     uint16_t address_;

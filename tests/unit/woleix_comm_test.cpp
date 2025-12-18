@@ -103,7 +103,7 @@ protected:
   void SetUp() override 
   {
     mock_transmitter = new MockRemoteTransmitterBase();
-    mock_command_transmitter = new WoleixCommandTransmitter(mock_transmitter);    
+    mock_command_transmitter = new WoleixTransmitter(mock_transmitter);
   }
     
   void TearDown() override {
@@ -112,7 +112,7 @@ protected:
   }
 
   MockRemoteTransmitterBase* mock_transmitter;
-  WoleixCommandTransmitter* mock_command_transmitter;
+  WoleixTransmitter* mock_command_transmitter;
 
 };
 
@@ -129,13 +129,13 @@ protected:
  */
 TEST(WoleixNecCommandTest, ConstructionAndGetters)
 {
-    WoleixNecCommand cmd(WoleixCommandBase::Type::POWER, 0x00FF, 200, 1);
+    WoleixCommand cmd(WoleixCommand::Type::POWER, 0x00FF, 200, 1);
     
-    EXPECT_EQ(cmd.get_type(), WoleixCommandBase::Type::POWER);
+    EXPECT_EQ(cmd.get_type(), WoleixCommand::Type::POWER);
     EXPECT_EQ(cmd.get_address(), 0x00FF);
     EXPECT_EQ(cmd.get_delay_ms(), 200);
     EXPECT_EQ(cmd.get_repeat_count(), 1);
-    EXPECT_EQ(cmd.get_command_code(), POWER_NEC);
+    EXPECT_EQ(cmd.get_command(), POWER_NEC);
 }
 
 /**
@@ -148,20 +148,20 @@ TEST(WoleixNecCommandTest, CorrectCommandCodeForAllTypes)
 {
     uint16_t address = 0x00FF;
     
-    WoleixNecCommand power_cmd(WoleixCommandBase::Type::POWER, address, 200);
-    EXPECT_EQ(power_cmd.get_command_code(), POWER_NEC);
+    WoleixCommand power_cmd(WoleixCommand::Type::POWER, address, 200);
+    EXPECT_EQ(power_cmd.get_command(), POWER_NEC);
     
-    WoleixNecCommand temp_up_cmd(WoleixCommandBase::Type::TEMP_UP, address, 200);
-    EXPECT_EQ(temp_up_cmd.get_command_code(), TEMP_UP_NEC);
+    WoleixCommand temp_up_cmd(WoleixCommand::Type::TEMP_UP, address, 200);
+    EXPECT_EQ(temp_up_cmd.get_command(), TEMP_UP_NEC);
     
-    WoleixNecCommand temp_down_cmd(WoleixCommandBase::Type::TEMP_DOWN, address, 200);
-    EXPECT_EQ(temp_down_cmd.get_command_code(), TEMP_DOWN_NEC);
+    WoleixCommand temp_down_cmd(WoleixCommand::Type::TEMP_DOWN, address, 200);
+    EXPECT_EQ(temp_down_cmd.get_command(), TEMP_DOWN_NEC);
     
-    WoleixNecCommand mode_cmd(WoleixCommandBase::Type::MODE, address, 200);
-    EXPECT_EQ(mode_cmd.get_command_code(), MODE_NEC);
+    WoleixCommand mode_cmd(WoleixCommand::Type::MODE, address, 200);
+    EXPECT_EQ(mode_cmd.get_command(), MODE_NEC);
     
-    WoleixNecCommand speed_cmd(WoleixCommandBase::Type::FAN_SPEED, address, 200);
-    EXPECT_EQ(speed_cmd.get_command_code(), SPEED_NEC);
+    WoleixCommand speed_cmd(WoleixCommand::Type::FAN_SPEED, address, 200);
+    EXPECT_EQ(speed_cmd.get_command(), SPEED_NEC);
 }
 
 /**
@@ -172,10 +172,10 @@ TEST(WoleixNecCommandTest, CorrectCommandCodeForAllTypes)
  */
 TEST(WoleixNecCommandTest, EqualityOperator)
 {
-    WoleixNecCommand cmd1(WoleixCommandBase::Type::POWER, 0x00FF, 200, 1);
-    WoleixNecCommand cmd2(WoleixCommandBase::Type::POWER, 0x00FF, 200, 1);
-    WoleixNecCommand cmd3(WoleixCommandBase::Type::MODE, 0x00FF, 200, 1);
-    WoleixNecCommand cmd4(WoleixCommandBase::Type::POWER, 0x00FE, 200, 1);
+    WoleixCommand cmd1(WoleixCommand::Type::POWER, 0x00FF, 200, 1);
+    WoleixCommand cmd2(WoleixCommand::Type::POWER, 0x00FF, 200, 1);
+    WoleixCommand cmd3(WoleixCommand::Type::MODE, 0x00FF, 200, 1);
+    WoleixCommand cmd4(WoleixCommand::Type::POWER, 0x00FE, 200, 1);
     
     EXPECT_TRUE(cmd1 == cmd2);
     EXPECT_FALSE(cmd1 == cmd3);  // Different type
@@ -197,11 +197,11 @@ TEST(WoleixNecCommandTest, EqualityOperator)
 TEST(WoleixCommandTransmitterTest, TransmitsNecCommand)
 {
     MockRemoteTransmitterBase mock_transmitter;
-    WoleixCommandTransmitter transmitter(&mock_transmitter);
+    WoleixTransmitter transmitter(&mock_transmitter);
     
     // Create a POWER command
     uint16_t address = 0x00FF;
-    WoleixNecCommand power_cmd(WoleixCommandBase::Type::POWER, address, 200, 3);
+    WoleixCommand power_cmd(WoleixCommand::Type::POWER, address, 200, 3);
     
     // Expect the NEC transmit method to be called with correct parameters
     EXPECT_CALL(mock_transmitter, send_(testing::An<const NECProtocol::ProtocolData&>(), 3, 200))
@@ -209,7 +209,7 @@ TEST(WoleixCommandTransmitterTest, TransmitsNecCommand)
         .WillOnce(testing::Invoke([&power_cmd, address](const NECProtocol::ProtocolData& data, 
                                                           uint16_t repeats, uint16_t wait) {
             EXPECT_EQ(data.address, address);
-            EXPECT_EQ(data.command, power_cmd.get_command_code());
+            EXPECT_EQ(data.command, power_cmd.get_command());
             EXPECT_EQ(data.command_repeats, 1);
             EXPECT_EQ(repeats, 3);
             EXPECT_EQ(wait, 200);
@@ -228,12 +228,12 @@ TEST(WoleixCommandTransmitterTest, TransmitsNecCommand)
 TEST(WoleixCommandTransmitterTest, TransmitsMultipleNecCommands)
 {
     MockRemoteTransmitterBase mock_transmitter;
-    WoleixCommandTransmitter transmitter(&mock_transmitter);
+    WoleixTransmitter transmitter(&mock_transmitter);
     
     uint16_t address = 0x00FF;
     std::vector<WoleixCommand> commands;
-    commands.push_back(WoleixNecCommand(WoleixCommandBase::Type::POWER, address, 200, 1));
-    commands.push_back(WoleixNecCommand(WoleixCommandBase::Type::MODE, address, 200, 2));
+    commands.push_back(WoleixCommand(WoleixCommand::Type::POWER, address, 200, 1));
+    commands.push_back(WoleixCommand(WoleixCommand::Type::MODE, address, 200, 2));
     
     // Expect two NEC transmit calls
     EXPECT_CALL(mock_transmitter, send_(testing::An<const NECProtocol::ProtocolData&>(), 

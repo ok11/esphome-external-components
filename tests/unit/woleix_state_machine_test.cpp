@@ -9,17 +9,14 @@ using namespace esphome::climate_ir_woleix;
 
 // Custom GMock matcher for checking WoleixCommand type
 MATCHER_P(IsCommandType, expected_type, "") {
-    auto actual_type = std::visit([](const auto& c) { 
-        return c.get_type(); 
-    }, arg);
-    return actual_type == expected_type;
+    return arg.get_type() == expected_type;
 }
 
-static const WoleixCommandBase::Type POWER_COMMAND = WoleixCommandBase::Type::POWER;
-static const WoleixCommandBase::Type MODE_COMMAND = WoleixCommandBase::Type::MODE;
-static const WoleixCommandBase::Type TEMP_UP_COMMAND = WoleixCommandBase::Type::TEMP_UP;
-static const WoleixCommandBase::Type TEMP_DOWN_COMMAND = WoleixCommandBase::Type::TEMP_DOWN;
-static const WoleixCommandBase::Type SPEED_COMMAND = WoleixCommandBase::Type::FAN_SPEED;
+static const WoleixCommand::Type POWER_COMMAND = WoleixCommand::Type::POWER;
+static const WoleixCommand::Type MODE_COMMAND = WoleixCommand::Type::MODE;
+static const WoleixCommand::Type TEMP_UP_COMMAND = WoleixCommand::Type::TEMP_UP;
+static const WoleixCommand::Type TEMP_DOWN_COMMAND = WoleixCommand::Type::TEMP_DOWN;
+static const WoleixCommand::Type SPEED_COMMAND = WoleixCommand::Type::FAN_SPEED;
 
 class MockWoleixStateMachine : public WoleixStateMachine {
 public:
@@ -53,12 +50,10 @@ protected:
     MockWoleixStateMachine* state_machine_;
     
     // Helper to count specific commands in a vector and sum their repeat counts
-    int count_command(const std::vector<WoleixCommand>& commands, WoleixCommandBase::Type type) {
+    int count_command(const std::vector<WoleixCommand>& commands, WoleixCommand::Type type) {
         return std::accumulate(commands.begin(), commands.end(), 0,
             [type](int sum, const WoleixCommand& cmd) {
-                return sum + std::visit([type](const auto& c) -> int { 
-                    return c.get_type() == type ? c.get_repeat_count() : 0;
-                }, cmd);
+                return sum + (cmd.get_type() == type ? cmd.get_repeat_count() : 0);
             });
     }
 };
@@ -734,14 +729,11 @@ TEST_F(WoleixStateMachineTest, CommandOrderingIsCorrect)
     EXPECT_EQ(commands.size(), 3);
 
     // First command should be POWER
-    auto cmd0_type = std::visit([](const auto& c) { return c.get_type(); }, commands[0]);
-    EXPECT_EQ(cmd0_type, POWER_COMMAND);
+    EXPECT_EQ(commands[0].get_type(), POWER_COMMAND);
     // Second command must be MODE (DEHUM->FAN)
-    auto cmd1_type = std::visit([](const auto& c) { return c.get_type(); }, commands[1]);
-    EXPECT_EQ(cmd1_type, MODE_COMMAND);
+    EXPECT_EQ(commands[1].get_type(), MODE_COMMAND);
     // Third command must be SPEED (LOW->HIGH)
-    auto cmd2_type = std::visit([](const auto& c) { return c.get_type(); }, commands[2]);
-    EXPECT_EQ(cmd2_type, SPEED_COMMAND);
+    EXPECT_EQ(commands[2].get_type(), SPEED_COMMAND);
 }
 
 /**
