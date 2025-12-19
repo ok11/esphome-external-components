@@ -6,35 +6,50 @@ esp32:
   framework:
     type: esp-idf
 
-# Enable logging
-logger:
-  level: VERBOSE
-
 external_components:
   - source: /config/external_components
     components: [ climate_ir_woleix ]
 
+logger:
+  level: VERBOSE
+
+api:
+
+wifi:
+  ssid: "test_ssid"
+  password: "test_password"
+
+button:
+  - platform: template
+    id: power
+    on_press:
+      - remote_transmitter.transmit_nec:
+          address: 0xFB04
+          command: 0xFB04
+          command_repeats: 1
+
 remote_transmitter:
-  pin: GPIO20
+  id: ir_transmitter
+  pin: GPIO4
   carrier_duty_percent: 50%
-  id: new_room_ac_ir
 
 sensor:
   - platform: dht
-    model: DHT11
-    pin: GPIO4
-    id: new_room_ac_dht
+    pin: GPIO5
     temperature:
-      name: Temperature
-      id: new_room_ac_current_temperature
+      id: room_temp
     humidity:
-      name: Humidity
-      id: new_room_ac_current_humidity
+      id: room_humidity
     update_interval: 60s
 
 binary_sensor:
+  - platform: homeassistant
+    id: socket_state
+    entity_id: switch.woleix_power
+
   - platform: gpio
     id: reset_button
+    name: Reset AC
     internal: true
     pin: 
       number: GPIO01
@@ -44,13 +59,33 @@ binary_sensor:
       inverted: true
     filters:
       - delayed_on: 3s
-      - delayed_off: 10ms 
+      - delayed_off: 10ms
+    on_press:
+      - if:
+          condition:
+            lambda: return id(woleix_with_reset_button).is_on();
+          then:
+            - lambda: id(power).press();
+            - delay: 30s
+      - if:
+          condition:
+            lambda: return id(socket_state).has_state() && id(socket_state).state;
+          then:
+            - homeassistant.service:
+                service: switch.turn_off
+                data:
+                  entity_id: switch.woleix_power
+            - delay: 30s
+            - homeassistant.service:
+                service: switch.turn_on
+                data:
+                  entity_id: switch.woleix_power
+      - lambda: id(woleix_with_reset_button).reset_state();
 
 climate:
   - platform: climate_ir_woleix
-    name: "New Room AC"
-    id: new_room_ac
-    transmitter_id: new_room_ac_ir
-    sensor: new_room_ac_current_temperature
-    humidity_sensor: new_room_ac_current_humidity
+    id: woleix_with_reset_button
+    transmitter_id: ir_transmitter
+    sensor: room_temp
+    humidity_sensor: room_humidity
 

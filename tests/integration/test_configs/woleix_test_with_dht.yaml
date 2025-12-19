@@ -1,5 +1,5 @@
 esphome:
-  name: test-climate-ir-woleix
+  name: test-climate-ir-woleix-dht
 
 esp32:
   board: esp32dev
@@ -27,11 +27,9 @@ sensor:
       id: room_humidity
     update_interval: 60s
 
-# Configure the climate component with all features
 climate:
   - platform: climate_ir_woleix
-    name: "Test Woleix Full Features"
-    id: test_climate_dht
+    id: test_woleix_with_dht
     transmitter_id: ir_transmitter
     sensor: room_temp
     humidity_sensor: room_humidity

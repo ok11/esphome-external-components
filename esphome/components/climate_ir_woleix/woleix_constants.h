@@ -9,7 +9,7 @@ namespace climate_ir_woleix {
 /**
  * @brief Current component version.
  */
-static const char *const VERSION = "0.2.4";
+static const char *const VERSION = "1.0.0";
 
 /**
  * @brief Tag for logging messages related to the Woleix climate component.

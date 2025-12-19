@@ -17,11 +17,18 @@ tests/
 │   ├── mocks/                          # Mock ESPHome headers
 │   └── README.md
 ├── integration/                        # End-to-end integration tests
-│   ├── docker-compose.yml
-│   ├── test_configs/                   # ESPHome YAML configs
-│   ├── test_runner.py                  # Main test orchestrator
-│   ├── run_tests.sh                    # Integration test runner
-│   ├── scripts/                        # Helper scripts
+│   ├── docker-compose.yml              # Docker orchestration
+│   ├── run_tests.sh                    # Main entry point
+│   ├── requirements.txt                # Python dependencies
+│   ├── test_configs/                   # ESPHome YAML test configurations
+│   │   ├── woleix_test_basic.yaml      # Basic component setup
+│   │   ├── woleix_test_full.yaml       # Full-featured configuration
+│   │   ├── woleix_test_with_dht.yaml   # With DHT sensor integration
+│   │   └── woleix_test_with_reset_button.yaml  # With reset button
+│   ├── scripts/                        # Test automation scripts
+│   │   ├── test_runner.py              # Python test orchestrator
+│   │   └── wait_for_esphome.sh         # Health check script
+│   ├── output/                         # Compiled firmware (gitignored)
 │   └── README.md
 ├── CMakeLists.txt
 └── README.md                           # This file
@@ -77,13 +84,21 @@ See [unit/README.md](unit/README.md) for detailed instructions.
 
 **Purpose:** End-to-end validation with real ESPHome
 
+**Test Configurations:**
+
+- `woleix_test_basic.yaml` - Minimal component setup
+- `woleix_test_full.yaml` - Full-featured configuration with web server and status LED
+- `woleix_test_with_dht.yaml` - Integration with DHT22 temperature/humidity sensor
+- `woleix_test_with_reset_button.yaml` - Configuration with reset button functionality
+
 **Characteristics:**
 
-- Run in minutes
-- Test against actual ESPHome in Docker
+- Run in minutes (~5-10 minutes first run, ~1-2 minutes subsequent runs)
+- Test against actual ESPHome in Docker container
 - Validate real compilation and integration
-- Test external component loading
-- Smoke tests for realistic scenarios
+- Test external component loading from mounted directory
+- Compilation tests for realistic scenarios
+- Automated via Python test runner (`test_runner.py`)
 
 **When to use:**
 
@@ -98,6 +113,9 @@ See [unit/README.md](unit/README.md) for detailed instructions.
 ```bash
 cd tests/integration
 ./run_tests.sh
+
+# Keep containers running for debugging
+KEEP_RUNNING=true ./run_tests.sh
 ```
 
 See [integration/README.md](integration/README.md) for detailed instructions.
@@ -123,21 +141,24 @@ Our test strategy follows the testing pyramid:
 ### Run All Tests Locally
 
 ```bash
-# 1. Run unit tests
+# 1. Run unit tests (fast, ~5 seconds)
 cd tests/unit
-mkdir -p build && cd build
-cmake .. && make && ctest
+./run_tests.sh
 
-# 2. Run integration tests
-cd ../../integration
+# 2. Run integration tests (~5-10 minutes first run, ~1-2 minutes subsequent)
+cd ../integration
 ./run_tests.sh
 ```
 
 ### Run Only Unit Tests (Fastest)
 
 ```bash
-cd tests/unit/build
-ctest --output-on-failure
+cd tests/unit
+./run_tests.sh
+
+# Or with CMake directly
+mkdir -p build && cd build
+cmake .. && make && ctest --output-on-failure
 ```
 
 ### Run Only Integration Tests
@@ -145,6 +166,9 @@ ctest --output-on-failure
 ```bash
 cd tests/integration
 ./run_tests.sh
+
+# Keep containers running for debugging
+KEEP_RUNNING=true ./run_tests.sh
 ```
 
 ## Prerequisites
@@ -196,15 +220,25 @@ See the main [README.md](../README.md#4-platformio-dependencies-for-external-com
 
 ### For Integration Tests
 
-- Docker
+- Docker Desktop (macOS/Windows) or Docker Engine (Linux)
 - Docker Compose
-- Python 3.8+
+- Python 3.12+
 - bash
+- Python packages: `requests` (installed via requirements.txt)
 
 **Install Docker:**
 
-- macOS/Windows: Install Docker Desktop
+- macOS/Windows: Install Docker Desktop from https://www.docker.com/products/docker-desktop
 - Ubuntu: `sudo apt-get install docker.io docker-compose`
+
+**Install Python dependencies:**
+
+```bash
+cd tests/integration
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
 
 ## CI/CD Integration
 
@@ -298,7 +332,12 @@ KEEP_RUNNING=true ./run_tests.sh
 docker-compose logs -f esphome
 
 # Access ESPHome dashboard
-open http://localhost:6052
+open http://localhost:6052  # macOS
+# or
+xdg-open http://localhost:6052  # Linux
+
+# Manually compile a specific config
+docker exec esphome-test esphome compile /config/test_configs/woleix_test_basic.yaml
 
 # When done
 docker-compose down
@@ -405,10 +444,31 @@ Create a new YAML file in `tests/integration/test_configs/`:
 ```yaml
 esphome:
   name: test-your-scenario
-  # ... rest of config
+  friendly_name: "Test Your Scenario"
+  platformio_options:
+    board_build.flash_mode: dio
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+external_components:
+  - source: /config/external_components
+    components: [ climate_ir_woleix ]
+
+# Add your test configuration here
+remote_transmitter:
+  pin: GPIO14
+  carrier_duty_percent: 50%
+
+climate:
+  - platform: climate_ir_woleix
+    name: "Test Climate"
+    # ... rest of config
 ```
 
-The test runner will automatically discover and test it.
+The test runner will automatically discover and compile all `.yaml` files in `test_configs/`.
 
 ## Troubleshooting
 

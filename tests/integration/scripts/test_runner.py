@@ -48,7 +48,7 @@ def run_compilation_tests():
     print("Running Compilation Tests")
     print("=" * 60)
 
-    test_configs_dir = pathlib.Path(__file__).parent / "test_configs"
+    test_configs_dir = pathlib.Path(__file__).parent.parent / "test_configs"
     test_configs = list(test_configs_dir.glob("*.yaml"))
 
     if not test_configs:

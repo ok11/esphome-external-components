@@ -47,8 +47,19 @@ cleanup() {
   fi
 }
 
+prepare() {
+  echo "Preparing environment..."
+  python -m venv .venv
+  source .venv/bin/activate
+  pip install -r ./requirements.txt
+  echo "✓ Preparation complete"
+  echo ""
+}
+
 # Trap to ensure cleanup happens
 trap cleanup EXIT
+
+prepare
 
 # Step 1: Build and start Docker containers
 echo "Step 1: Building and starting Docker containers..."
@@ -76,7 +87,7 @@ echo ""
 # Step 3: Run the test suite
 echo "Step 3: Running integration tests..."
 echo "----------------------------------------------------------------------"
-if "$INTEGRATION_DIR/../../.venv/bin/python" "$INTEGRATION_DIR/test_runner.py"; then
+if python "$INTEGRATION_DIR/scripts/test_runner.py"; then
   TEST_RESULT=0
   echo ""
   echo -e "${GREEN}✓ All tests passed!${NC}"

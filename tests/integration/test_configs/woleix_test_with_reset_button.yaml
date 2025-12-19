@@ -13,25 +13,68 @@ external_components:
 logger:
   level: VERBOSE
 
+api:
+
+wifi:
+  ssid: "test_ssid"
+  password: "test_password"
+
+button:
+  - platform: template
+    id: power
+    on_press:
+      - remote_transmitter.transmit_nec:
+          address: 0xFB04
+          command: 0xFB04
+          command_repeats: 1
+
 remote_transmitter:
   id: ir_transmitter
   pin: GPIO4
   carrier_duty_percent: 50%
 
-# Status LED for visual feedback
 binary_sensor:
+  - platform: homeassistant
+    id: socket_state
+    entity_id: switch.woleix_power
+
   - platform: gpio
     id: reset_button
-    pin: GPIO5
+    name: Reset AC
+    internal: true
+    pin: 
+      number: GPIO01
+      mode:
+        input: true
+        pullup: true
+      inverted: true
     filters:
       - delayed_on: 3s
       - delayed_off: 10ms
+    on_press:
+      - if:
+          condition:
+            lambda: return id(woleix_with_reset_button).is_on();
+          then:
+            - lambda: id(power).press();
+            - delay: 30s
+      - if:
+          condition:
+            lambda: return id(socket_state).has_state() && id(socket_state).state;
+          then:
+            - homeassistant.service:
+                service: switch.turn_off
+                data:
+                  entity_id: switch.woleix_power
+            - delay: 30s
+            - homeassistant.service:
+                service: switch.turn_on
+                data:
+                  entity_id: switch.woleix_power
+      - lambda: id(woleix_with_reset_button).reset_state();
 
-# Configure the climate component with all features
 climate:
   - platform: climate_ir_woleix
-    name: "Test Woleix With Reset Button"
-    id: test_climate_reset_button
+    id: woleix_with_reset_button
     transmitter_id: ir_transmitter
-    reset_button: reset_button
 

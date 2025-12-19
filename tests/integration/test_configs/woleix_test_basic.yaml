@@ -17,6 +17,5 @@ remote_transmitter:
 
 climate:
   - platform: climate_ir_woleix
-    name: "Test Woleix Full Features"
-    id: test_climate_basic
+    id: test_woleix_basic
     transmitter_id: ir_transmitter

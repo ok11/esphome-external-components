@@ -1,6 +1,6 @@
 services:
   esphome:
-    image: esphome/esphome:${ESPHOME_TAG}
+    image: esphome/esphome:${ESPHOME_TAG:-latest}
     container_name: esphome-test
     volumes:
       - type: bind
@@ -31,5 +31,5 @@ networks:
     driver: bridge
 
 # Start compilation by running ./test_runner.py (part of the ./run_tests.sh)
-# or by entering "esphome compile /config/test_configs/climate_test.yaml" 
+# or by entering "esphome compile /config/test_configs/<config>.yaml" 
 # in the container's interactive shell / terminal

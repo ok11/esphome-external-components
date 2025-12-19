@@ -377,12 +377,12 @@ To maintain synchronization, you need a mechanism to bring your WoleixIR compone
 ```mermaid
 sequenceDiagram
     participant User
-    participant ResetButton as Reset Button<br/>(GPIO Binary Sensor)
-    participant PowerButton as Power Button<br/>(Template)
-    participant WoleixIR as WoleixIR Component
-    participant Woleix as Woleix AC Unit
-    participant HASocket as Home Assistant<br/>Socket Entity
-    participant SmartSocket as Smart Socket
+    participant ResetButton as Reset Button<br/>(ESPHome)
+    participant PowerButton as Power Button<br/>(ESPHome)
+    participant WoleixIR as WoleixClimate<br/>(ESPHome)
+    participant Woleix as Woleix AC Unit<br/>(Device)
+    participant HASocket as SmartSocket<br/>(Home Assistant)
+    participant SmartSocket as SmartSocket<br/>(Device)
 
     Note over User,SmartSocket: State Reconciliation Process
 
@@ -460,6 +460,8 @@ binary_sensor:
     filters:
       - delayed_on: 3s
       - delayed_off: 10ms
+    on_press:
+      ...
 
 # Climate control
 climate:
@@ -470,7 +472,7 @@ climate:
     humidity_sensor: room_humidity  # Humidity sensor (optional)
 ```
 
-For a complete example, see [a sample config](./config/woleix_climate.yaml).
+For a complete reset button automation example, see [a sample config](./config/woleix_climate.yaml).
 
 ## 🧪 Running Tests
 
@@ -648,12 +650,73 @@ The component uses the **NEC IR protocol** for all transmissions to the Woleix A
 | **Speed** | `0xF906` | Toggle fan speed between LOW and HIGH |
 | **Timer** | `0xFF00` | Timer function (not currently used by component) |
 
+### Temperature Management
+
+The protocol for *Temp+* and *Temp-* is a bit unusual. It seems that the first temperature change command just puts the Woleix AC into the temperature change mode (the temperature indicator starts blinking), and the subsequent commands (*Temp+* and/or *Temp-* change the value). So, the protocol basically sends *N+1* commands for changing the temperature by *N* degrees, don't be surprised by that part of code.
+
 ### Command Transmission
 
 - Commands are sent using ESPHome's built-in NEC protocol support
 - Each command can include configurable delays (e.g., 150ms for temperature, 200ms for mode)
 - Commands can be repeated multiple times for reliable transmission
 - The component automatically manages command queuing and transmission timing
+
+### Pronto Use Discontinued
+
+I started with Pronto, because the native remote controller generates Pronto repeat frames on keeping buttons like *Temp+* and *Temp+* pressed. So, my hope was that this way I will be able to reproduce the same behavior in the `ClimateIR`. Alas, the receiver on the Woleix AC side seems to completely ignore the repeat frames. Then I decided to completely switch to NEC IR protocol as the constants there are fare more concise than the Pronto hex codes.
+
+I'm listing the Pronto hex codes below, but be aware that it's only for historical reasons.
+
+- **Power**:
+  - 0000 006D 0022 0000 0158 00AF 0014 0018 0014 0018 0014 0042 0014 0018
+    0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018
+    0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0018 0014 0018
+    0014 0042 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0042
+    0014 0042 0014 0018 0014 0043 0013 0042 0014 0042 0014 0042 0014 0042
+    0014 0483
+
+- **Temp+**:
+  - 0000 006D 0022 0000 0158 00B0 0013 0018 0014 0017 0014 0043 0013 0018
+    0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018
+    0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0018
+    0014 0042 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018
+    0014 0042 0014 0018 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042
+    0014 0483
+
+- **Temp-**:
+  - 0000 006D 0022 0000 0158 00AF 0014 0018 0014 0018 0014 0043 0013 0018
+    0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018
+    0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0018
+    0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018
+    0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042
+    0014 0483
+
+- **Mode**:
+  - 0000 006D 0022 0000 0159 00AF 0014 0018 0014 0018 0014 0043 0013 0018
+    0014 0018 0014 0018 0014 0018 0014 0018 0014 0043 0013 0043 0013 0018
+    0014 0043 0013 0043 0013 0043 0013 0043 0013 0043 0013 0043 0013 0018
+    0014 0043 0013 0043 0013 0018 0014 0018 0014 0018 0014 0018 0014 0018
+    0014 0043 0013 0018 0014 0018 0014 0043 0013 0043 0013 0043 0013 0042
+    0014 0483
+
+- **Speed**:
+  - 0000 006D 0022 0000 0158 00B0 0013 0018 0014 0018 0014 0041 0014 0018
+    0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018
+    0014 0040 0016 0043 0013 0043 0013 003D 0019 0040 0015 0018 0014 003E
+    0018 0043 0013 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0043
+    0013 0018 0014 0018 0014 0043 0013 0043 0013 0041 0014 0043 0013 0043
+    0013 0483
+
+- **Timer**:
+  - 0000 006D 0022 0000 0159 00AF 0014 0018 0014 0018 0014 0043 0013 0018
+    0014 0018 0014 0018 0014 0018 0014 0018 0014 0043 0013 0043 0013 0018
+    0014 0043 0013 0043 0013 0043 0013 0043 0013 0042 0014 0018 0014 0018
+    0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0042
+    0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042
+    0014 0483
+
+- **Repeat Frame**:
+  - 0000 006D 0002 0000 0159 0056 0014 0483
 
 ## 📚 Resources
 
