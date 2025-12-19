@@ -98,7 +98,7 @@ void WoleixStateMachine::generate_mode_commands_(WoleixMode target_mode)
         current_state_.mode = target_mode;
         
         ESP_LOGD(TAG, "Mode change: %d steps to reach mode %d", 
-                 steps, static_cast<int>(target_mode));
+                steps, static_cast<int>(target_mode));
     }
 }
 

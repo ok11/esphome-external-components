@@ -21,8 +21,8 @@ namespace climate_ir_woleix {
 using remote_base::RemoteTransmitterBase;
 
 /**
- * @brief Woleix IR commands based on NEC protocol.
- */
+* @brief Woleix IR commands based on NEC protocol.
+*/
 
 class WoleixCommand {
 public:
@@ -56,14 +56,14 @@ public:
     }
 
     /**
-     * Equality comparison operator.
-     * Compares both the string content and delay value.
-     */
+    * Equality comparison operator.
+    * Compares both the string content and delay value.
+    */
     bool operator==(const WoleixCommand& other) const {
         return type_ == other.type_ &&
-               address_ == other.address_ &&
-               delay_ms_ == other.delay_ms_ &&
-               repeat_count_ == other.repeat_count_;
+            address_ == other.address_ &&
+            delay_ms_ == other.delay_ms_ &&
+            repeat_count_ == other.repeat_count_;
     }
 
 protected:
@@ -74,8 +74,8 @@ protected:
 };
 
 /**
- * @brief Transmitter class for sending Woleix IR commands.
- */
+* @brief Transmitter class for sending Woleix IR commands.
+*/
 class WoleixTransmitter {
 public:
     WoleixTransmitter(RemoteTransmitterBase* transmitter)

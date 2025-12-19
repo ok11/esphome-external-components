@@ -93,26 +93,26 @@ bool check_timings_match
 class MockRemoteTransmitterBase : public RemoteTransmitterBase
 {
 public:
-  MOCK_METHOD(void, send_, (const ProntoProtocol::ProtocolData& data, uint32_t repeats, uint32_t wait), ());
-  MOCK_METHOD(void, send_, (const NECProtocol::ProtocolData& data, uint32_t repeats, uint32_t wait), ());
+MOCK_METHOD(void, send_, (const ProntoProtocol::ProtocolData& data, uint32_t repeats, uint32_t wait), ());
+MOCK_METHOD(void, send_, (const NECProtocol::ProtocolData& data, uint32_t repeats, uint32_t wait), ());
 };
 
 class WoleixCommTest : public testing::Test 
 {
 protected:
-  void SetUp() override 
-  {
+void SetUp() override 
+{
     mock_transmitter = new MockRemoteTransmitterBase();
     mock_command_transmitter = new WoleixTransmitter(mock_transmitter);
-  }
+}
     
-  void TearDown() override {
+void TearDown() override {
     delete mock_command_transmitter;
     delete mock_transmitter;
-  }
+}
 
-  MockRemoteTransmitterBase* mock_transmitter;
-  WoleixTransmitter* mock_command_transmitter;
+MockRemoteTransmitterBase* mock_transmitter;
+WoleixTransmitter* mock_command_transmitter;
 
 };
 
@@ -121,12 +121,12 @@ protected:
 // ============================================================================
 
 /**
- * Test: WoleixNecCommand construction and getters
- * 
- * Validates that a WoleixNecCommand is correctly constructed with the
- * specified type, address, delay, and repeat count, and that all getters
- * return the expected values.
- */
+* Test: WoleixNecCommand construction and getters
+* 
+* Validates that a WoleixNecCommand is correctly constructed with the
+* specified type, address, delay, and repeat count, and that all getters
+* return the expected values.
+*/
 TEST(WoleixNecCommandTest, ConstructionAndGetters)
 {
     WoleixCommand cmd(WoleixCommand::Type::POWER, 0x00FF, 200, 1);
@@ -139,11 +139,11 @@ TEST(WoleixNecCommandTest, ConstructionAndGetters)
 }
 
 /**
- * Test: WoleixNecCommand returns correct command code for each type
- * 
- * Validates that each command type returns the correct NEC command code
- * as defined in woleix_constants.h.
- */
+* Test: WoleixNecCommand returns correct command code for each type
+* 
+* Validates that each command type returns the correct NEC command code
+* as defined in woleix_constants.h.
+*/
 TEST(WoleixNecCommandTest, CorrectCommandCodeForAllTypes)
 {
     uint16_t address = 0x00FF;
@@ -165,11 +165,11 @@ TEST(WoleixNecCommandTest, CorrectCommandCodeForAllTypes)
 }
 
 /**
- * Test: WoleixNecCommand equality operator
- * 
- * Validates that two WoleixNecCommand objects are equal if and only if
- * they have the same type, address, delay, repeat count, and command code.
- */
+* Test: WoleixNecCommand equality operator
+* 
+* Validates that two WoleixNecCommand objects are equal if and only if
+* they have the same type, address, delay, repeat count, and command code.
+*/
 TEST(WoleixNecCommandTest, EqualityOperator)
 {
     WoleixCommand cmd1(WoleixCommand::Type::POWER, 0x00FF, 200, 1);
@@ -188,12 +188,12 @@ TEST(WoleixNecCommandTest, EqualityOperator)
 // ============================================================================
 
 /**
- * Test: WoleixCommandTransmitter transmits NEC commands correctly
- * 
- * Validates that when a WoleixNecCommand is passed to the transmitter,
- * it correctly calls the underlying NECProtocol transmit method with
- * the expected parameters.
- */
+* Test: WoleixCommandTransmitter transmits NEC commands correctly
+* 
+* Validates that when a WoleixNecCommand is passed to the transmitter,
+* it correctly calls the underlying NECProtocol transmit method with
+* the expected parameters.
+*/
 TEST(WoleixCommandTransmitterTest, TransmitsNecCommand)
 {
     MockRemoteTransmitterBase mock_transmitter;
@@ -207,7 +207,7 @@ TEST(WoleixCommandTransmitterTest, TransmitsNecCommand)
     EXPECT_CALL(mock_transmitter, send_(testing::An<const NECProtocol::ProtocolData&>(), 3, 200))
         .Times(1)
         .WillOnce(testing::Invoke([&power_cmd, address](const NECProtocol::ProtocolData& data, 
-                                                          uint16_t repeats, uint16_t wait) {
+                                                        uint16_t repeats, uint16_t wait) {
             EXPECT_EQ(data.address, address);
             EXPECT_EQ(data.command, power_cmd.get_command());
             EXPECT_EQ(data.command_repeats, 1);
@@ -220,11 +220,11 @@ TEST(WoleixCommandTransmitterTest, TransmitsNecCommand)
 }
 
 /**
- * Test: WoleixCommandTransmitter handles multiple NEC commands
- * 
- * Validates that the transmitter correctly transmits a sequence of
- * multiple NEC commands.
- */
+* Test: WoleixCommandTransmitter handles multiple NEC commands
+* 
+* Validates that the transmitter correctly transmits a sequence of
+* multiple NEC commands.
+*/
 TEST(WoleixCommandTransmitterTest, TransmitsMultipleNecCommands)
 {
     MockRemoteTransmitterBase mock_transmitter;
@@ -237,7 +237,7 @@ TEST(WoleixCommandTransmitterTest, TransmitsMultipleNecCommands)
     
     // Expect two NEC transmit calls
     EXPECT_CALL(mock_transmitter, send_(testing::An<const NECProtocol::ProtocolData&>(), 
-                                         testing::_, testing::_))
+                                        testing::_, testing::_))
         .Times(2);
     
     transmitter.transmit_(commands);
