@@ -12,10 +12,11 @@
 #define ESP_LOGE(tag, format, ...) printf("[E][%s] " format "\n", tag, ##__VA_ARGS__)
 
 // Mock delay function (in global namespace, not esphome namespace)
-inline void delay(uint32_t ms) {
-  // In tests, we don't actually delay
+inline void delay(uint32_t ms)
+{
+    // In tests, we don't actually delay
 }
 
 namespace esphome {
-// Empty namespace for esphome core
+    // Empty namespace for esphome core
 } // namespace esphome

@@ -9,11 +9,18 @@
 namespace esphome {
 namespace climate_ir_woleix {
 
-using remote_base::ProntoData;
 using remote_base::NECData;
-using remote_base::ProntoProtocol;
 using remote_base::NECProtocol;
 
+/**
+ * Transmit a single Woleix command via NEC protocol.
+ * 
+ * Converts the WoleixCommand into NEC protocol format and sends it through
+ * the IR transmitter. The command is repeated according to the repeat_count
+ * parameter, with appropriate delays between transmissions.
+ * 
+ * @param command The command to transmit
+ */
 void WoleixTransmitter::transmit_(const WoleixCommand& command)
 {
     NECData nec_data;
@@ -39,4 +46,3 @@ void WoleixTransmitter::transmit_(const WoleixCommand& command)
 
 }  // namespace climate_ir_woleix
 }  // namespace esphome
-

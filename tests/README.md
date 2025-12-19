@@ -35,28 +35,31 @@ tests/
 
 **Test Files:**
 
-- `climate_ir_woleix_test.cpp` - 28 tests for climate component
-- `woleix_state_machine_test.cpp` - 26 tests for state machine
-- `woleix_state_mapper_test.cpp` - 19 tests for state mapper
-- `woleix_comm_test.cpp` - 12 tests for communication
+- `climate_ir_woleix_test.cpp` - 28 tests for climate component (main controller)
+- `woleix_state_machine_test.cpp` - 26 tests for state machine (command generation)
+- `woleix_state_mapper_test.cpp` - 19 tests for state mapper (ESPHome↔Woleix conversions)
+- `woleix_comm_test.cpp` - 12 tests for communication layer (NEC protocol transmission)
 - **Total: 85 unit tests**
 
 **Characteristics:**
 
-- Run in seconds
-- Test component logic in isolation
-- Use Google Test/Mock framework
-- No external dependencies (beyond compiler & GTest)
-- Perfect for TDD and rapid development
+- Run in seconds (typically < 5 seconds for all 85 tests)
+- Test component logic in isolation using mocked dependencies
+- Use Google Test framework with Google Mock for mocking
+- No external dependencies (beyond C++ compiler & Google Test)
+- Perfect for TDD and rapid development cycles
 - **96.3% line coverage, 95.7% function coverage**
+- Test NEC protocol command generation and IR transmission logic
 
 **When to use:**
 
-- Testing individual functions and methods
-- Verifying state transitions
-- Validating IR command generation and sequences
-- Testing mode cycling logic
-- Quick feedback during development
+- Testing individual functions and methods in isolation
+- Verifying state transitions and state machine logic
+- Validating NEC IR command generation and command sequences
+- Testing circular mode cycling (COOL→DEHUM→FAN→COOL)
+- Testing temperature control granularity (1°C steps)
+- Verifying state mapping between ESPHome and Woleix formats
+- Quick feedback during development (runs in seconds)
 
 **How to run:**
 
@@ -378,17 +381,17 @@ TEST(StateMapperTest, YourNewTest) {
 **For Communication** - Edit `tests/unit/woleix_comm_test.cpp`:
 
 ```cpp
-TEST(WoleixCommandTransmitterTest, YourNewTest) {
+TEST(WoleixTransmitterTest, YourNewTest) {
   // Setup
   MockRemoteTransmitterBase mock_transmitter;
-  WoleixCommandTransmitter transmitter(&mock_transmitter);
+  WoleixTransmitter transmitter(&mock_transmitter);
+  WoleixCommand command(WoleixCommand::Type::POWER, ADDRESS_NEC, 0, 1);
   
-  // Expectations
-  EXPECT_CALL(mock_transmitter, send_(testing::_, testing::_, testing::_))
+  // Expectations - verify NEC protocol transmission
+  EXPECT_CALL(mock_transmitter, transmit(testing::_))
       .Times(1);
   
   // Execute
-  WoleixProntoCommand command(WoleixCommandBase::Type::POWER, 200, 1);
   transmitter.transmit_(command);
   
   // Verify is handled by the EXPECT_CALL
@@ -429,10 +432,86 @@ The test runner will automatically discover and test it.
 - Check for timing-dependent tests
 - Review CI logs carefully
 
+## Test Coverage Details
+
+### Current Coverage (as of v0.2.4)
+
+- **Line Coverage**: 96.3%
+- **Function Coverage**: 95.7%
+- **Total Tests**: 85 passing tests
+
+### Coverage by Component
+
+| Component | Tests | Focus Areas |
+| --------- | ----- | ----------- |
+| Climate Component | 28 | State synchronization, sensor integration, command transmission |
+| State Machine | 26 | Command generation, state transitions, mode cycling |
+| State Mapper | 19 | Bidirectional state conversions (ESPHome↔Woleix) |
+| Communication | 12 | NEC protocol transmission, command delays, repeats |
+
+### What's Tested
+
+✅ **Power Control**
+
+- Power on/off transitions
+- State reset on power-on
+- Default state initialization
+
+✅ **Mode Control**
+
+- Circular mode sequence (COOL→DEHUM→FAN→COOL)
+- Mode cycling with minimal commands
+- Mode-specific behaviors (e.g., temperature only in COOL)
+
+✅ **Temperature Control**
+
+- 1°C granular adjustments (15-30°C range)
+- Multiple temperature step commands
+- Temperature clamping to valid range
+- Temperature changes only in COOL mode
+
+✅ **Fan Speed Control**
+
+- LOW↔HIGH toggle
+- Fan speed state tracking
+
+✅ **State Mapping**
+
+- ESPHome→Woleix conversions
+- Woleix→ESPHome conversions
+- Mode, fan speed, and power state mappings
+
+✅ **IR Communication**
+
+- NEC protocol command generation
+- Command delays (150ms for temp, 200ms for mode)
+- Command repeat functionality
+- Command queue management
+
+✅ **Sensor Integration**
+
+- Temperature sensor updates
+- Humidity sensor updates (optional)
+- State publishing
+
+## Protocol Information
+
+### NEC IR Protocol
+
+The component uses the **NEC IR protocol** for all communications:
+
+- **Address**: `0xFB04` (fixed for all Woleix commands)
+- **Protocol**: Standard NEC consumer IR protocol
+- **Commands**: POWER (0xFB04), TEMP_UP (0xFA05), TEMP_DOWN (0xFE01), MODE (0xF20D), FAN_SPEED (0xF906)
+
+Tests verify that commands are correctly formatted for NEC transmission and include proper delays and repeats.
+
 ## Additional Resources
 
 - [Unit Tests README](unit/README.md) - Detailed unit test guide
 - [Integration Tests README](integration/README.md) - Detailed integration test guide
+- [API Documentation](../API.md) - Complete API reference
+- [Main README](../README.md) - Project overview and setup
 - [ESPHome Testing Docs](https://esphome.io/guides/contributing.html#testing)
 - [Google Test Documentation](https://google.github.io/googletest/)
 

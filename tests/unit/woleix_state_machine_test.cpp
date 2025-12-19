@@ -8,7 +8,8 @@
 using namespace esphome::climate_ir_woleix;
 
 // Custom GMock matcher for checking WoleixCommand type
-MATCHER_P(IsCommandType, expected_type, "") {
+MATCHER_P(IsCommandType, expected_type, "")
+{
     return arg.get_type() == expected_type;
 }
 
@@ -18,19 +19,20 @@ static const WoleixCommand::Type TEMP_UP_COMMAND = WoleixCommand::Type::TEMP_UP;
 static const WoleixCommand::Type TEMP_DOWN_COMMAND = WoleixCommand::Type::TEMP_DOWN;
 static const WoleixCommand::Type SPEED_COMMAND = WoleixCommand::Type::FAN_SPEED;
 
-class MockWoleixStateMachine : public WoleixStateMachine {
-public:
-void set_current_state(
-    WoleixPowerState power, WoleixMode mode, float temperature, WoleixFanSpeed fan_speed
-)
+class MockWoleixStateMachine : public WoleixStateMachine
 {
-    current_state_.power = power;
-    current_state_.mode = mode;
-    current_state_.temperature = temperature;
-    current_state_.fan_speed = fan_speed;
-}
+public:
+    void set_current_state(
+        WoleixPowerState power, WoleixMode mode, float temperature, WoleixFanSpeed fan_speed
+    )
+    {
+        current_state_.power = power;
+        current_state_.mode = mode;
+        current_state_.temperature = temperature;
+        current_state_.fan_speed = fan_speed;
+    }
 
-using WoleixStateMachine::transit_to_state;
+    using WoleixStateMachine::transit_to_state;
 };
 
 // Test fixture for WoleixStateMachine
@@ -50,11 +52,14 @@ protected:
     MockWoleixStateMachine* state_machine_;
     
     // Helper to count specific commands in a vector and sum their repeat counts
-    int count_command(const std::vector<WoleixCommand>& commands, WoleixCommand::Type type) {
+    int count_command(const std::vector<WoleixCommand>& commands, WoleixCommand::Type type)
+    {
         return std::accumulate(commands.begin(), commands.end(), 0,
-            [type](int sum, const WoleixCommand& cmd) {
+            [type](int sum, const WoleixCommand& cmd)
+            {
                 return sum + (cmd.get_type() == type ? cmd.get_repeat_count() : 0);
-            });
+            }
+        );
     }
 };
 
@@ -63,11 +68,11 @@ protected:
 // ============================================================================
 
 /**
-* Test: State machine initializes with correct default values
-* 
-* Verifies that on construction, the state machine starts with device defaults:
-* power=ON, mode=COOL, temperature=25°C, fan_speed=LOW
-*/
+ * Test: State machine initializes with correct default values
+ * 
+ * Verifies that on construction, the state machine starts with device defaults:
+ * power=ON, mode=COOL, temperature=25°C, fan_speed=LOW
+ */
 TEST_F(WoleixStateMachineTest, InitialStateIsCorrect)
 {
     auto state = state_machine_->get_state();
@@ -79,11 +84,11 @@ TEST_F(WoleixStateMachineTest, InitialStateIsCorrect)
 }
 
 /**
-* Test: reset() restores state machine to defaults
-* 
-* Validates that calling reset() after changing state restores all values
-* to the device defaults, providing a way to recover from state sync issues.
-*/
+ * Test: reset() restores state machine to defaults
+ * 
+ * Validates that calling reset() after changing state restores all values
+ * to the device defaults, providing a way to recover from state sync issues.
+ */
 TEST_F(WoleixStateMachineTest, ResetRestoresDefaultState)
 {
     // Set state
@@ -109,11 +114,11 @@ TEST_F(WoleixStateMachineTest, ResetRestoresDefaultState)
 // ============================================================================
 
 /**
-* Test: Turning power OFF from ON sends single POWER command
-* 
-* Validates that transitioning from ON to OFF state generates exactly
-* one POWER IR command and updates the internal power state.
-*/
+ * Test: Turning power OFF from ON sends single POWER command
+ * 
+ * Validates that transitioning from ON to OFF state generates exactly
+ * one POWER IR command and updates the internal power state.
+ */
 TEST_F(WoleixStateMachineTest, PowerOffFromOnSendsPowerCommand)
 {
     state_machine_->set_current_state(
@@ -140,12 +145,12 @@ TEST_F(WoleixStateMachineTest, PowerOffFromOnSendsPowerCommand)
 }
 
 /**
-* Test: Turning power ON from OFF sends POWER command
-* 
-* When powering on from OFF, the state machine resets to defaults and
-* then generates commands to reach the requested state. Verifies POWER
-* command is sent and state is updated to ON.
-*/
+ * Test: Turning power ON from OFF sends POWER command
+ * 
+ * When powering on from OFF, the state machine resets to defaults and
+ * then generates commands to reach the requested state. Verifies POWER
+ * command is sent and state is updated to ON.
+ */
 TEST_F(WoleixStateMachineTest, PowerOnFromOffSendsPowerCommand)
 {
     // First turn off
@@ -172,12 +177,12 @@ TEST_F(WoleixStateMachineTest, PowerOnFromOffSendsPowerCommand)
 }
 
 /**
-* Test: Power OFF ignores other state parameters
-* 
-* When turning power OFF, mode, temperature, and fan speed parameters
-* should be ignored. Only the POWER command is sent regardless of
-* other requested changes.
-*/
+ * Test: Power OFF ignores other state parameters
+ * 
+ * When turning power OFF, mode, temperature, and fan speed parameters
+ * should be ignored. Only the POWER command is sent regardless of
+ * other requested changes.
+ */
 TEST_F(WoleixStateMachineTest, PowerOffIgnoresOtherStateChanges)
 {
     state_machine_->set_current_state(
@@ -206,11 +211,11 @@ TEST_F(WoleixStateMachineTest, PowerOffIgnoresOtherStateChanges)
 // ============================================================================
 
 /**
-* Test: COOL→DEHUM mode transition requires 1 MODE button press
-* 
-* Tests the circular mode sequence. Going from COOL to DEHUM is the
-* first step in the cycle, requiring exactly 1 MODE command.
-*/
+ * Test: COOL→DEHUM mode transition requires 1 MODE button press
+ * 
+ * Tests the circular mode sequence. Going from COOL to DEHUM is the
+ * first step in the cycle, requiring exactly 1 MODE command.
+ */
 TEST_F(WoleixStateMachineTest, ModeTransitionCoolToDehum)
 {
     state_machine_->set_current_state(
@@ -232,11 +237,11 @@ TEST_F(WoleixStateMachineTest, ModeTransitionCoolToDehum)
 }
 
 /**
-* Test: COOL→FAN mode transition requires 2 MODE button presses
-* 
-* Tests the circular mode sequence. Going from COOL to FAN requires
-* passing through DEHUM: COOL→DEHUM→FAN (2 steps).
-*/
+ * Test: COOL→FAN mode transition requires 2 MODE button presses
+ * 
+ * Tests the circular mode sequence. Going from COOL to FAN requires
+ * passing through DEHUM: COOL→DEHUM→FAN (2 steps).
+ */
 TEST_F(WoleixStateMachineTest, ModeTransitionCoolToFan)
 {
     state_machine_->set_current_state(
@@ -258,11 +263,11 @@ TEST_F(WoleixStateMachineTest, ModeTransitionCoolToFan)
 }
 
 /**
-* Test: DEHUM→FAN mode transition requires 1 MODE button press
-* 
-* Tests the circular mode sequence. Going from DEHUM to FAN is the
-* next step in the cycle, requiring exactly 1 MODE command.
-*/
+ * Test: DEHUM→FAN mode transition requires 1 MODE button press
+ * 
+ * Tests the circular mode sequence. Going from DEHUM to FAN is the
+ * next step in the cycle, requiring exactly 1 MODE command.
+ */
 TEST_F(WoleixStateMachineTest, ModeTransitionDehumToFan)
 {
     state_machine_->set_current_state(
@@ -285,11 +290,11 @@ TEST_F(WoleixStateMachineTest, ModeTransitionDehumToFan)
 }
 
 /**
-* Test: FAN→COOL mode transition requires 1 MODE button press
-* 
-* Tests the circular mode sequence. Going from FAN to COOL wraps around
-* the cycle, requiring exactly 1 MODE command: FAN→COOL.
-*/
+ * Test: FAN→COOL mode transition requires 1 MODE button press
+ * 
+ * Tests the circular mode sequence. Going from FAN to COOL wraps around
+ * the cycle, requiring exactly 1 MODE command: FAN→COOL.
+ */
 TEST_F(WoleixStateMachineTest, ModeTransitionFanToCool)
 {
     state_machine_->set_current_state(
@@ -312,11 +317,11 @@ TEST_F(WoleixStateMachineTest, ModeTransitionFanToCool)
 }
 
 /**
-* Test: DEHUM→COOL mode transition requires 2 MODE button presses
-* 
-* Tests the circular mode sequence. Going from DEHUM to COOL requires
-* passing through FAN: DEHUM→FAN→COOL (2 steps).
-*/
+ * Test: DEHUM→COOL mode transition requires 2 MODE button presses
+ * 
+ * Tests the circular mode sequence. Going from DEHUM to COOL requires
+ * passing through FAN: DEHUM→FAN→COOL (2 steps).
+ */
 TEST_F(WoleixStateMachineTest, ModeTransitionDehumToCool)
 {
     state_machine_->set_current_state(
@@ -339,11 +344,11 @@ TEST_F(WoleixStateMachineTest, ModeTransitionDehumToCool)
 }
 
 /**
-* Test: No mode change means no MODE commands
-* 
-* When the target mode matches the current mode, no MODE commands
-* should be generated.
-*/
+ * Test: No mode change means no MODE commands
+ * 
+ * When the target mode matches the current mode, no MODE commands
+ * should be generated.
+ */
 TEST_F(WoleixStateMachineTest, NoModeChangeGeneratesNoModeCommands)
 {
     state_machine_->set_current_state(
@@ -368,12 +373,12 @@ TEST_F(WoleixStateMachineTest, NoModeChangeGeneratesNoModeCommands)
 // ============================================================================
 
 /**
-* Test: Temperature increase in COOL mode generates TEMP_UP commands
-* 
-* Validates that increasing temperature (e.g., 25°C to 28°C) in COOL mode
-* generates the correct number of TEMP_UP commands (3 in this case) and
-* updates the internal temperature state.
-*/
+ * Test: Temperature increase in COOL mode generates TEMP_UP commands
+ * 
+ * Validates that increasing temperature (e.g., 25°C to 28°C) in COOL mode
+ * generates the correct number of TEMP_UP commands (3 in this case) and
+ * updates the internal temperature state.
+ */
 TEST_F(WoleixStateMachineTest, TemperatureIncreaseInCoolMode)
 {
     state_machine_->set_current_state(
@@ -397,12 +402,12 @@ TEST_F(WoleixStateMachineTest, TemperatureIncreaseInCoolMode)
 }
 
 /**
-* Test: Temperature decrease in COOL mode generates TEMP_DOWN commands
-* 
-* Validates that decreasing temperature (e.g., 25°C to 20°C) in COOL mode
-* generates the correct number of TEMP_DOWN commands (5 in this case) and
-* updates the internal temperature state.
-*/
+ * Test: Temperature decrease in COOL mode generates TEMP_DOWN commands
+ * 
+ * Validates that decreasing temperature (e.g., 25°C to 20°C) in COOL mode
+ * generates the correct number of TEMP_DOWN commands (5 in this case) and
+ * updates the internal temperature state.
+ */
 TEST_F(WoleixStateMachineTest, TemperatureDecreaseInCoolMode)
 {
     state_machine_->set_current_state(
@@ -426,12 +431,12 @@ TEST_F(WoleixStateMachineTest, TemperatureDecreaseInCoolMode)
 }
 
 /**
-* Test: Temperature values below minimum are clamped to 15°C
-* 
-* When a temperature below the minimum (15°C) is requested, the state
-* machine should clamp it to 15°C and generate the appropriate number
-* of TEMP_DOWN commands to reach the minimum.
-*/
+ * Test: Temperature values below minimum are clamped to 15°C
+ * 
+ * When a temperature below the minimum (15°C) is requested, the state
+ * machine should clamp it to 15°C and generate the appropriate number
+ * of TEMP_DOWN commands to reach the minimum.
+ */
 TEST_F(WoleixStateMachineTest, TemperatureClampedToMinimum)
 {
     state_machine_->set_current_state(
@@ -453,12 +458,12 @@ TEST_F(WoleixStateMachineTest, TemperatureClampedToMinimum)
 }
 
 /**
-* Test: Temperature values above maximum are clamped to 30°C
-* 
-* When a temperature above the maximum (30°C) is requested, the state
-* machine should clamp it to 30°C and generate the appropriate number
-* of TEMP_UP commands to reach the maximum.
-*/
+ * Test: Temperature values above maximum are clamped to 30°C
+ * 
+ * When a temperature above the maximum (30°C) is requested, the state
+ * machine should clamp it to 30°C and generate the appropriate number
+ * of TEMP_UP commands to reach the maximum.
+ */
 TEST_F(WoleixStateMachineTest, TemperatureClampedToMaximum)
 {
     state_machine_->set_current_state(
@@ -480,12 +485,12 @@ TEST_F(WoleixStateMachineTest, TemperatureClampedToMaximum)
 }
 
 /**
-* Test: Temperature changes ignored in DEHUM mode
-* 
-* Temperature control is only available in COOL mode. When in DEHUM mode,
-* temperature change requests should be ignored and no temperature commands
-* should be generated.
-*/
+ * Test: Temperature changes ignored in DEHUM mode
+ * 
+ * Temperature control is only available in COOL mode. When in DEHUM mode,
+ * temperature change requests should be ignored and no temperature commands
+ * should be generated.
+ */
 TEST_F(WoleixStateMachineTest, TemperatureIgnoredInDehumMode)
 {
     state_machine_->set_current_state(
@@ -509,12 +514,12 @@ TEST_F(WoleixStateMachineTest, TemperatureIgnoredInDehumMode)
 }
 
 /**
-* Test: Temperature changes ignored in FAN mode
-* 
-* Temperature control is only available in COOL mode. When in FAN mode,
-* temperature change requests should be ignored and no temperature commands
-* should be generated.
-*/
+ * Test: Temperature changes ignored in FAN mode
+ * 
+ * Temperature control is only available in COOL mode. When in FAN mode,
+ * temperature change requests should be ignored and no temperature commands
+ * should be generated.
+ */
 TEST_F(WoleixStateMachineTest, TemperatureIgnoredInFanMode)
 {
     state_machine_->set_current_state(
@@ -542,11 +547,11 @@ TEST_F(WoleixStateMachineTest, TemperatureIgnoredInFanMode)
 // ============================================================================
 
 /**
-* Test: Fan speed LOW→HIGH transition sends SPEED command
-* 
-* Validates that changing fan speed from LOW to HIGH generates exactly
-* one SPEED IR command and updates the internal fan speed state.
-*/
+ * Test: Fan speed LOW→HIGH transition sends SPEED command
+ * 
+ * Validates that changing fan speed from LOW to HIGH generates exactly
+ * one SPEED IR command and updates the internal fan speed state.
+ */
 TEST_F(WoleixStateMachineTest, FanSpeedLowToHigh)
 {
     state_machine_->set_current_state(
@@ -569,11 +574,11 @@ TEST_F(WoleixStateMachineTest, FanSpeedLowToHigh)
 }
 
 /**
-* Test: Fan speed HIGH→LOW transition sends SPEED command
-* 
-* Validates that changing fan speed from HIGH to LOW generates exactly
-* one SPEED IR command (toggle) and updates the internal fan speed state.
-*/
+ * Test: Fan speed HIGH→LOW transition sends SPEED command
+ * 
+ * Validates that changing fan speed from HIGH to LOW generates exactly
+ * one SPEED IR command (toggle) and updates the internal fan speed state.
+ */
 TEST_F(WoleixStateMachineTest, FanSpeedHighToLow)
 {
     state_machine_->set_current_state(
@@ -598,11 +603,11 @@ TEST_F(WoleixStateMachineTest, FanSpeedHighToLow)
 }
 
 /**
-* Test: No fan speed change means no SPEED commands
-* 
-* When the target fan speed matches the current fan speed, no SPEED
-* commands should be generated.
-*/
+ * Test: No fan speed change means no SPEED commands
+ * 
+ * When the target fan speed matches the current fan speed, no SPEED
+ * commands should be generated.
+ */
 TEST_F(WoleixStateMachineTest, NoFanSpeedChangeGeneratesNoCommands)
 {
     state_machine_->set_current_state(
@@ -627,12 +632,12 @@ TEST_F(WoleixStateMachineTest, NoFanSpeedChangeGeneratesNoCommands)
 // ============================================================================
 
 /**
-* Test: Complete multi-parameter state change from defaults
-* 
-* Tests changing all parameters simultaneously (mode, temperature, fan speed).
-* Validates that temperature is correctly ignored when target mode doesn't
-* support temperature control (FAN mode in this case).
-*/
+ * Test: Complete multi-parameter state change from defaults
+ * 
+ * Tests changing all parameters simultaneously (mode, temperature, fan speed).
+ * Validates that temperature is correctly ignored when target mode doesn't
+ * support temperature control (FAN mode in this case).
+ */
 TEST_F(WoleixStateMachineTest, CompleteStateChangeFromDefaults)
 {
     state_machine_->reset();
@@ -653,12 +658,12 @@ TEST_F(WoleixStateMachineTest, CompleteStateChangeFromDefaults)
 }
 
 /**
-* Test: Multiple sequential state changes
-* 
-* Validates that the state machine correctly handles a series of state
-* changes, with each change building on the previous state. Tests that
-* the command queue is properly cleared between changes.
-*/
+ * Test: Multiple sequential state changes
+ * 
+ * Validates that the state machine correctly handles a series of state
+ * changes, with each change building on the previous state. Tests that
+ * the command queue is properly cleared between changes.
+ */
 TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
 {
     // Change 1: Mode and fan
@@ -703,12 +708,12 @@ TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
 }
 
 /**
-* Test: Command ordering follows correct priority
-* 
-* When powering on and changing multiple parameters, commands should be
-* generated in the correct order: POWER first, then MODE, TEMP, and FAN.
-* This ensures the AC unit processes commands in the expected sequence.
-*/
+ * Test: Command ordering follows correct priority
+ * 
+ * When powering on and changing multiple parameters, commands should be
+ * generated in the correct order: POWER first, then MODE, TEMP, and FAN.
+ * This ensures the AC unit processes commands in the expected sequence.
+ */
 TEST_F(WoleixStateMachineTest, CommandOrderingIsCorrect)
 {
     // Power on from off should process in order: POWER, MODE, TEMP, FAN
@@ -737,12 +742,12 @@ TEST_F(WoleixStateMachineTest, CommandOrderingIsCorrect)
 }
 
 /**
-* Test: No commands generated when state doesn't change
-* 
-* Validates that setting the same target state twice in a row generates
-* commands only on the first call. The second call should return an empty
-* command queue since there's no state change.
-*/
+ * Test: No commands generated when state doesn't change
+ * 
+ * Validates that setting the same target state twice in a row generates
+ * commands only on the first call. The second call should return an empty
+ * command queue since there's no state change.
+ */
 TEST_F(WoleixStateMachineTest, EmptyCommandsAfterNoChange)
 {
     state_machine_->set_current_state(
@@ -769,12 +774,12 @@ TEST_F(WoleixStateMachineTest, EmptyCommandsAfterNoChange)
 // ============================================================================
 
 /**
-* Test: Fractional temperatures are rounded correctly
-* 
-* Validates that fractional temperature values (e.g., 27.5°C) are properly
-* rounded to the nearest integer (28°C) when calculating the number of
-* temperature adjustment commands needed.
-*/
+ * Test: Fractional temperatures are rounded correctly
+ * 
+ * Validates that fractional temperature values (e.g., 27.5°C) are properly
+ * rounded to the nearest integer (28°C) when calculating the number of
+ * temperature adjustment commands needed.
+ */
 TEST_F(WoleixStateMachineTest, TemperatureRoundingHandled)
 {
     state_machine_->set_current_state(

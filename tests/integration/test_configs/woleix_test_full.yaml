@@ -53,5 +53,4 @@ climate:
     transmitter_id: new_room_ac_ir
     sensor: new_room_ac_current_temperature
     humidity_sensor: new_room_ac_current_humidity
-    reset_button: reset_button
 

@@ -64,15 +64,14 @@ esphome-external-components/
 
 ## 📖 Component Architecture
 
-The climate_ir_woleix component consists of four main parts:
+The climate_ir_woleix component consists of five main parts:
 
 ### 1. Climate IR Component (`climate_ir_woleix.h/cpp`)
 
 - Implements ESPHome's Climate interface by extending ClimateIR
 - Handles user interactions and overall state management
-- Integrates with temperature/humidity sensors
-- Coordinates IR command transmission using WoleixCommandTransmitter
-- Supports an optional reset button for state reconciliation
+- Integrates with temperature/humidity sensors (temperature required, humidity optional)
+- Coordinates IR command transmission using WoleixTransmitter
 - Uses WoleixStateMachine to manage state transitions and command generation
 - Utilizes StateMapper for converting between ESPHome and Woleix-specific states
 
@@ -80,23 +79,34 @@ The climate_ir_woleix component consists of four main parts:
 
 - Manages internal AC state (power, mode, temperature, fan speed)
 - Generates optimal command sequences for state transitions
-- Handles mode cycling and temperature adjustments
+- Handles mode cycling through COOL→DEHUM→FAN sequence
+- Manages temperature adjustments (15-30°C in COOL mode)
+- Uses WoleixCommandFactory to create IR commands
 - Provides methods for state transitions and retrieving current state
 
-### 3. Communication (`woleix_comm.h/cpp`)
+### 3. Communication Layer (`woleix_comm.h/cpp`)
 
-- Defines classes for IR command representation (WoleixProntoCommand, WoleixNecCommand)
-- Implements WoleixCommandTransmitter for sending IR commands
-- Supports both Pronto hex format and NEC protocol for IR transmission
+- **WoleixCommand**: Represents individual IR commands using NEC protocol
+  - Encapsulates command type, NEC address (0xFB04), delay, and repeat count
+  - Supports POWER, TEMP_UP, TEMP_DOWN, MODE, and FAN_SPEED commands
+- **WoleixTransmitter**: Handles IR transmission via ESPHome's RemoteTransmitterBase
+  - Converts WoleixCommand objects to NEC protocol format
+  - Manages command delays and repeats automatically
 
 ### 4. State Mapper (`woleix_state_mapper.h/cpp`)
 
-- Provides utility functions for mapping between ESPHome climate states and Woleix-specific states
-- Handles conversions for modes, fan speeds, and power states
+- Provides bidirectional conversion between ESPHome and Woleix states
+- Maps climate modes: COOL↔CLIMATE_MODE_COOL, DEHUM↔CLIMATE_MODE_DRY, FAN↔CLIMATE_MODE_FAN_ONLY
+- Maps fan speeds: LOW↔CLIMATE_FAN_LOW, HIGH↔CLIMATE_FAN_HIGH
+- Converts power states between boolean and enum representations
 
-### Shared Resources
+### 5. Constants (`woleix_constants.h`)
 
-- Constants (`woleix_constants.h`): Defines constant values used throughout the component, including temperature limits and IR command codes.
+- Component version information
+- Temperature limits (15-30°C)
+- NEC protocol address (0xFB04)
+- NEC command codes for all IR operations
+- Default values for power, mode, temperature, and fan speed
 
 ### Interaction Between Components
 
@@ -128,14 +138,17 @@ This diagram shows how user interactions flow through the system, from ESPHome t
 
 **Key Features:**
 
-- Power toggle with state reset on power-on
-- Mode cycling: COOL → DEHUM → FAN → COOL
-- Temperature control (15-30°C, COOL mode only)
-- Fan speed toggle (LOW ↔ HIGH)
-- Optimized command generation for minimal IR transmissions
-- Granular temperature control: Sends individual commands for each degree of change
-- Support for humidity sensor integration
-- Optional reset button for state reconciliation
+- **IR Protocol**: Uses NEC protocol (address 0xFB04) for all IR transmissions
+- **Power Control**: Power toggle with automatic state reset on power-on
+- **Mode Cycling**: Circular mode sequence COOL → DEHUM → FAN → COOL
+- **Temperature Control**: Adjustable 15-30°C in COOL mode with 1°C granularity
+- **Fan Speed**: Toggle between LOW and HIGH speeds
+- **Optimized Commands**: Generates minimal command sequences with appropriate delays
+- **Granular Temperature**: Sends individual commands for each degree of temperature change
+- **Sensor Integration**:
+  - Temperature sensor (required) for current temperature display
+  - Humidity sensor (optional) for current humidity display
+- **State Reconciliation**: External reset button may be used for re-synchronizing with physical device state
 
 **Temperature Control Behavior:**
 
@@ -351,7 +364,7 @@ After powering on, the device returns to its *default* state:
 
 To maintain synchronization, you need a mechanism to bring your WoleixIR component to the same *default* state. I have automated this at the Home Assistant level by controlling the device through a smart socket. The reconciliation process works as follows:
 
-- The reset button (a `binary_sensor`) is clicked (actually a long press of 3 seconds to avoid accidental resets), which initiates:
+- An external reset button (a `binary_sensor`) is clicked (actually a long press of 3 seconds to avoid accidental resets), which initiates:
   - Sending a power OFF command to Woleix if it is currently on
   - After a 30-second delay (according to the user's manual), a Home Assistant automation switches off the smart socket
   - After another 30-second delay, the smart socket is powered back on
@@ -364,55 +377,51 @@ To maintain synchronization, you need a mechanism to bring your WoleixIR compone
 ```mermaid
 sequenceDiagram
     participant User
-    participant ResetButton as Reset Button<br/>(Binary Sensor)
+    participant ResetButton as Reset Button<br/>(GPIO Binary Sensor)
+    participant PowerButton as Power Button<br/>(Template)
     participant WoleixIR as WoleixIR Component
     participant Woleix as Woleix AC Unit
-    participant HA as Home Assistant<br/>Automation
+    participant HASocket as Home Assistant<br/>Socket Entity
     participant SmartSocket as Smart Socket
 
     Note over User,SmartSocket: State Reconciliation Process
 
-    User->>ResetButton: Click reset button
+    User->>ResetButton: Long press (3s)
     activate ResetButton
-    ResetButton->>WoleixIR: Button pressed event
-    activate WoleixIR
+    Note right of ResetButton: GPIO button detects<br/>long press via filters
     
-    alt Woleix AC is powered ON
-        WoleixIR->>Woleix: Send power OFF command
+    alt Woleix AC is ON (checked via WoleixIR state)
+        ResetButton->>PowerButton: Trigger power button press
+        activate PowerButton
+        PowerButton->>Woleix: Send power OFF IR command<br/>(NEC: 0xFB04/0xFB04)
         Note right of Woleix: AC powers off
+        deactivate PowerButton
+        Note over ResetButton: Wait 30 seconds
     end
     
-    WoleixIR->>HA: Trigger reset automation
-    deactivate WoleixIR
-    deactivate ResetButton
-    
-    activate HA
-    Note over HA: Wait 30 seconds<br/>(capacitor discharge)
-    HA->>SmartSocket: Power OFF
-    activate SmartSocket
-    Note right of SmartSocket: Cut power to device
-    SmartSocket-->>Woleix: Power disconnected
-    
-    Note over HA,SmartSocket: Wait 30 seconds<br/>(ensure full reset)
-    
-    HA->>SmartSocket: Power ON
-    SmartSocket-->>Woleix: Power restored
-    Note right of Woleix: Device boots to<br/>default state:<br/>- Mode: COOL<br/>- Temp: 25°C<br/>- Fan: LOW
-    deactivate SmartSocket
-    
-    alt Device was powered ON before reset
-        HA->>WoleixIR: Send power ON command
-        activate WoleixIR
-        WoleixIR->>Woleix: Send power ON command
-        Note right of Woleix: AC powers on
-        deactivate WoleixIR
+    alt Smart socket is ON (checked via HA entity state)
+        ResetButton->>HASocket: Call switch.turn_off service
+        activate HASocket
+        HASocket->>SmartSocket: Turn off socket
+        Note right of SmartSocket: Cut power to device
+        SmartSocket-->>Woleix: Power disconnected
+        deactivate HASocket
+        Note over ResetButton: Wait 30 seconds<br/>(capacitor discharge)
+        
+        ResetButton->>HASocket: Call switch.turn_on service
+        activate HASocket
+        HASocket->>SmartSocket: Turn on socket
+        SmartSocket-->>Woleix: Power restored
+        Note right of Woleix: Device boots to<br/>default state:<br/>- Mode: COOL<br/>- Temp: 25°C<br/>- Fan: LOW
+        deactivate HASocket
     end
     
-    HA->>WoleixIR: Reset internal state
+    ResetButton->>WoleixIR: Call reset_state() method
     activate WoleixIR
     Note right of WoleixIR: Internal state reset to:<br/>- Mode: COOL<br/>- Temp: 25°C<br/>- Fan: LOW
+    WoleixIR-->>ResetButton: State reset complete
     deactivate WoleixIR
-    deactivate HA
+    deactivate ResetButton
     
     Note over User,SmartSocket: ✓ States Reconciled<br/>Physical device and assumed state now match
 ```
@@ -459,8 +468,9 @@ climate:
     transmitter_id: ir_transmitter
     sensor: room_temp              # Temperature sensor (required)
     humidity_sensor: room_humidity  # Humidity sensor (optional)
-    reset_button: ac_reset_button  # Reset button (optional)
 ```
+
+For a complete example, see [a sample config](./config/woleix_climate.yaml).
 
 ## 🧪 Running Tests
 
@@ -619,70 +629,31 @@ export CXX=g++
 cmake ..
 ```
 
-## The Command Codes
+## 📡 IR Protocol & Command Codes
 
-### Pronto
+The component uses the **NEC IR protocol** for all transmissions to the Woleix AC unit.
 
-- **Power**:
-  - 0000 006D 0022 0000 0158 00AF 0014 0018 0014 0018 0014 0042 0014 0018
-    0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018
-    0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0018 0014 0018
-    0014 0042 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0042
-    0014 0042 0014 0018 0014 0043 0013 0042 0014 0042 0014 0042 0014 0042
-    0014 0483
+### NEC Protocol Details
 
-- **Temp+**:
-  - 0000 006D 0022 0000 0158 00B0 0013 0018 0014 0017 0014 0043 0013 0018
-    0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018
-    0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0018
-    0014 0042 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018
-    0014 0042 0014 0018 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042
-    0014 0483
+- **Protocol**: NEC (standard consumer IR protocol)
+- **Address**: `0xFB04` (fixed for all Woleix commands)
+- **Command Codes**:
 
-- **Temp-**:
-  - 0000 006D 0022 0000 0158 00AF 0014 0018 0014 0018 0014 0043 0013 0018
-    0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018
-    0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0018
-    0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018
-    0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042
-    0014 0483
+| Button | NEC Code | Function |
+| ------ | -------- | -------- |
+| **Power** | `0xFB04` | Toggle AC unit on/off |
+| **Temp+** | `0xFA05` | Increase temperature by 1°C |
+| **Temp-** | `0xFE01` | Decrease temperature by 1°C |
+| **Mode** | `0xF20D` | Cycle through COOL → DEHUM → FAN modes |
+| **Speed** | `0xF906` | Toggle fan speed between LOW and HIGH |
+| **Timer** | `0xFF00` | Timer function (not currently used by component) |
 
-- **Mode**:
-  - 0000 006D 0022 0000 0159 00AF 0014 0018 0014 0018 0014 0043 0013 0018
-    0014 0018 0014 0018 0014 0018 0014 0018 0014 0043 0013 0043 0013 0018
-    0014 0043 0013 0043 0013 0043 0013 0043 0013 0043 0013 0043 0013 0018
-    0014 0043 0013 0043 0013 0018 0014 0018 0014 0018 0014 0018 0014 0018
-    0014 0043 0013 0018 0014 0018 0014 0043 0013 0043 0013 0043 0013 0042
-    0014 0483
+### Command Transmission
 
-- **Speed**:
-  - 0000 006D 0022 0000 0158 00B0 0013 0018 0014 0018 0014 0041 0014 0018
-    0014 0018 0014 0018 0014 0018 0014 0018 0014 0042 0014 0042 0014 0018
-    0014 0040 0016 0043 0013 0043 0013 003D 0019 0040 0015 0018 0014 003E
-    0018 0043 0013 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0043
-    0013 0018 0014 0018 0014 0043 0013 0043 0013 0041 0014 0043 0013 0043
-    0013 0483
-
-- **Timer**:
-  - 0000 006D 0022 0000 0159 00AF 0014 0018 0014 0018 0014 0043 0013 0018
-    0014 0018 0014 0018 0014 0018 0014 0018 0014 0043 0013 0043 0013 0018
-    0014 0043 0013 0043 0013 0043 0013 0043 0013 0042 0014 0018 0014 0018
-    0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0018 0014 0042
-    0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042 0014 0042
-    0014 0483
-
-- **Repeat Frame**:
-  - 0000 006D 0002 0000 0159 0056 0014 0483
-
-### NEC
-
-- **Address** (always the same): 0xFB04
-- **Power**: 0xFB04
-- **Temp+**: 0xFA05
-- **Temp-**: 0xFE01
-- **Mode**: 0xF20D
-- **Speed**: 0xF906
-- **Timer**: 0xFF00
+- Commands are sent using ESPHome's built-in NEC protocol support
+- Each command can include configurable delays (e.g., 150ms for temperature, 200ms for mode)
+- Commands can be repeated multiple times for reliable transmission
+- The component automatically manages command queuing and transmission timing
 
 ## 📚 Resources
 

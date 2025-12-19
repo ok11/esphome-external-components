@@ -17,12 +17,14 @@ using testing::AtLeast;
 using testing::Invoke;
 
 // Custom GMock matcher for checking WoleixCommand type
-MATCHER_P(IsCommandOfType, expected_type, "") {
-        return arg.get_type() == expected_type;
+MATCHER_P(IsCommandOfType, expected_type, "")
+{
+    return arg.get_type() == expected_type;
 }
 
-MATCHER_P2(IsCommand, expected_type, expected_repeat, "") {
-        return arg.get_type() == expected_type && arg.get_repeat_count() == expected_repeat;
+MATCHER_P2(IsCommand, expected_type, expected_repeat, "") 
+{
+    return arg.get_type() == expected_type && arg.get_repeat_count() == expected_repeat;
 }
 
 class MockWoleixStateMachine : public WoleixStateMachine
@@ -76,9 +78,7 @@ public:
         );
     }
 
-    void get_last_state(ClimateMode& mode,
-                                            float& target_temperature,
-                                            ClimateFanMode& fan_mode)
+    void get_last_state(ClimateMode& mode, float& target_temperature, ClimateFanMode& fan_mode)
     {
             WoleixInternalState woleix_state =
                 ((MockWoleixStateMachine*)state_machine_)->get_current_state();
@@ -90,12 +90,9 @@ public:
             fan_mode = StateMapper::woleix_to_esphome_fan_mode(woleix_state.fan_speed);
     }
 
-    esphome::sensor::Sensor* get_humidity_sensor() {
+    esphome::sensor::Sensor* get_humidity_sensor()
+    {
         return this->humidity_sensor_;
-    }
-
-    esphome::binary_sensor::BinarySensor* get_reset_button() {
-        return this->reset_button_;
     }
 
     MOCK_METHOD(void, publish_state, (), (override)); 
@@ -136,12 +133,12 @@ protected:
 // ============================================================================
 
 /**
-* Test: Verify climate traits are configured correctly
-* 
-* Validates that the climate component reports correct temperature range
-* (15-30°C with 1°C steps) and supports current temperature and humidity
-* sensor readings.
-*/
+ * Test: Verify climate traits are configured correctly
+ * 
+ * Validates that the climate component reports correct temperature range
+ * (15-30°C with 1°C steps) and supports current temperature and humidity
+ * sensor readings.
+ */
 TEST_F(WoleixClimateTest, TraitsConfiguredCorrectly)
 {
     auto traits = mock_climate->call_traits();
@@ -161,12 +158,12 @@ TEST_F(WoleixClimateTest, TraitsConfiguredCorrectly)
 // ============================================================================
 
 /**
-* Test: Turning on from OFF state sends power command plus state setup
-* 
-* When powering on from OFF state, the AC unit resets to defaults and
-* requires POWER command plus MODE and SPEED commands to reach desired state.
-* Tests transition from OFF to DRY mode with HIGH fan speed.
-*/
+ * Test: Turning on from OFF state sends power command plus state setup
+ * 
+ * When powering on from OFF state, the AC unit resets to defaults and
+ * requires POWER command plus MODE and SPEED commands to reach desired state.
+ * Tests transition from OFF to DRY mode with HIGH fan speed.
+ */
 TEST_F(WoleixClimateTest, TurningOnFromOffSendsPowerCommand)
 {
     // Start in OFF mode - set state AFTER constructor has run
@@ -192,11 +189,11 @@ TEST_F(WoleixClimateTest, TurningOnFromOffSendsPowerCommand)
 }
 
 /**
-* Test: Turning off sends only power command
-* 
-* When powering off the AC unit, only the POWER command should be sent.
-* No mode, temperature, or fan speed commands are needed when turning off.
-*/
+ * Test: Turning off sends only power command
+ * 
+ * When powering off the AC unit, only the POWER command should be sent.
+ * No mode, temperature, or fan speed commands are needed when turning off.
+ */
 TEST_F(WoleixClimateTest, TurningOffSendsPowerCommand)
 {
     // Start in COOL mode
@@ -218,11 +215,11 @@ TEST_F(WoleixClimateTest, TurningOffSendsPowerCommand)
 }
 
 /**
-* Test: Staying in OFF mode does not transmit any commands
-* 
-* When the AC is already off and the target state is also off,
-* no IR commands should be transmitted since there's no state change.
-*/
+ * Test: Staying in OFF mode does not transmit any commands
+ * 
+ * When the AC is already off and the target state is also off,
+ * no IR commands should be transmitted since there's no state change.
+ */
 TEST_F(WoleixClimateTest, StayingOffDoesNotTransmit) 
 {
     // Start in OFF mode
@@ -244,12 +241,12 @@ TEST_F(WoleixClimateTest, StayingOffDoesNotTransmit)
 // ============================================================================
 
 /**
-* Test: Increasing temperature sends multiple TEMP_UP commands
-* 
-* When raising the temperature (e.g., from 20°C to 23°C), the component
-* should send the correct number of TEMP_UP IR commands (3 in this case).
-* Temperature adjustment only works in COOL mode.
-*/
+ * Test: Increasing temperature sends multiple TEMP_UP commands
+ * 
+ * When raising the temperature (e.g., from 20°C to 23°C), the component
+ * should send the correct number of TEMP_UP IR commands (3 in this case).
+ * Temperature adjustment only works in COOL mode.
+ */
 TEST_F(WoleixClimateTest, IncreasingTemperatureSendsTempUpCommands)
 {
     // Initialize with a known state
@@ -271,12 +268,12 @@ TEST_F(WoleixClimateTest, IncreasingTemperatureSendsTempUpCommands)
 }
 
 /**
-* Test: Decreasing temperature sends multiple TEMP_DOWN commands
-* 
-* When lowering the temperature (e.g., from 25°C to 23°C), the component
-* should send the correct number of TEMP_DOWN IR commands (2 in this case).
-* Temperature adjustment only works in COOL mode.
-*/
+ * Test: Decreasing temperature sends multiple TEMP_DOWN commands
+ * 
+ * When lowering the temperature (e.g., from 25°C to 23°C), the component
+ * should send the correct number of TEMP_DOWN IR commands (2 in this case).
+ * Temperature adjustment only works in COOL mode.
+ */
 TEST_F(WoleixClimateTest, DecreasingTemperatureSendsTempDownCommands)
 {
     // Initialize with a known state
@@ -298,11 +295,11 @@ TEST_F(WoleixClimateTest, DecreasingTemperatureSendsTempDownCommands)
 }
 
 /**
-* Test: No temperature change means no temperature commands
-* 
-* When the target temperature matches the current temperature, no
-* temperature adjustment commands should be sent.
-*/
+ * Test: No temperature change means no temperature commands
+ * 
+ * When the target temperature matches the current temperature, no
+ * temperature adjustment commands should be sent.
+ */
 TEST_F(WoleixClimateTest, NoTemperatureChangeDoesNotSendTempCommands)
 {
     // Initialize with a known state
@@ -323,12 +320,12 @@ TEST_F(WoleixClimateTest, NoTemperatureChangeDoesNotSendTempCommands)
 }
 
 /**
-* Test: Temperature changes ignored in non-COOL modes
-* 
-* Temperature control is only available in COOL mode. When in FAN or
-* DEHUM mode, temperature changes should be ignored and no temperature
-* commands should be sent.
-*/
+ * Test: Temperature changes ignored in non-COOL modes
+ * 
+ * Temperature control is only available in COOL mode. When in FAN or
+ * DEHUM mode, temperature changes should be ignored and no temperature
+ * commands should be sent.
+ */
 TEST_F(WoleixClimateTest, NonCoolModeDoesNotSendTempCommands)
 {
     // Initialize with a known state
@@ -353,11 +350,11 @@ TEST_F(WoleixClimateTest, NonCoolModeDoesNotSendTempCommands)
 // ============================================================================
 
 /**
-* Test: Mode transition COOL→FAN requires 2 MODE button presses
-* 
-* Tests the circular mode sequence. Going from COOL to FAN requires
-* cycling through: COOL→DEHUM→FAN (2 steps).
-*/
+ * Test: Mode transition COOL→FAN requires 2 MODE button presses
+ * 
+ * Tests the circular mode sequence. Going from COOL to FAN requires
+ * cycling through: COOL→DEHUM→FAN (2 steps).
+ */
 TEST_F(WoleixClimateTest, ChangingModeCoolToFanSends2ModeCommands)
 {
     // Initialize in COOL mode
@@ -379,11 +376,11 @@ TEST_F(WoleixClimateTest, ChangingModeCoolToFanSends2ModeCommands)
 }
 
 /**
-* Test: Mode transition DRY→COOL requires 2 MODE button presses
-* 
-* Tests the circular mode sequence. Going from DEHUM (DRY) to COOL requires
-* cycling through: DEHUM→FAN→COOL (2 steps).
-*/
+ * Test: Mode transition DRY→COOL requires 2 MODE button presses
+ * 
+ * Tests the circular mode sequence. Going from DEHUM (DRY) to COOL requires
+ * cycling through: DEHUM→FAN→COOL (2 steps).
+ */
 TEST_F(WoleixClimateTest, ChangingModeDryToCoolSends2ModeCommands)
 {
     // Initialize in COOL mode
@@ -405,11 +402,11 @@ TEST_F(WoleixClimateTest, ChangingModeDryToCoolSends2ModeCommands)
 }
 
 /**
-* Test: Mode transition COOL→DRY requires 1 MODE button press
-* 
-* Tests the circular mode sequence. Going from COOL to DEHUM (DRY) requires
-* only one step: COOL→DEHUM (1 step).
-*/
+ * Test: Mode transition COOL→DRY requires 1 MODE button press
+ * 
+ * Tests the circular mode sequence. Going from COOL to DEHUM (DRY) requires
+ * only one step: COOL→DEHUM (1 step).
+ */
 TEST_F(WoleixClimateTest, ChangingModeCoolToDrySends1ModeCommand)
 {
     // Initialize in COOL mode
@@ -435,11 +432,11 @@ TEST_F(WoleixClimateTest, ChangingModeCoolToDrySends1ModeCommand)
 // ============================================================================
 
 /**
-* Test: Increasing fan speed from LOW to HIGH sends SPEED command
-* 
-* Validates that changing fan speed from LOW to HIGH generates a single
-* SPEED IR command to toggle the fan speed setting.
-*/
+ * Test: Increasing fan speed from LOW to HIGH sends SPEED command
+ * 
+ * Validates that changing fan speed from LOW to HIGH generates a single
+ * SPEED IR command to toggle the fan speed setting.
+ */
 TEST_F(WoleixClimateTest, IncreasingFanSpeedSendsSpeedCommand)
 {
     // Initialize with known state
@@ -462,11 +459,11 @@ TEST_F(WoleixClimateTest, IncreasingFanSpeedSendsSpeedCommand)
 }
 
 /**
-* Test: Decreasing fan speed from HIGH to LOW sends SPEED command
-* 
-* Validates that changing fan speed from HIGH to LOW generates a single
-* SPEED IR command to toggle the fan speed setting.
-*/
+ * Test: Decreasing fan speed from HIGH to LOW sends SPEED command
+ * 
+ * Validates that changing fan speed from HIGH to LOW generates a single
+ * SPEED IR command to toggle the fan speed setting.
+ */
 TEST_F(WoleixClimateTest, DecreasingFanSpeedSendsSpeedCommand)
 {
     // Initialize with known state
@@ -518,12 +515,12 @@ TEST_F(WoleixClimateTest, UnchangedFanSpeedDoesNotSendSpeedCommand)
 // ============================================================================
 
 /**
-* Test: Complete multi-parameter state change
-* 
-* Tests a complex transition changing mode (DRY→COOL), temperature (20→24°C),
-* and fan speed (LOW→HIGH) simultaneously. Validates that all necessary
-* commands are generated in the correct order and quantity.
-*/
+ * Test: Complete multi-parameter state change
+ * 
+ * Tests a complex transition changing mode (DRY→COOL), temperature (20→24°C),
+ * and fan speed (LOW→HIGH) simultaneously. Validates that all necessary
+ * commands are generated in the correct order and quantity.
+ */
 TEST_F(WoleixClimateTest, CompleteStateChangeSequence)
 {
     // Start from OFF
@@ -563,11 +560,11 @@ TEST_F(WoleixClimateTest, CompleteStateChangeSequence)
 // ============================================================================
 
 /**
-* Test: Temperature constants are correctly defined
-* 
-* Verifies that minimum (15°C) and maximum (30°C) temperature constants
-* match the Woleix AC unit specifications.
-*/
+ * Test: Temperature constants are correctly defined
+ * 
+ * Verifies that minimum (15°C) and maximum (30°C) temperature constants
+ * match the Woleix AC unit specifications.
+ */
 TEST_F(WoleixClimateTest, TemperatureBoundsAreCorrect)
 {
     EXPECT_EQ(WOLEIX_TEMP_MIN, 15.0f);
@@ -579,17 +576,17 @@ TEST_F(WoleixClimateTest, TemperatureBoundsAreCorrect)
 // ============================================================================
 
 /**
-* Test: transmit_state() calls publish_state() to notify ESPHome
-* 
-* Validates that after transmitting IR commands, the climate component
-* calls publish_state() to update ESPHome with the new state.
-*/
+ * Test: transmit_state() calls publish_state() to notify ESPHome
+ * 
+ * Validates that after transmitting IR commands, the climate component
+ * calls publish_state() to update ESPHome with the new state.
+ */
 TEST_F(WoleixClimateTest, ControlCallsPublishState)
 {
     auto call = mock_climate->make_call();
     call.set_mode(ClimateMode::CLIMATE_MODE_COOL)
-            .set_target_temperature(25.0f)
-            .set_fan_mode(ClimateFanMode::CLIMATE_FAN_LOW);
+        .set_target_temperature(25.0f)
+        .set_fan_mode(ClimateFanMode::CLIMATE_FAN_LOW);
 
         // Turning on sends: Power, Mode, Speed commands
     mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_OFF, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
@@ -601,17 +598,17 @@ TEST_F(WoleixClimateTest, ControlCallsPublishState)
 }
 
 /**
-* Test: transmit_state() calls publish_state() to notify ESPHome
-* 
-* Validates that after transmitting IR commands, the climate component
-* updates ESPHome with the new state.
-*/
+ * Test: transmit_state() calls publish_state() to notify ESPHome
+ * 
+ * Validates that after transmitting IR commands, the climate component
+ * updates ESPHome with the new state.
+ */
 TEST_F(WoleixClimateTest, ControlUpdatesState)
 {
     auto call = mock_climate->make_call();
     call.set_mode(ClimateMode::CLIMATE_MODE_COOL)
-            .set_target_temperature(25.0f)
-            .set_fan_mode(ClimateFanMode::CLIMATE_FAN_LOW);
+        .set_target_temperature(25.0f)
+        .set_fan_mode(ClimateFanMode::CLIMATE_FAN_LOW);
 
     // Turning on sends: Power, Mode, Speed commands
     mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_OFF, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
@@ -627,12 +624,12 @@ TEST_F(WoleixClimateTest, ControlUpdatesState)
 // ============================================================================
 
 /**
-* Test: Humidity sensor callback registration during setup
-* 
-* Verifies that when a humidity sensor is configured, the setup() method
-* registers a callback to receive humidity updates. Tests that publishing
-* a humidity value updates the sensor state correctly.
-*/
+ * Test: Humidity sensor callback registration during setup
+ * 
+ * Verifies that when a humidity sensor is configured, the setup() method
+ * registers a callback to receive humidity updates. Tests that publishing
+ * a humidity value updates the sensor state correctly.
+ */
 TEST_F(WoleixClimateTest, HumiditySensorCallbackIsRegistered)
 {
     // Create a mock humidity sensor
@@ -653,12 +650,12 @@ TEST_F(WoleixClimateTest, HumiditySensorCallbackIsRegistered)
 }
 
 /**
-* Test: Humidity sensor receives multiple updates correctly
-* 
-* Validates that the humidity sensor callback can handle multiple
-* sequential updates, with each new value correctly updating the
-* sensor's state property.
-*/
+ * Test: Humidity sensor receives multiple updates correctly
+ * 
+ * Validates that the humidity sensor callback can handle multiple
+ * sequential updates, with each new value correctly updating the
+ * sensor's state property.
+ */
 TEST_F(WoleixClimateTest, HumiditySensorCallbackReceivesUpdates)
 {
     // Create a mock humidity sensor
@@ -682,12 +679,12 @@ TEST_F(WoleixClimateTest, HumiditySensorCallbackReceivesUpdates)
 }
 
 /**
-* Test: Setup() handles null humidity sensor gracefully
-* 
-* Verifies that calling setup() without a humidity sensor configured
-* (nullptr) does not cause crashes or exceptions. The humidity sensor
-* is optional, so this must work correctly.
-*/
+ * Test: Setup() handles null humidity sensor gracefully
+ * 
+ * Verifies that calling setup() without a humidity sensor configured
+ * (nullptr) does not cause crashes or exceptions. The humidity sensor
+ * is optional, so this must work correctly.
+ */
 TEST_F(WoleixClimateTest, HumiditySensorCallbackWorksWithNullSensor)
 {
     // Don't set a humidity sensor (leave it as nullptr)
@@ -697,12 +694,12 @@ TEST_F(WoleixClimateTest, HumiditySensorCallbackWorksWithNullSensor)
 }
 
 /**
-* Test: Humidity sensor updates trigger climate state republish
-* 
-* Validates that when the humidity sensor publishes a new value, the
-* climate component's publish_state() is called to update ESPHome
-* with the new humidity reading.
-*/
+ * Test: Humidity sensor updates trigger climate state republish
+ * 
+ * Validates that when the humidity sensor publishes a new value, the
+ * climate component's publish_state() is called to update ESPHome
+ * with the new humidity reading.
+ */
 TEST_F(WoleixClimateTest, PublishingStateOfHumiditySensorRepublishesItByClimate)
 {
     // Turning on sends: Power, Mode, Speed commands
@@ -735,12 +732,12 @@ TEST_F(WoleixClimateTest, PublishingStateOfHumiditySensorRepublishesItByClimate)
 // ============================================================================
 
 /**
-* Test: Setup() handles null reset button gracefully
-* 
-* Verifies that calling setup() without the reset button configured
-* (nullptr) does not cause crashes or exceptions. The reset button
-* is optional, so this must work correctly.
-*/
+ * Test: Setup() handles null reset button gracefully
+ * 
+ * Verifies that calling setup() without the reset button configured
+ * (nullptr) does not cause crashes or exceptions. The reset button
+ * is optional, so this must work correctly.
+ */
 TEST_F(WoleixClimateTest, ResetButtonCallbackWorksWithNullSensor)
 {
     // Don't set a reset button (leave it as nullptr)
@@ -751,108 +748,12 @@ TEST_F(WoleixClimateTest, ResetButtonCallbackWorksWithNullSensor)
 
 
 /**
-* Test: Reset button callback registration during setup
-* 
-* Verifies that when the reset button is configured, the setup() method
-* registers a callback to receive button press. Tests that publishing
-* the reset button state updates the climate state correctly.
-*/
-TEST_F(WoleixClimateTest, ResetButtonCallbackIsRegistered)
-{
-    // Create a mock reset button
-    esphome::binary_sensor::BinarySensor reset_button;
-  
-    // Set the reset button on the climate device
-    mock_climate->set_reset_button(&reset_button);
-  
-    // Call setup to register the callback
-    mock_climate->setup();
-  
-    // Verify the callback was registered by publishing a state
-    // and checking that it doesn't crash (basic test)
-    reset_button.publish_state(true);
-}
-
-/**
-* Test: Reset button press resets the internal state
-* 
-* Validates that the reset button press resets the internal climate state.
-*/
-TEST_F(WoleixClimateTest, DISABLED_ResetButtonCallbackResetsState)
-{
-    // Create a mock reset button
-    esphome::binary_sensor::BinarySensor reset_button;
-  
-    // Set the reset button on the climate device
-    mock_climate->set_reset_button(&reset_button);
-  
-    // Call setup to register the callback
-    mock_climate->setup();
-  
-    ClimateMode mode = ClimateMode::CLIMATE_MODE_OFF;
-    float target_temperature = 20.0f;
-    ClimateFanMode fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
-
-    mock_climate->set_last_state(
-        mode,
-        target_temperature,
-        fan_mode
-    );
-
-    // Press the reset button
-    reset_button.publish_state(true);
-
-    mock_climate->get_last_state(
-        mode,
-        target_temperature,
-        fan_mode
-    );
-    EXPECT_EQ(mode, ClimateMode::CLIMATE_MODE_COOL);
-    EXPECT_EQ(target_temperature, 25.0f);
-    EXPECT_EQ(fan_mode, ClimateFanMode::CLIMATE_FAN_LOW);
-}
-
-/**
-* Test: Reset button press triggers climate state republishing
-* (with reset values)
-* 
-* Validates that when the reset button is pressed, the
-* climate component's publish_state() is called to update ESPHome
-* with the new climate state.
-*/
-TEST_F(WoleixClimateTest, DISABLED_PublishingStateOfResetButtonRepublishesItByClimate)
-{
-    // Turning on sends: Power, Mode, Speed commands
-
-    mock_climate->set_last_state(
-        ClimateMode::CLIMATE_MODE_OFF,
-        22.0f,
-        ClimateFanMode::CLIMATE_FAN_LOW
-    );
-
-    EXPECT_CALL(*mock_climate, publish_state())
-            .Times(1);  // Expect exactly 1 call
-  
-    // Create a mock humidity sensor
-    esphome::binary_sensor::BinarySensor reset_button;
-  
-    // Set the humidity sensor on the climate device
-    mock_climate->set_reset_button(&reset_button);
-  
-    // Call setup to register the callback
-    mock_climate->setup();
-  
-    // Publish multiple humidity values and verify they're received
-    reset_button.publish_state(true);
-}
-
-/**
-* Test: Fan speed is only transmitted in FAN mode
-* 
-* Validates that the SPEED_COMMAND is only sent when the climate
-* is in FAN mode. In other modes (COOL, DRY), fan speed changes
-* should not trigger a SPEED_COMMAND.
-*/
+ * Test: Fan speed is only transmitted in FAN mode
+ * 
+ * Validates that the SPEED_COMMAND is only sent when the climate
+ * is in FAN mode. In other modes (COOL, DRY), fan speed changes
+ * should not trigger a SPEED_COMMAND.
+ */
 TEST_F(WoleixClimateTest, FanSpeedOnlyTransmittedInFanMode)
 {
     // Test in COOL mode
@@ -905,23 +806,23 @@ TEST_F(WoleixClimateTest, FanSpeedOnlyTransmittedInFanMode)
 // ============================================================================
 
 /**
-* Test: Control function handles mode changes correctly
-*
-* Validates that the control() function correctly updates the internal state
-* when a mode change is requested, and triggers transmit_state().
-*/
+ * Test: Control function handles mode changes correctly
+ *
+ * Validates that the control() function correctly updates the internal state
+ * when a mode change is requested, and triggers transmit_state().
+ */
 
 // ============================================================================
 // Test: Improved State Synchronization
 // ============================================================================
 
 /**
-* Test: Transmit state synchronizes internal state with state machine
-*
-* Validates that the transmit_state() function correctly synchronizes
-* the internal state of the climate component with the state machine
-* after sending commands.
-*/
+ * Test: Transmit state synchronizes internal state with state machine
+ *
+ * Validates that the transmit_state() function correctly synchronizes
+ * the internal state of the climate component with the state machine
+ * after sending commands.
+ */
 TEST_F(WoleixClimateTest, TransmitStateSynchronizesInternalState)
 {
     // Start in COOL mode at 20°C with LOW fan
@@ -950,11 +851,11 @@ TEST_F(WoleixClimateTest, TransmitStateSynchronizesInternalState)
 // ============================================================================
 
 /**
-* Test: Default protocol generates NEC commands
-* 
-* Validates that without explicitly setting a protocol, the climate component
-* uses the default NEC protocol for command generation.
-*/
+ * Test: Default protocol generates NEC commands
+ * 
+ * Validates that without explicitly setting a protocol, the climate component
+ * uses the default NEC protocol for command generation.
+ */
 TEST_F(WoleixClimateTest, DefaultProtocolGeneratesNecCommands)
 {
     // Don't call set_protocol - use default (NEC)
@@ -975,11 +876,10 @@ TEST_F(WoleixClimateTest, DefaultProtocolGeneratesNecCommands)
 }
 
 /**
-* Test: NEC commands
-* 
-* Validates that after calling set_protocol(Protocol::NEC), the climate
-* component generates NEC format commands instead of Pronto commands.
-*/
+ * Test: NEC commands
+ * 
+ * Validates that the climate component generates proper NEC format commands.
+ */
 TEST_F(WoleixClimateTest, SetProtocolNecGeneratesNecCommands)
 {
     mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_OFF, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
@@ -1000,12 +900,12 @@ TEST_F(WoleixClimateTest, SetProtocolNecGeneratesNecCommands)
 }
 
 /**
-* Test: Verify NEC commands contain correct address and codes
-* 
-* When using NEC protocol, validates that generated commands have:
-* - Correct NEC address (ADDRESS_NEC)
-* - Correct command codes for each button type
-*/
+ * Test: Verify NEC commands contain correct address and codes
+ * 
+ * When using NEC protocol, validates that generated commands have:
+ * - Correct NEC address (ADDRESS_NEC)
+ * - Correct command codes for each button type
+ */
 TEST_F(WoleixClimateTest, NecCommandsHaveCorrectAddressAndCodes)
 {
     mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_COOL, 20.0f, ClimateFanMode::CLIMATE_FAN_LOW);
