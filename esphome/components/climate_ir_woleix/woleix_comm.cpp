@@ -35,10 +35,14 @@ void WoleixTransmitter::transmit_(const WoleixCommand& command)
         "Transmitting NEC command: " 
             "address=%#04x, "
             "code=%#04x, "
-            "repeats=%d", 
+            "repeats=%u, "
+            "send_times=%u, "
+            "send_wait=%u",
         nec_data.address,
         nec_data.command,
-        nec_data.command_repeats
+        nec_data.command_repeats,
+        command.get_repeat_count(),
+        command.get_delay_ms()
     );
 
     transmitter_->transmit<NECProtocol>(nec_data, command.get_repeat_count(), delay_ms);

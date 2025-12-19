@@ -173,7 +173,7 @@ void WoleixClimate::transmit_commands_(std::vector<WoleixCommand>& commands)
 {
     if (command_transmitter_->get_transmitter() == nullptr)
     {
-            command_transmitter_->set_transmitter(transmitter_);
+        command_transmitter_->set_transmitter(transmitter_);
     }
     command_transmitter_->transmit_(commands);
 }
@@ -193,14 +193,16 @@ ClimateTraits WoleixClimate::traits()
 {
     auto traits = ClimateTraits();
 
-    traits.set_supported_modes({
+    traits.set_supported_modes
+    ({
         ClimateMode::CLIMATE_MODE_OFF,
         ClimateMode::CLIMATE_MODE_COOL,
         ClimateMode::CLIMATE_MODE_DRY,
         ClimateMode::CLIMATE_MODE_FAN_ONLY
     });
 
-    traits.set_supported_fan_modes({
+    traits.set_supported_fan_modes
+    ({
         ClimateFanMode::CLIMATE_FAN_LOW,
         ClimateFanMode::CLIMATE_FAN_HIGH
     });

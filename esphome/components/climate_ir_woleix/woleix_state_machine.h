@@ -34,10 +34,19 @@ enum class WoleixFanSpeed {
     HIGH   /**< High fan speed */
 };
 
-const WoleixPowerState WOLEIX_POWER_DEFAULT = WoleixPowerState::ON;  /**< Default power state */
-const WoleixMode WOLEIX_MODE_DEFAULT = WoleixMode::COOL;              /**< Default operating mode */
-const float WOLEIX_TEMP_DEFAULT = 25.0f;                              /**< Default temperature in Celsius */
-const WoleixFanSpeed WOLEIX_FAN_DEFAULT = WoleixFanSpeed::LOW;        /**< Default fan speed */
+/**
+ * @brief Represents the fan speed settings of the AC unit.
+ */
+enum class WoleixTempSetting {
+    ON,   /**< Temperature setting is on */
+    OFF   /**< Temperature setting is off */
+};
+
+const WoleixPowerState WOLEIX_POWER_DEFAULT = WoleixPowerState::ON;          /**< Default power state */
+const WoleixMode WOLEIX_MODE_DEFAULT = WoleixMode::COOL;                     /**< Default operating mode */
+const WoleixTempSetting WOLEIX_TEMP_SETTING_DEFAULT = WoleixTempSetting::ON; /**< Default temp setting */
+const float WOLEIX_TEMP_DEFAULT = 25.0f;                                     /**< Default temperature in Celsius */
+const WoleixFanSpeed WOLEIX_FAN_DEFAULT = WoleixFanSpeed::LOW;               /**< Default fan speed */
 
 /**
  * @brief Complete internal state of the AC unit.
@@ -46,10 +55,11 @@ const WoleixFanSpeed WOLEIX_FAN_DEFAULT = WoleixFanSpeed::LOW;        /**< Defau
  * operating configuration of the air conditioner unit.
  */
 struct WoleixInternalState {
-    WoleixPowerState power;    /**< Power state (ON/OFF) */
-    WoleixMode mode;           /**< Operating mode (COOL/DEHUM/FAN) */
-    float temperature;         /**< Target temperature in Celsius (15-30°C, only applicable in COOL mode) */
-    WoleixFanSpeed fan_speed;  /**< Fan speed setting (LOW/HIGH) */
+    WoleixPowerState power;         /**< Power state (ON/OFF) */
+    WoleixMode mode;                /**< Operating mode (COOL/DEHUM/FAN) */
+    WoleixTempSetting temp_setting; /**< Temperature setting (ON/OFF) */
+    float temperature;              /**< Target temperature in Celsius (15-30°C, only applicable in COOL mode) */
+    WoleixFanSpeed fan_speed;       /**< Fan speed (LOW/HIGH) */
 
     /**
         * Default constructor initializes to device defaults.
@@ -57,10 +67,11 @@ struct WoleixInternalState {
         * Sets: power=ON, mode=COOL, temperature=25.0°C, fan_speed=LOW
         */
     WoleixInternalState()
-                    : power(WOLEIX_POWER_DEFAULT),
-                            mode(WOLEIX_MODE_DEFAULT),
-                            temperature(WOLEIX_TEMP_DEFAULT),
-                            fan_speed(WOLEIX_FAN_DEFAULT)
+      : power(WOLEIX_POWER_DEFAULT),
+        mode(WOLEIX_MODE_DEFAULT),
+        temp_setting(WOLEIX_TEMP_SETTING_DEFAULT),
+        temperature(WOLEIX_TEMP_DEFAULT),
+        fan_speed(WOLEIX_FAN_DEFAULT)
     {}
 };
 
@@ -72,7 +83,7 @@ public:
 
     virtual WoleixCommand create(WoleixCommand::Type type, uint32_t delay = 0, uint32_t repeats = 1) const
     {
-                    return WoleixCommand(type, address_, delay, repeats);
+        return WoleixCommand(type, address_, delay, repeats);
     }
 private:
     uint16_t address_;

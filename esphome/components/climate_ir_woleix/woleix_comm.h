@@ -72,10 +72,18 @@ public:
     };
     
     /**
+     * @brief Get the NEC protocol address.
+     * @return 16-bit NEC address
+     */
+    uint16_t get_address() const {
+        return address_;
+    }
+
+    /**
      * @brief Get the delay after transmission.
      * @return Delay in milliseconds
      */
-    uint16_t get_delay_ms() const {
+    uint32_t get_delay_ms() const {
         return delay_ms_;
     }
     
@@ -83,16 +91,8 @@ public:
      * @brief Get the number of times to repeat this command.
      * @return Repeat count
      */
-    uint16_t get_repeat_count() const {
+    uint32_t get_repeat_count() const {
         return repeat_count_;
-    }
-
-    /**
-     * @brief Get the NEC protocol address.
-     * @return 16-bit NEC address
-     */
-    uint16_t get_address() const {
-        return address_;
     }
 
     /**
@@ -113,8 +113,8 @@ public:
 protected:
     Type type_;
     uint16_t address_;    /**< NEC format IR address */
-    uint16_t delay_ms_{0};  /**< Delay after command in milliseconds */
-    uint16_t repeat_count_{1};  /**< Number of times to repeat the command */
+    uint32_t delay_ms_{0};  /**< Delay after command in milliseconds */
+    uint32_t repeat_count_{1};  /**< Number of times to repeat the command */
 };
 
 /**

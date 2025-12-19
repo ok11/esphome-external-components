@@ -170,12 +170,18 @@ void WoleixStateMachine::generate_temperature_commands_(float target_temp)
         target_temp = std::clamp(target_temp, WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX);
 
         float temp_diff = target_temp - current_state_.temperature;
+
+        
         
         if (temp_diff > 0.1f)
         {
             // Temperature increase needed
             int steps = std::lround(std::abs(temp_diff));  // Round to nearest integer
 
+            if (current_state_.temp_setting != WoleixTempSetting::ON)
+            {
+                
+            }
             if (steps > 0)
                 enqueue_command_(command_factory_->create(WoleixCommand::Type::TEMP_UP, 150, steps + 1));
 
