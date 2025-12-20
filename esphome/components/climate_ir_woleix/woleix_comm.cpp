@@ -45,7 +45,7 @@ void WoleixTransmitter::transmit_(const WoleixCommand& command)
         command.get_delay_ms()
     );
 
-    transmitter_->transmit<NECProtocol>(nec_data, command.get_repeat_count(), delay_ms);
+    transmitter_->transmit<NECProtocol>(nec_data, command.get_repeat_count(), delay_ms * 1000);
 }
 
 }  // namespace climate_ir_woleix

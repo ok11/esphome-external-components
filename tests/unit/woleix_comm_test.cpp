@@ -203,15 +203,15 @@ TEST(WoleixCommandTransmitterTest, TransmitsNecCommand)
     WoleixCommand power_cmd(WoleixCommand::Type::POWER, address, 200, 3);
     
     // Expect the NEC transmit method to be called with correct parameters
-    EXPECT_CALL(mock_transmitter, send_(testing::An<const NECProtocol::ProtocolData&>(), 3, 200))
+    EXPECT_CALL(mock_transmitter, send_(testing::An<const NECProtocol::ProtocolData&>(), 3, 200000))
         .Times(1)
         .WillOnce(testing::Invoke([&power_cmd, address](const NECProtocol::ProtocolData& data, 
-                                                        uint16_t repeats, uint16_t wait) {
+                                                        uint32_t repeats, uint32_t wait) {
             EXPECT_EQ(data.address, address);
             EXPECT_EQ(data.command, power_cmd.get_command());
             EXPECT_EQ(data.command_repeats, 1);
             EXPECT_EQ(repeats, 3);
-            EXPECT_EQ(wait, 200);
+            EXPECT_EQ(wait, 200000);
         }));
     
     // Transmit the command
