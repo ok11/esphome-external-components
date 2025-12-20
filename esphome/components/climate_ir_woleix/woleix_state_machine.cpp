@@ -178,10 +178,6 @@ void WoleixStateMachine::generate_temperature_commands_(float target_temp)
             // Temperature increase needed
             int steps = std::lround(std::abs(temp_diff));  // Round to nearest integer
 
-            if (current_state_.temp_setting != WoleixTempSetting::ON)
-            {
-                
-            }
             if (steps > 0)
                 enqueue_command_(command_factory_->create(WoleixCommand::Type::TEMP_UP, 150, steps + 1));
 

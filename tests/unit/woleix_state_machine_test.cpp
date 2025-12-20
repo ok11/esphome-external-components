@@ -77,7 +77,7 @@ TEST_F(WoleixStateMachineTest, InitialStateIsCorrect)
 {
     auto state = state_machine_->get_state();
     
-    EXPECT_EQ(state.power, WoleixPowerState::ON);
+    EXPECT_EQ(state.power, WoleixPowerState::OFF);
     EXPECT_EQ(state.mode, WoleixMode::COOL);
     EXPECT_FLOAT_EQ(state.temperature, 25.0f);
     EXPECT_EQ(state.fan_speed, WoleixFanSpeed::LOW);
@@ -103,7 +103,7 @@ TEST_F(WoleixStateMachineTest, ResetRestoresDefaultState)
     state_machine_->reset();
     
     auto state = state_machine_->get_state();
-    EXPECT_EQ(state.power, WoleixPowerState::ON);
+    EXPECT_EQ(state.power, WoleixPowerState::OFF);
     EXPECT_EQ(state.mode, WoleixMode::COOL);
     EXPECT_FLOAT_EQ(state.temperature, 25.0f);
     EXPECT_EQ(state.fan_speed, WoleixFanSpeed::LOW);

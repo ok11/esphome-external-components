@@ -31,6 +31,8 @@ MATCHER_P2(IsCommand, expected_type, expected_repeat, "")
 
 class MockRemoteTransmitterBase : public RemoteTransmitterBase
 {
+public:
+    MOCK_METHOD(void, send_, (const NECProtocol::ProtocolData& data, uint32_t repeats, uint32_t wait), ());
 };
 
 class MockWoleixStateMachine : public WoleixStateMachine
@@ -942,7 +944,8 @@ TEST_F(WoleixClimateTest, NecCommandsHaveCorrectAddressAndCodes)
     }
 }
 
-TEST_F(WoleixClimateTest, SetTransmitterPropagation) {
+TEST_F(WoleixClimateTest, SetTransmitterPropagation)
+{
   auto mock_transmitter = std::make_shared<MockRemoteTransmitterBase>();
   WoleixClimate climate;
 
@@ -952,6 +955,19 @@ TEST_F(WoleixClimateTest, SetTransmitterPropagation) {
   EXPECT_EQ(climate.get_command_transmitter()->get_transmitter(), mock_transmitter.get());
 }
 
+TEST_F(WoleixClimateTest, PowerOnAfterReset)
+{
+    mock_climate->reset_state();
+
+    EXPECT_CALL(*mock_transmitter, transmit_(IsCommand(WoleixCommand::Type::POWER, 1)))
+        .Times(1);
+
+    mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
+    mock_climate->target_temperature = WOLEIX_TEMP_DEFAULT;
+    mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
+
+    mock_climate->call_transmit_state();
+}
 // ============================================================================
 // Main
 // ============================================================================
