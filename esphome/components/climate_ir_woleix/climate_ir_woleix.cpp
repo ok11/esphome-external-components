@@ -15,27 +15,19 @@ using esphome::climate::ClimateFanMode;
 using esphome::climate::ClimateFeature;
 using esphome::climate::ClimateTraits;
 
+
 /**
- * Default constructor.
+ * Constructor accepting state machine and transmitter.
  * 
  * Initializes the climate controller with default settings and creates
  * internal state machine and command transmitter instances.
  */
-WoleixClimate::WoleixClimate()
-    : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX),
-        state_machine_(new WoleixStateMachine()),
-        command_transmitter_(new WoleixTransmitter(nullptr))
-{
-        target_temperature = WOLEIX_TEMP_DEFAULT;
-        mode = climate::CLIMATE_MODE_OFF;
-        fan_mode = climate::CLIMATE_FAN_LOW;
-}
-
 WoleixClimate::WoleixClimate(WoleixStateMachine *state_machine, WoleixTransmitter *command_transmitter)
     : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX),
         state_machine_(state_machine),
         command_transmitter_(command_transmitter)
 {
+    reset_state();
 }
 
 /**
@@ -52,6 +44,9 @@ WoleixClimate::WoleixClimate(WoleixStateMachine *state_machine, WoleixTransmitte
 void WoleixClimate::reset_state()
 {
     state_machine_->reset();
+    target_temperature = WOLEIX_TEMP_DEFAULT;
+    mode = climate::CLIMATE_MODE_OFF;
+    fan_mode = climate::CLIMATE_FAN_LOW;
 }
 
 /**
