@@ -64,8 +64,7 @@ public:
      */
     WoleixClimate()
         : WoleixClimate(new WoleixStateMachine(), new WoleixTransmitter(nullptr))
-    {
-    }
+    {}
 
     /**
      * Constructor with custom state machine and command transmitter.
@@ -85,11 +84,35 @@ public:
     void setup() override;
 
     /**
+     * Set the transmitter for this climate device.
+     * 
+     * This method hides the base class (ClimateIR) method of the same name.
+     * It calls the base class method and also sets the transmitter for the
+     * command_transmitter_ object.
+     * 
+     * @param transmitter Pointer to the RemoteTransmitterBase object
+     */
+    void set_transmitter(RemoteTransmitterBase* transmitter)
+    {
+        ClimateIR::set_transmitter(transmitter);
+        command_transmitter_->set_transmitter(transmitter);
+    }
+
+    /**
+     * Get the command transmitter.
+     * 
+     * This method is used for testing purposes to verify the correct
+     * propagation of the RemoteTransmitterBase pointer.
+     * 
+     * @return Pointer to the WoleixTransmitter object
+     */
+    WoleixTransmitter* get_command_transmitter() const { return command_transmitter_; }
+    /**
      * Set the humidity sensor for current humidity readings.
      * 
      * @param humidity_sensor Pointer to sensor providing humidity data
      */
-    void set_humidity_sensor(sensor::Sensor *humidity_sensor) { humidity_sensor_ = humidity_sensor; }
+    void set_humidity_sensor(sensor::Sensor* humidity_sensor) { humidity_sensor_ = humidity_sensor; }
 
     /**
      * Reset the state machine to default values.
@@ -144,9 +167,9 @@ protected:
      */
     virtual void update_state_();
 
-    WoleixStateMachine *state_machine_{nullptr};  /**< State machine for command generation and state management */
-    WoleixTransmitter *command_transmitter_{nullptr};  /**< Command transmitter for sending IR commands */
-    sensor::Sensor *humidity_sensor_{nullptr};  /**< Optional humidity sensor */
+    WoleixStateMachine* state_machine_{nullptr};  /**< State machine for command generation and state management */
+    WoleixTransmitter* command_transmitter_{nullptr};  /**< Command transmitter for sending IR commands */
+    sensor::Sensor* humidity_sensor_{nullptr};  /**< Optional humidity sensor */
     std::vector<WoleixCommand> commands_;  /**< Queue of commands to transmit */
 };
 

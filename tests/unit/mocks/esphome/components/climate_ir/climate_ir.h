@@ -19,9 +19,12 @@ using climate::ClimateMode;
 using climate::ClimateFanMode;
 using climate::ClimateSwingMode;
 using climate::ClimateTraits;
+using remote_base::RemoteTransmittable;
 
 // Mock ClimateIR base class
-class ClimateIR: public Climate
+class ClimateIR
+  : public RemoteTransmittable,
+    public Climate
 {
 public:
     ClimateIR(float min_temp, float max_temp)

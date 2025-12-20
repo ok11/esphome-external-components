@@ -22,7 +22,7 @@ using esphome::climate::ClimateTraits;
  * Initializes the climate controller with default settings and creates
  * internal state machine and command transmitter instances.
  */
-WoleixClimate::WoleixClimate(WoleixStateMachine *state_machine, WoleixTransmitter *command_transmitter)
+WoleixClimate::WoleixClimate(WoleixStateMachine* state_machine, WoleixTransmitter* command_transmitter)
     : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX),
         state_machine_(state_machine),
         command_transmitter_(command_transmitter)

@@ -4,6 +4,8 @@
 #include <gmock/gmock.h>
 #include <gmock/gmock-matchers.h>
 
+#include "esphome/components/remote_base/remote_base.h"
+
 #include "climate_ir_woleix.h"
 #include "woleix_state_mapper.h"
 
@@ -26,6 +28,10 @@ MATCHER_P2(IsCommand, expected_type, expected_repeat, "")
 {
     return arg.get_type() == expected_type && arg.get_repeat_count() == expected_repeat;
 }
+
+class MockRemoteTransmitterBase : public RemoteTransmitterBase
+{
+};
 
 class MockWoleixStateMachine : public WoleixStateMachine
 {
@@ -936,6 +942,15 @@ TEST_F(WoleixClimateTest, NecCommandsHaveCorrectAddressAndCodes)
     }
 }
 
+TEST_F(WoleixClimateTest, SetTransmitterPropagation) {
+  auto mock_transmitter = std::make_shared<MockRemoteTransmitterBase>();
+  WoleixClimate climate;
+
+  climate.set_transmitter(mock_transmitter.get());
+
+  // Verify that the transmitter was correctly set in the WoleixTransmitter
+  EXPECT_EQ(climate.get_command_transmitter()->get_transmitter(), mock_transmitter.get());
+}
 
 // ============================================================================
 // Main

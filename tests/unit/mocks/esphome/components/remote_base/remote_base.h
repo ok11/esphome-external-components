@@ -48,8 +48,8 @@ class RemoteTransmittable
 {
 public:
     RemoteTransmittable() {}
-    RemoteTransmittable(RemoteTransmitterBase *transmitter) : transmitter_(transmitter) {}
-    void set_transmitter(RemoteTransmitterBase *transmitter) { this->transmitter_ = transmitter; }
+    RemoteTransmittable(RemoteTransmitterBase* transmitter) : transmitter_(transmitter) {}
+    void set_transmitter(RemoteTransmitterBase* transmitter) { this->transmitter_ = transmitter; }
 
 protected:
     template<typename Protocol>
@@ -57,7 +57,7 @@ protected:
     {
       this->transmitter_->transmit<Protocol>(data, send_times, send_wait);
     }
-    RemoteTransmitterBase *transmitter_;
+    RemoteTransmitterBase* transmitter_;
 };
 
 
