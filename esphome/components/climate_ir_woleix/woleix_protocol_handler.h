@@ -1,167 +1,196 @@
-// #pragma once
+#pragma once
 
-// #include <vector>
-// #include <functional>
-// #include "woleix_comm.h"
+#include <cinttypes>
+#include <string>
+#include <functional>
 
-// namespace esphome {
-// namespace climate_ir_woleix {
+#include "esphome/components/remote_base/remote_base.h"
+#include "esphome/components/remote_base/nec_protocol.h"
 
-// /**
-//  * Callback interface for protocol handler to schedule async operations.
-//  * This decouples the handler from ESPHome's Component class.
-//  */
-// class ProtocolScheduler {
-// public:
-//     virtual ~ProtocolScheduler() = default;
+#include "woleix_constants.h"
+#include "woleix_command.h"
+
+namespace esphome {
+namespace climate_ir_woleix {
+
+using remote_base::RemoteTransmitterBase;
+
+
+/**
+ * Protocol states for temperature setting mode.
+ */
+enum class TempProtocolState
+{
+    IDLE,           ///< Not in temperature setting mode
+    SETTING_ACTIVE  ///< In setting mode, subsequent temp commands go through directly
+};
+
+
+/**
+ * @brief Handles transmission of Woleix IR commands via NEC protocol.
+ * 
+ * This class wraps ESPHome's RemoteTransmitterBase to send IR commands
+ * to Woleix AC units. It converts WoleixCommand objects into NEC protocol
+ * data and transmits them through the configured IR transmitter.
+ * 
+ * The transmitter handles command delays and repeats automatically.
+ */
+class WoleixProtocolHandler {
+public:
+
+    /// Function type for scheduling a timeout
+    using TimeoutSetter = std::function<void(const std::string&, uint32_t, std::function<void()>)>;    
+    /// Function type for cancelling a timeout
+    using TimeoutCanceller = std::function<void(const std::string&)>;
+
+    /**
+     * @brief Construct a new transmitter with the given IR transmitter base.
+     * 
+     * @param transmitter ESPHome remote transmitter to use for IR output
+     */
+    WoleixProtocolHandler(RemoteTransmitterBase* transmitter, WoleixCommandQueue* command_queue, TimeoutSetter set_timeout, TimeoutCanceller cancel_timeout)
+      : transmitter_(transmitter),
+        command_queue_(command_queue),
+        set_timeout_(std::move(set_timeout)),
+        cancel_timeout_(std::move(cancel_timeout)) 
+    {}
     
-//     /**
-//      * Schedule a callback to run after a delay.
-//      * @param name Unique name for this timeout (for cancellation)
-//      * @param delay_ms Delay in milliseconds
-//      * @param callback Function to call
-//      */
-//     virtual void schedule_timeout(const std::string& name, uint32_t delay_ms, 
-//                                   std::function<void()> callback) = 0;
+    virtual ~WoleixProtocolHandler() = default;
+
+    /**
+     * Execute commands synchronously (from caller's perspective).
+     * 
+     * Internally handles async timing for temperature setting mode,
+     * but returns immediately. The caller doesn't need to wait or
+     * handle completion - state machine has already updated.
+     * 
+     * @param commands Commands to execute
+     */
+    void process();
+
+    /**
+     * Execute commands synchronously.
+     * 
+     * Returns immediately.
+     * 
+     * @param commands Command to execute  
+     */
+//    void execute(const WoleixCommand& commands);
+
+    /**
+     * Reset protocol state (e.g., after AC power cycle).
+     * Cancels pending operations and resets to IDLE.
+     */
+    void reset();
+
+    /**
+     * @brief Set the IR transmitter base.
+     * 
+     * @param transmitter New transmitter to use
+     */
+    virtual void set_transmitter(RemoteTransmitterBase* transmitter)
+    {
+        transmitter_ = transmitter;
+    }
     
-//     /**
-//      * Cancel a previously scheduled timeout.
-//      * @param name Name of the timeout to cancel
-//      */
-//     virtual void cancel_timeout(const std::string& name) = 0;
+    /**
+     * @brief Get the current IR transmitter base.
+     * 
+     * @return Pointer to the current transmitter
+     */
+    virtual RemoteTransmitterBase* get_transmitter() const
+    {
+        return transmitter_;
+    }
+
+protected:
+
+    /**
+     * Execute commands with completion callback.
+     * 
+     * For cases where caller needs to know when transmission is done.
+     * 
+     * @param commands Commands to execute  
+     * @param on_complete Callback when all commands are sent
+     */
+    void process_(std::function<void()> on_complete);
+
+    /**
+     * @brief Transmit a single command.
+     * 
+     * Converts the command to NEC protocol format and transmits via IR.
+     * 
+     * @param command Command to transmit
+     */
+    virtual void transmit_(const WoleixCommand& command);
+
+    /**
+     * Check if currently in temperature setting mode.
+     */
+    bool is_in_temp_setting_mode_() const { return temp_state_ == TempProtocolState::SETTING_ACTIVE; }
+
+    // Protocol timing constants
+    static constexpr uint32_t TEMP_SETTING_MODE_TIMEOUT_MS = 5000;
+    static constexpr uint32_t TEMP_ENTER_DELAY_MS = 150;
+    static constexpr uint32_t INTER_COMMAND_DELAY_MS = 200;
+    static constexpr uint32_t POLL_COMMAND_INTERVAL_MS = 600;
+
+    // Timeout names
+    static constexpr const char* TIMEOUT_SETTING_MODE = "proto_setting_mode";
+    static constexpr const char* TIMEOUT_NEXT_COMMAND = "proto_next_cmd";
+
+    /**
+     * Process the next command in the queue.
+     */
+    void process_next_command_();
+
+    /**
+     * Handle a temperature command (TEMP_UP or TEMP_DOWN).
+     * Manages setting mode entry and timeout extension.
+     */
+    void handle_temp_command_(const WoleixCommand& cmd);
+
+    /**
+     * Handle a non-temperature command.
+     */
+    void handle_regular_command_(const WoleixCommand& cmd);
+
+    /**
+     * Enter temperature setting mode.
+     * Sends the first temp command and schedules the setting mode timeout.
+     */
+    void enter_setting_mode_(const WoleixCommand& cmd);
+
+    /**
+     * Extend the setting mode timeout.
+     * Called after each temp command to reset the 5-second window.
+     */
+    void extend_setting_mode_timeout_();
+
+    /**
+     * Called when setting mode times out.
+     */
+    void on_setting_mode_timeout_();
+
+    /**
+     * Check if a command is a temperature command.
+     */
+    static bool is_temp_command_(const WoleixCommand& cmd);
+
+private:
+
+    // Command queue for async execution
+    WoleixCommandQueue* command_queue_;
+    RemoteTransmitterBase* transmitter_;
+    TimeoutSetter set_timeout_;
+    TimeoutCanceller cancel_timeout_;
+    TempProtocolState temp_state_{TempProtocolState::IDLE};
     
-//     /**
-//      * Get current time in milliseconds (for tracking).
-//      */
-//     virtual uint32_t get_millis() const = 0;
-// };
-
-// /**
-//  * Protocol states for temperature setting mode.
-//  */
-// enum class TempProtocolState {
-//     IDLE,           ///< Not in temperature setting mode
-//     SETTING_ACTIVE  ///< In setting mode, subsequent temp commands go through directly
-// };
-
-// /**
-//  * Handles Woleix AC protocol timing and quirks.
-//  * 
-//  * This class manages the asynchronous aspects of communicating with the AC:
-//  * - Temperature setting mode (enter, maintain, timeout)
-//  * - Inter-command delays
-//  * - Command sequencing
-//  * 
-//  * It is decoupled from ESPHome via the ProtocolScheduler interface,
-//  * making it testable without ESPHome dependencies.
-//  */
-// class WoleixProtocolHandler {
-// public:
-//     /**
-//      * Construct a protocol handler.
-//      * 
-//      * @param transmitter The underlying IR transmitter
-//      * @param scheduler Interface for async scheduling (provided by Component)
-//      */
-//     WoleixProtocolHandler(WoleixTransmitter* transmitter, ProtocolScheduler* scheduler);
+    std::function<void()> on_complete_;
     
-//     virtual ~WoleixProtocolHandler() = default;
+    // Pending temp commands while entering setting mode
+    std::vector<WoleixCommand> pending_temp_commands_;
+};
 
-//     /**
-//      * Execute a sequence of commands with proper protocol handling.
-//      * 
-//      * Commands are executed asynchronously with appropriate delays.
-//      * Temperature commands automatically handle setting mode.
-//      * 
-//      * @param commands Commands to execute
-//      * @param on_complete Optional callback when all commands are done
-//      */
-//     virtual void execute(const std::vector<WoleixCommand>& commands,
-//                         std::function<void()> on_complete = nullptr);
-
-//     /**
-//      * Check if currently in temperature setting mode.
-//      */
-//     bool is_in_temp_setting_mode() const { return temp_state_ == TempProtocolState::SETTING_ACTIVE; }
-
-//     /**
-//      * Reset protocol state (e.g., after AC power cycle).
-//      * Cancels pending operations and resets to IDLE.
-//      */
-//     void reset();
-
-//     /**
-//      * Get the underlying transmitter (for direct access if needed).
-//      */
-//     WoleixTransmitter* get_transmitter() const { return transmitter_; }
-
-// protected:
-//     // Protocol timing constants
-//     static constexpr uint32_t TEMP_SETTING_MODE_TIMEOUT_MS = 5000;
-//     static constexpr uint32_t TEMP_ENTER_DELAY_MS = 150;
-//     static constexpr uint32_t INTER_COMMAND_DELAY_MS = 200;
-
-//     // Timeout names
-//     static constexpr const char* TIMEOUT_SETTING_MODE = "proto_setting_mode";
-//     static constexpr const char* TIMEOUT_NEXT_COMMAND = "proto_next_cmd";
-
-//     /**
-//      * Process the next command in the queue.
-//      */
-//     void process_next_command_();
-
-//     /**
-//      * Handle a temperature command (TEMP_UP or TEMP_DOWN).
-//      * Manages setting mode entry and timeout extension.
-//      */
-//     void handle_temp_command_(const WoleixCommand& cmd);
-
-//     /**
-//      * Handle a non-temperature command.
-//      */
-//     void handle_regular_command_(const WoleixCommand& cmd);
-
-//     /**
-//      * Enter temperature setting mode.
-//      * Sends the first temp command and schedules the setting mode timeout.
-//      */
-//     void enter_setting_mode_(const WoleixCommand& cmd);
-
-//     /**
-//      * Extend the setting mode timeout.
-//      * Called after each temp command to reset the 5-second window.
-//      */
-//     void extend_setting_mode_timeout_();
-
-//     /**
-//      * Called when setting mode times out.
-//      */
-//     void on_setting_mode_timeout_();
-
-//     /**
-//      * Check if a command is a temperature command.
-//      */
-//     static bool is_temp_command_(const WoleixCommand& cmd);
-
-//     /**
-//      * Transmit a single command via IR.
-//      */
-//     void transmit_(const WoleixCommand& cmd);
-
-// private:
-//     WoleixTransmitter* transmitter_;
-//     ProtocolScheduler* scheduler_;
-    
-//     TempProtocolState temp_state_{TempProtocolState::IDLE};
-    
-//     // Command queue for async execution
-//     std::vector<WoleixCommand> command_queue_;
-//     size_t current_command_index_{0};
-//     std::function<void()> on_complete_callback_;
-    
-//     // Pending temp commands while entering setting mode
-//     std::vector<WoleixCommand> pending_temp_commands_;
-// };
-
-// }  // namespace climate_ir_woleix
-// }  // namespace esphome
+}  // namespace climate_ir_woleix
+}  // namespace esphome

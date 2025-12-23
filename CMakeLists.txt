@@ -200,12 +200,14 @@ endif()
 # Component library - climate_ir_woleix
 # This ensures component files are included in compile_commands.json
 add_library(climate_ir_woleix STATIC
+    esphome/components/climate_ir_woleix/woleix_constants.h
+    esphome/components/climate_ir_woleix/woleix_command.h
     esphome/components/climate_ir_woleix/climate_ir_woleix.cpp
     esphome/components/climate_ir_woleix/climate_ir_woleix.h
     esphome/components/climate_ir_woleix/woleix_state_machine.cpp
     esphome/components/climate_ir_woleix/woleix_state_machine.h
-    esphome/components/climate_ir_woleix/woleix_comm.cpp
-    esphome/components/climate_ir_woleix/woleix_comm.h
+    esphome/components/climate_ir_woleix/woleix_protocol_handler.cpp
+    esphome/components/climate_ir_woleix/woleix_protocol_handler.h
     esphome/components/climate_ir_woleix/woleix_state_mapper.cpp
     esphome/components/climate_ir_woleix/woleix_state_mapper.h
 )

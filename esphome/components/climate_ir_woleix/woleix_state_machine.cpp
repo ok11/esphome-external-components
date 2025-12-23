@@ -1,3 +1,5 @@
+#include <cmath>
+#include <algorithm>
 
 #include "esphome/core/log.h"
 
@@ -19,13 +21,13 @@ static const std::vector<WoleixMode> MODE_SWITCH_SEQUENCE =
     WoleixMode::FAN
 };
 
-WoleixStateMachine::WoleixStateMachine()
-    : WoleixStateMachine(new WoleixCommandFactory(ADDRESS_NEC)) 
+WoleixStateMachine::WoleixStateMachine(WoleixCommandQueue* command_queue)
+    : WoleixStateMachine(command_queue, new WoleixCommandFactory(ADDRESS_NEC)) 
 {
 }
 
-WoleixStateMachine::WoleixStateMachine(WoleixCommandFactory* command_factory)
-    : command_factory_(command_factory) 
+WoleixStateMachine::WoleixStateMachine(WoleixCommandQueue* command_queue, WoleixCommandFactory* command_factory)
+    : command_queue_(command_queue), command_factory_(command_factory) 
 {
     reset();
 }
@@ -49,14 +51,15 @@ WoleixStateMachine::WoleixStateMachine(WoleixCommandFactory* command_factory)
  * @param fan_speed Target fan speed (LOW/HIGH, only used in FAN mode)
  * @return Reference to vector of generated commands
  */
-const std::vector<WoleixCommand>& WoleixStateMachine::transit_to_state
-(
-    WoleixPowerState power, WoleixMode mode, float temperature, WoleixFanSpeed fan_speed
-)
+const void WoleixStateMachine::move_to(const WoleixInternalState& target_state)
 {
-    // Clear any previous commands
-    command_queue_.clear();
-    
+    if (on_hold_) return;
+
+    WoleixPowerState power = target_state.power;
+    WoleixMode mode = target_state.mode;
+    float temperature = target_state.temperature;
+    WoleixFanSpeed fan_speed = target_state.fan_speed;
+
     // Step 1: Handle power state transitions
     generate_power_commands_(power);
     
@@ -78,15 +81,14 @@ const std::vector<WoleixCommand>& WoleixStateMachine::transit_to_state
             generate_fan_commands_(fan_speed);
         }
         
-        ESP_LOGD(TAG, "Calculated and queued %zu commands for state transition: power=%d, mode=%d, temp=%.1f, fan=%d",
-                command_queue_.size(),
-                static_cast<int>(power),
-                static_cast<int>(mode),
-                temperature,
-                static_cast<int>(fan_speed));
+        ESP_LOGD(TAG, "Calculated and queued %u commands for state transition: power=%d, mode=%d, temp=%.1f, fan=%d",
+            command_queue_->length(),
+            static_cast<int>(power),
+            static_cast<int>(mode),
+            temperature,
+            static_cast<int>(fan_speed));
 
     }
-    return command_queue_;
 }
 
 /**
@@ -100,7 +102,6 @@ const std::vector<WoleixCommand>& WoleixStateMachine::transit_to_state
 void WoleixStateMachine::reset()
 {
     current_state_ = WoleixInternalState();  // Reset to defaults
-    command_queue_.clear();
     
     ESP_LOGD(TAG, "State machine reset to defaults: ON, COOL, 25°C, LOW fan");
 }
@@ -143,7 +144,10 @@ void WoleixStateMachine::generate_mode_commands_(WoleixMode target_mode)
         int steps = calculate_mode_steps_(current_state_.mode, target_mode);
         
         // Send MODE commands to cycle through modes
-        enqueue_command_(command_factory_->create(WoleixCommand::Type::MODE, 200, steps));
+        for (int i = 0; i < steps; i++)
+        {
+            enqueue_command_(command_factory_->create(WoleixCommand::Type::MODE));
+        }
 
         current_state_.mode = target_mode;
         
@@ -179,7 +183,7 @@ void WoleixStateMachine::generate_temperature_commands_(float target_temp)
             int steps = std::lround(std::abs(temp_diff));  // Round to nearest integer
 
             if (steps > 0)
-                enqueue_command_(command_factory_->create(WoleixCommand::Type::TEMP_UP, 150, steps + 1));
+                enqueue_command_(command_factory_->create(WoleixCommand::Type::TEMP_UP, steps));
 
             current_state_.temperature += steps;
             
@@ -192,7 +196,7 @@ void WoleixStateMachine::generate_temperature_commands_(float target_temp)
             int steps = std::lround(std::abs(temp_diff));  // Round to nearest integer
             
             if (steps > 0)
-                enqueue_command_(command_factory_->create(WoleixCommand::Type::TEMP_DOWN, 150, steps + 1));
+                enqueue_command_(command_factory_->create(WoleixCommand::Type::TEMP_DOWN, steps));
 
             current_state_.temperature -= steps;
             
@@ -266,7 +270,7 @@ int WoleixStateMachine::calculate_mode_steps_(WoleixMode from_mode, WoleixMode t
  */
 void WoleixStateMachine::enqueue_command_(const WoleixCommand& command)
 {
-    command_queue_.push_back(command);
+    if (!on_hold_) command_queue_->enqueue(command);
 }
 
 }  // namespace climate_ir_woleix

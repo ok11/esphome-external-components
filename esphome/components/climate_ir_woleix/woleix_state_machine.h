@@ -4,7 +4,7 @@
 #include <vector>
 #include <memory>
 
-#include "woleix_comm.h"
+#include "woleix_command.h"
 
 namespace esphome {
 namespace climate_ir_woleix {
@@ -57,11 +57,29 @@ struct WoleixInternalState {
         * Sets: power=ON, mode=COOL, temperature=25.0°C, fan_speed=LOW
         */
     WoleixInternalState()
-      : power(WOLEIX_POWER_DEFAULT),
-        mode(WOLEIX_MODE_DEFAULT),
-        temperature(WOLEIX_TEMP_DEFAULT),
-        fan_speed(WOLEIX_FAN_DEFAULT)
+      : WoleixInternalState
+        (
+            WOLEIX_POWER_DEFAULT,
+            WOLEIX_MODE_DEFAULT,
+            WOLEIX_TEMP_DEFAULT,
+            WOLEIX_FAN_DEFAULT
+        )
     {}
+
+    WoleixInternalState(WoleixPowerState p, WoleixMode m, float t, WoleixFanSpeed f)
+      : power(p),
+        mode(m),
+        temperature(t),
+        fan_speed(f)
+    {}
+
+    bool operator==(const WoleixInternalState& other)
+    {
+        return power == other.power 
+            && mode == other.mode
+            && temperature == other.temperature
+            && fan_speed == other.fan_speed;
+    }
 };
 
 class WoleixCommandFactory
@@ -70,9 +88,9 @@ public:
     WoleixCommandFactory(uint16_t address) : address_(address) {}
     virtual ~WoleixCommandFactory() = default;
 
-    virtual WoleixCommand create(WoleixCommand::Type type, uint32_t delay = 0, uint32_t repeats = 1) const
+    virtual WoleixCommand create(WoleixCommand::Type type, uint32_t repeats = 1) const
     {
-        return WoleixCommand(type, address_, delay, repeats);
+        return WoleixCommand(type, address_, repeats);
     }
 private:
     uint16_t address_;
@@ -94,14 +112,15 @@ private:
  * Usage example:
  * @code
  * WoleixStateMachine state_machine;
- * state_machine.transit_to_state(WoleixPowerState::ON, WoleixMode::COOL, 24.0f, WoleixFanSpeed::HIGH);
+ * state_machine.move_to(WoleixPowerState::ON, WoleixMode::COOL, 24.0f, WoleixFanSpeed::HIGH);
  * auto commands = state_machine.get_commands();
  * // Transmit commands via IR
  * @endcode
  * 
  * @see WoleixInternalState
  */
-class WoleixStateMachine {
+class WoleixStateMachine: protected WoleixCommandQueueListener
+{
 public:
     /**
      * Default constructor.
@@ -109,16 +128,7 @@ public:
      * Initializes the state machine with default device settings:
      * power=ON, mode=COOL, temperature=25°C, fan_speed=LOW
      */
-    WoleixStateMachine();
-
-    /**
-     * Factory constructor.
-     * 
-     * Initializes the state machine with default device settings:
-     * power=ON, mode=COOL, temperature=25°C, fan_speed=LOW
-     * and sets the command factory
-     */
-    WoleixStateMachine(WoleixCommandFactory* command_factory);
+    WoleixStateMachine(WoleixCommandQueue* command_queue);
 
     /**
      * Set the target state and generate the command sequence needed.
@@ -136,8 +146,7 @@ public:
      * @note Turning power OFF will queue power command only, ignoring other parameters
      * @note Turning power ON from OFF will reset all settings to defaults
      */
-    const std::vector<WoleixCommand>& transit_to_state(WoleixPowerState power, WoleixMode mode, 
-                    float temperature, WoleixFanSpeed fan_speed);
+    const void move_to(const WoleixInternalState& target_state);
 
     /**
      * Reset the internal state to device defaults.
@@ -164,11 +173,14 @@ public:
 
 protected:
 
-    WoleixInternalState current_state_;  /**< Current tracked state of the AC unit */
-    WoleixCommandFactory* command_factory_{nullptr};  /**< Factory for creating IR commands */
-
-private:
-    std::vector<WoleixCommand> command_queue_;  /**< Queue of IR commands to be transmitted */
+    /**
+     * Factory constructor.
+     * 
+     * Initializes the state machine with default device settings:
+     * power=ON, mode=COOL, temperature=25°C, fan_speed=LOW
+     * and sets the command factory
+     */
+    WoleixStateMachine(WoleixCommandQueue* command_queue, WoleixCommandFactory* command_factory);
 
     /**
      * Generate IR commands to change power state.
@@ -221,6 +233,22 @@ private:
      * @param command IR command object
      */
     void enqueue_command_(const WoleixCommand& command);
+
+    void hold()
+    {
+        on_hold_ = true;
+    }
+
+    void resume()
+    {
+        on_hold_ = false;
+    }
+    WoleixInternalState current_state_;  /**< Current tracked state of the AC unit */
+    WoleixCommandFactory* command_factory_{nullptr};  /**< Factory for creating IR commands */
+    WoleixCommandQueue* command_queue_;
+
+    bool on_hold_{false};
+
 };
 
 }  // namespace climate_ir_woleix

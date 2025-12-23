@@ -1,49 +1,55 @@
-/* #include "esphome/core/log.h"
+#include <ranges>
+#include <algorithm>
+#include <cmath>
+
+#include "esphome/core/hal.h"
+#include "esphome/core/log.h"
+#include "esphome/components/remote_base/nec_protocol.h"
 
 #include "woleix_protocol_handler.h"
 
 namespace esphome {
 namespace climate_ir_woleix {
 
-static const char* TAG = "woleix_protocol";
+using remote_base::NECData;
+using remote_base::NECProtocol;
 
-WoleixProtocolHandler::WoleixProtocolHandler(WoleixTransmitter* transmitter, 
-        ProtocolScheduler* scheduler)
-    : transmitter_(transmitter), scheduler_(scheduler) {}
+void WoleixProtocolHandler::process()
+{
+    process_(nullptr);
+}
 
-void WoleixProtocolHandler::execute(const std::vector<WoleixCommand>& commands,
-                                    std::function<void()> on_complete) {
-    if (commands.empty())
+void WoleixProtocolHandler::process_(std::function<void()> on_complete)
+{
+    if (command_queue_->is_empty())
     {
         if (on_complete) on_complete();
         return;
     }
 
-    ESP_LOGD(TAG, "Executing %zu commands", commands.size());
+    ESP_LOGD(TAG, "Executing %u commands", command_queue_->length());
     
-    command_queue_ = commands;
-    current_command_index_ = 0;
-    on_complete_callback_ = on_complete;
+    on_complete_ = on_complete;
     
     process_next_command_();
 }
 
 void WoleixProtocolHandler::process_next_command_()
 {
-    if (current_command_index_ >= command_queue_.size())
+    if (command_queue_->is_empty())
     {
         // All commands processed
         ESP_LOGD(TAG, "All commands executed");
-        command_queue_.clear();
-        if (on_complete_callback_)
+        if (on_complete_)
         {
-            on_complete_callback_();
-            on_complete_callback_ = nullptr;
+            on_complete_();
+            on_complete_ = nullptr;
         }
-        return;
+        set_timeout_(TIMEOUT_NEXT_COMMAND, POLL_COMMAND_INTERVAL_MS,
+            [this]() { process_next_command_(); });
     }
 
-    const auto& cmd = command_queue_[current_command_index_];
+    const auto& cmd = command_queue_->dequeue();
     
     if (is_temp_command_(cmd))
     {
@@ -69,11 +75,9 @@ void WoleixProtocolHandler::handle_temp_command_(const WoleixCommand& cmd)
             ESP_LOGD(TAG, "In setting mode, sending temp command directly");
             transmit_(cmd);
             extend_setting_mode_timeout_();
-            
-            current_command_index_++;
-            
+                        
             // Schedule next command with delay
-            scheduler_->schedule_timeout(TIMEOUT_NEXT_COMMAND, INTER_COMMAND_DELAY_MS,
+            set_timeout_(TIMEOUT_NEXT_COMMAND, INTER_COMMAND_DELAY_MS, 
                 [this]() { process_next_command_(); });
             break;
     }
@@ -90,10 +94,8 @@ void WoleixProtocolHandler::enter_setting_mode_(const WoleixCommand& cmd)
     // Start the setting mode timeout
     extend_setting_mode_timeout_();
     
-    current_command_index_++;
-    
     // Wait for AC to enter setting mode, then continue with remaining commands
-    scheduler_->schedule_timeout(TIMEOUT_NEXT_COMMAND, TEMP_ENTER_DELAY_MS,
+    set_timeout_(TIMEOUT_NEXT_COMMAND, TEMP_ENTER_DELAY_MS, 
         [this]() { process_next_command_(); });
 }
 
@@ -102,19 +104,14 @@ void WoleixProtocolHandler::handle_regular_command_(const WoleixCommand& cmd)
     ESP_LOGD(TAG, "Sending regular command");
     transmit_(cmd);
     
-    current_command_index_++;
-    
-    // Use the command's built-in delay, or a default
-    uint32_t delay = cmd.get_delay_ms() > 0 ? cmd.get_delay_ms() : INTER_COMMAND_DELAY_MS;
-    
-    scheduler_->schedule_timeout(TIMEOUT_NEXT_COMMAND, delay,
+    set_timeout_(TIMEOUT_NEXT_COMMAND, INTER_COMMAND_DELAY_MS, 
         [this]() { process_next_command_(); });
 }
 
 void WoleixProtocolHandler::extend_setting_mode_timeout_()
 {
-    scheduler_->cancel_timeout(TIMEOUT_SETTING_MODE);
-    scheduler_->schedule_timeout(TIMEOUT_SETTING_MODE, TEMP_SETTING_MODE_TIMEOUT_MS,
+    cancel_timeout_(TIMEOUT_SETTING_MODE);
+    set_timeout_(TIMEOUT_SETTING_MODE, TEMP_SETTING_MODE_TIMEOUT_MS,
         [this]() { on_setting_mode_timeout_(); });
 }
 
@@ -128,13 +125,15 @@ void WoleixProtocolHandler::reset()
 {
     ESP_LOGD(TAG, "Resetting protocol handler");
     
-    scheduler_->cancel_timeout(TIMEOUT_SETTING_MODE);
-    scheduler_->cancel_timeout(TIMEOUT_NEXT_COMMAND);
+    cancel_timeout_(TIMEOUT_SETTING_MODE);
+    cancel_timeout_(TIMEOUT_NEXT_COMMAND);    
     
     temp_state_ = TempProtocolState::IDLE;
-    command_queue_.clear();
-    current_command_index_ = 0;
-    on_complete_callback_ = nullptr;
+    on_complete_ = nullptr;
+
+    set_timeout_(TIMEOUT_NEXT_COMMAND, POLL_COMMAND_INTERVAL_MS,
+        [this]() { process_next_command_(); });
+
 }
 
 bool WoleixProtocolHandler::is_temp_command_(const WoleixCommand& cmd)
@@ -143,11 +142,38 @@ bool WoleixProtocolHandler::is_temp_command_(const WoleixCommand& cmd)
            cmd.get_type() == WoleixCommand::Type::TEMP_DOWN;
 }
 
-void WoleixProtocolHandler::transmit_(const WoleixCommand& cmd)
+/**
+ * Transmit a single Woleix command via NEC protocol.
+ * 
+ * Converts the WoleixCommand into NEC protocol format and sends it through
+ * the IR transmitter. The command is repeated according to the repeat_count
+ * parameter, with appropriate delays between transmissions.
+ * 
+ * @param command The command to transmit
+ */
+void WoleixProtocolHandler::transmit_(const WoleixCommand& command)
 {
-    ESP_LOGD(TAG, "TX: command type %d", static_cast<int>(cmd.get_type()));
-    transmitter_->transmit_(cmd);
+    NECData nec_data;
+    nec_data.address = command.get_address();
+    nec_data.command = command.get_command();
+    nec_data.command_repeats = 1; 
+
+    ESP_LOGD
+    (
+        TAG,
+        "Transmitting NEC command: " 
+            "address=%#04x, "
+            "code=%#04x, "
+            "repeats=%u, "
+            "send_times=%u",
+        nec_data.address,
+        nec_data.command,
+        nec_data.command_repeats,
+        command.get_repeat_count()
+    );
+
+    transmitter_->transmit<NECProtocol>(nec_data, command.get_repeat_count(), 0);
 }
 
 }  // namespace climate_ir_woleix
-}  // namespace esphome */
+}  // namespace esphome

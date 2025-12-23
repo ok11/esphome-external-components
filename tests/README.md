@@ -391,7 +391,7 @@ TEST(WoleixStateMachineTest, YourNewTest) {
   WoleixStateMachine state_machine;
   
   // Execute
-  state_machine.transit_to_state(WoleixPowerState::ON, 
+  state_machine.move_to(WoleixPowerState::ON, 
                                  WoleixMode::COOL, 
                                  25.0f, 
                                  WoleixFanSpeed::LOW);

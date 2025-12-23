@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "esphome/core/log.h"
 #include "esphome/core/hal.h"
 #include "esphome/components/climate/climate_mode.h"
@@ -15,18 +17,40 @@ using esphome::climate::ClimateFanMode;
 using esphome::climate::ClimateFeature;
 using esphome::climate::ClimateTraits;
 
+WoleixClimate::WoleixClimate()
+  : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX),
+    command_queue_(std::make_unique<WoleixCommandQueue>(QUEUE_MAX_CAPACITY)),
+    state_machine_(std::make_shared<WoleixStateMachine>(command_queue_.get())),
+    protocol_handler_
+    (
+        std::make_shared<WoleixProtocolHandler>
+        (
+                transmitter_,
+                command_queue_.get(),
+                [this](const std::string& name, uint32_t delay_ms, std::function<void()> callback) {
+                    this->set_timeout(name, delay_ms, std::move(callback));
+                },
+                [this](const std::string& name) {
+                    this->cancel_timeout(name);
+                }
+        )
+    )
+{}
+
 
 /**
  * Constructor accepting state machine and transmitter.
  * 
  * Initializes the climate controller with default settings and creates
- * internal state machine and command transmitter instances.
+ * internal state machine and protocol handler instances.
  */
-WoleixClimate::WoleixClimate(WoleixStateMachine* state_machine, WoleixTransmitter* command_transmitter)
+WoleixClimate::WoleixClimate(WoleixCommandQueue* command_queue, WoleixStateMachine* state_machine, WoleixProtocolHandler* protocol_handler)
     : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX),
+        command_queue_(command_queue),
         state_machine_(state_machine),
-        command_transmitter_(command_transmitter)
+        protocol_handler_(protocol_handler)
 {
+    command_queue_->register_listener(std::shared_ptr<WoleixListener>(std::shared_ptr<WoleixClimate>{}, this));
     reset_state();
 }
 
@@ -43,7 +67,11 @@ WoleixClimate::WoleixClimate(WoleixStateMachine* state_machine, WoleixTransmitte
  */
 void WoleixClimate::reset_state()
 {
+    command_queue_->reset();
+
     state_machine_->reset();
+    protocol_handler_->reset();
+    
     target_temperature = WOLEIX_TEMP_DEFAULT;
     mode = climate::CLIMATE_MODE_OFF;
     fan_mode = climate::CLIMATE_FAN_LOW;
@@ -91,15 +119,17 @@ void WoleixClimate::setup()
  * 
  * @return Reference to vector of commands needed for the state transition
  */
-const std::vector<WoleixCommand>& WoleixClimate::calculate_commands_()
+void WoleixClimate::calculate_commands_()
 {
+    WoleixInternalState target_state;
     // Map ESPHome Climate states to Woleix AC states
-    WoleixPowerState woleix_power = StateMapper::esphome_to_woleix_power(mode != ClimateMode::CLIMATE_MODE_OFF);
-    WoleixMode woleix_mode = StateMapper::esphome_to_woleix_mode(mode);
-    WoleixFanSpeed woleix_fan_speed = StateMapper::esphome_to_woleix_fan_mode(fan_mode.value());
-  
+    target_state.power = StateMapper::esphome_to_woleix_power(mode != ClimateMode::CLIMATE_MODE_OFF);
+    target_state.mode = StateMapper::esphome_to_woleix_mode(mode);
+    target_state.fan_speed = StateMapper::esphome_to_woleix_fan_mode(fan_mode.value());
+    target_state.temperature = target_temperature;
+    
     // Generate command sequence via state machine
-    return state_machine_->transit_to_state(woleix_power, woleix_mode, target_temperature, woleix_fan_speed);
+    state_machine_->move_to(target_state);
 }
 
 /**
@@ -118,9 +148,6 @@ void WoleixClimate::update_state_()
         : ClimateMode::CLIMATE_MODE_OFF;
     target_temperature = current_state.temperature;
     fan_mode = StateMapper::woleix_to_esphome_fan_mode(current_state.fan_speed);
-
-    ESP_LOGD(TAG, "Synced internal state - Mode: %d, Temp: %.1f, Fan: %d",
-        static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
 }
 
 /**
@@ -138,39 +165,15 @@ void WoleixClimate::transmit_state()
     ESP_LOGD(TAG, "Transmitting state - Mode: %d, Temp: %.1f, Fan: %d",
         static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
 
-    auto commands = calculate_commands_();
+    calculate_commands_();
 
-    if (!commands.empty())
-    {
-        // Send them over the IR transmitter
-        transmit_commands_(commands);
+    ESP_LOGD(TAG, "Transmitted climate state - Mode: %d, Temp: %.1f, Fan: %d",
+        static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
 
-        ESP_LOGD(TAG, "Transmitted climate state - Mode: %d, Temp: %.1f, Fan: %d",
-            static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
-  
-        update_state_();
-    }
-    else
-    {
-        ESP_LOGI(TAG, "No commands generated to reach the target state");
-    }
-}
+    update_state_();
 
-/**
- * Transmit all queued IR commands.
- * 
- * Ensures the command transmitter has the correct IR transmitter base configured,
- * then sends all commands in the queue. The transmitter handles delays and repeats.
- * 
- * @param commands Vector of commands to transmit
- */
-void WoleixClimate::transmit_commands_(std::vector<WoleixCommand>& commands)
-{
-    if (command_transmitter_->get_transmitter() == nullptr)
-    {
-        command_transmitter_->set_transmitter(transmitter_);
-    }
-    command_transmitter_->transmit_(commands);
+    ESP_LOGD(TAG, "Synced internal state to - Mode: %d, Temp: %.1f, Fan: %d",
+        static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
 }
 
 /**

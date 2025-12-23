@@ -83,6 +83,25 @@ public:
     float max_temperature_;
 
     float current_humidity{NAN};
+    
+    void set_timeout(const std::string &name, uint32_t timeout, std::function<void()> &&f) {}
+    bool cancel_timeout(const std::string &name) { return true; }
+
+    void status_set_warning(const char* message = nullptr) {}
+    void status_set_error(const char* message = nullptr) {}
+    void status_clear_warning() {}
+    void status_clear_error() {}
+
+    // Temporary states (auto-clear after timeout)
+    void status_momentary_warning(const std::string& name, uint32_t length = 5000) {}
+    void status_momentary_error(const std::string& name, uint32_t length = 5000) {}
+
+    // Check current status
+    bool status_has_warning() const { return false; }
+    bool status_has_error() const { return false; }
+
+    // Fatal - marks component as failed, removes from loop
+    void mark_failed() {}
 };
 
 } // namespace climate_ir

@@ -1,93 +1,15 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include "woleix_comm.h"
 #include "woleix_constants.h"
+#include "woleix_command.h"
+#include "woleix_protocol_handler.h"
+
+#include "mock_scheduler.h"
+#include "mock_queue.h"
 
 using namespace esphome::climate_ir_woleix;
 using namespace esphome::remote_base;
-
-// Helper: Get the expected timings for a command
-std::vector<int32_t> get_power_timings() 
-{
-    return 
-    {
-        5568, 2832, 528, 600, 528, 600, 528, 1680, 528, 600, 528, 600, 528, 600,
-        528, 600, 528, 600, 528, 1680, 528, 1680, 528, 600, 528, 1680, 528, 1680,
-        528, 1680, 528, 1680, 528, 1680, 528, 600, 528, 600, 528, 1680, 528, 600,
-        528, 600, 528, 600, 528, 600, 528, 600, 528, 1680, 528, 1680, 528, 600,
-        528, 1704, 516, 1680, 528, 1680, 528, 1680, 528, 1680, 528, 18780
-    };
-}
-
-std::vector<int32_t> get_temp_up_timings()
-{
-    return
-    {
-        5568, 2832, 516, 600, 528, 576, 528, 1704, 516, 600, 528, 600, 528, 600,
-        528, 600, 528, 600, 528, 1680, 528, 1680, 528, 600, 528, 1680, 528, 1680,
-        528, 1680, 528, 1680, 528, 1680, 528, 1680, 528, 600, 528, 1680, 528, 600,
-        528, 600, 528, 600, 528, 600, 528, 600, 528, 600, 528, 1680, 528, 600,
-        528, 1680, 528, 1680, 528, 1680, 528, 1680, 528, 1680, 528, 18780
-    };
-}
-
-std::vector<int32_t> get_temp_down_timings() {
-    return
-    {
-        5568, 2820, 528, 600, 528, 600, 528, 1704, 516, 600, 528, 600, 528, 600,
-        528, 600, 528, 600, 528, 1680, 528, 1680, 528, 600, 528, 1680, 528, 1680,
-        528, 1680, 528, 1680, 528, 1680, 528, 1680, 528, 600, 528, 600, 528, 600,
-        528, 600, 528, 600, 528, 600, 528, 600, 528, 600, 528, 1680, 528, 1680,
-        528, 1680, 528, 1680, 528, 1680, 528, 1680, 528, 1680, 528, 18780
-    };
-}
-
-std::vector<int32_t> get_mode_timings()
-{
-    return
-    {
-        5592, 2820, 528, 600, 528, 600, 528, 1704, 516, 600, 528, 600, 528, 600,
-        528, 600, 528, 600, 528, 1704, 516, 1704, 516, 600, 528, 1704, 516, 1704,
-        516, 1704, 516, 1704, 516, 1704, 516, 1704, 516, 600, 528, 1704, 516, 1704,
-        516, 600, 528, 600, 528, 600, 528, 600, 528, 600, 528, 1704, 516, 600,
-        528, 600, 528, 1704, 516, 1704, 516, 1704, 516, 1680, 528, 18780
-    };
-}
-
-std::vector<int32_t> get_speed_timings()
-{
-    return
-    {
-        5568, 2832, 516, 600, 528, 600, 528, 1656, 528, 600, 528, 600, 528, 600,
-        528, 600, 528, 600, 528, 1680, 528, 1680, 528, 600, 528, 1632, 552, 1704,
-        516, 1704, 516, 1560, 624, 1632, 552, 600, 528, 600, 528, 1584, 600, 1704,
-        516, 600, 528, 600, 528, 600, 528, 600, 528, 600, 528, 1704, 516, 600,
-        528, 600, 528, 1704, 516, 1704, 516, 1656, 528, 1704, 516, 1704, 516, 18780
-    };
-}
-
-// Helper: Check if transmitted data matches expected timings
-bool check_timings_match
-(
-    const RemoteTransmitData& data, const std::vector<int32_t>& expected
-)
-{
-    const auto& actual = data.get_data();
-    if (actual.size() != expected.size()) {
-        return false;
-    }
-
-    for (size_t i = 0; i < expected.size(); i++) {
-        // Allow some tolerance for timing variations
-        int32_t diff = std::abs((int32_t)actual[i] - expected[i]);
-        if (diff > 50) {  // 50us tolerance
-        return false;
-        }
-    }
-    return true;
-}
-
 
 // Mock RemoteTransmitterBase
 class MockRemoteTransmitterBase : public RemoteTransmitterBase
@@ -96,22 +18,39 @@ public:
     MOCK_METHOD(void, send_, (const NECProtocol::ProtocolData& data, uint32_t repeats, uint32_t wait), ());
 };
 
-class WoleixCommTest : public testing::Test 
+class MockWoleixProtocolHandler : public WoleixProtocolHandler
+{
+public:
+    MockWoleixProtocolHandler(RemoteTransmitterBase* transmitter, MockWoleixCommandQueue* command_queue, MockScheduler* mock_scheduler)
+        : WoleixProtocolHandler(transmitter, command_queue, mock_scheduler->get_setter(), mock_scheduler->get_canceller()) {}
+    bool is_in_temp_setting_mode() const
+    {
+        return is_in_temp_setting_mode_();
+    }
+};
+
+class WoleixProtocolHandlerTest : public testing::Test 
 {
 protected:
     void SetUp() override 
     {
+        mock_queue = new MockWoleixCommandQueue();
+        mock_scheduler = new MockScheduler(); 
         mock_transmitter = new MockRemoteTransmitterBase();
-        mock_command_transmitter = new WoleixTransmitter(mock_transmitter);
+        mock_protocol_handler = new MockWoleixProtocolHandler(mock_transmitter, mock_queue, mock_scheduler);
     }
         
     void TearDown() override {
-        delete mock_command_transmitter;
+        delete mock_protocol_handler;
         delete mock_transmitter;
+        delete mock_scheduler;
+        delete mock_queue;
     }
 
+    MockWoleixCommandQueue* mock_queue;
+    MockScheduler* mock_scheduler;
     MockRemoteTransmitterBase* mock_transmitter;
-    WoleixTransmitter* mock_command_transmitter;
+    MockWoleixProtocolHandler* mock_protocol_handler;
 
 };
 
@@ -183,39 +122,43 @@ TEST(WoleixNecCommandTest, EqualityOperator)
 
 
 // ============================================================================
-// Test: WoleixCommandTransmitter with NEC Commands
+// Test: WoleixProtocolHandler with NEC Commands
 // ============================================================================
 
 /**
- * Test: WoleixCommandTransmitter transmits NEC commands correctly
+ * Test: WoleixProtocolHandler handles NEC commands correctly
  * 
  * Validates that when a WoleixNecCommand is passed to the transmitter,
  * it correctly calls the underlying NECProtocol transmit method with
  * the expected parameters.
  */
-TEST(WoleixCommandTransmitterTest, TransmitsNecCommand)
+TEST_F(WoleixProtocolHandlerTest, TransmitsNecCommand)
 {
-    MockRemoteTransmitterBase mock_transmitter;
-    WoleixTransmitter transmitter(&mock_transmitter);
-    
     // Create a POWER command
     uint16_t address = 0x00FF;
     WoleixCommand power_cmd(WoleixCommand::Type::POWER, address, 200, 3);
     
     // Expect the NEC transmit method to be called with correct parameters
-    EXPECT_CALL(mock_transmitter, send_(testing::An<const NECProtocol::ProtocolData&>(), 3, 200000))
+    EXPECT_CALL(*mock_transmitter, send_(testing::An<const NECProtocol::ProtocolData&>(), 3, 200000))
         .Times(1)
-        .WillOnce(testing::Invoke([&power_cmd, address](const NECProtocol::ProtocolData& data, 
-                                                        uint32_t repeats, uint32_t wait) {
-            EXPECT_EQ(data.address, address);
-            EXPECT_EQ(data.command, power_cmd.get_command());
-            EXPECT_EQ(data.command_repeats, 1);
-            EXPECT_EQ(repeats, 3);
-            EXPECT_EQ(wait, 200000);
-        }));
+        .WillOnce
+        (
+            testing::Invoke
+            (
+                [&power_cmd, address]
+                (const NECProtocol::ProtocolData& data, uint32_t repeats, uint32_t wait)
+                {
+                    EXPECT_EQ(data.address, address);
+                    EXPECT_EQ(data.command, power_cmd.get_command());
+                    EXPECT_EQ(data.command_repeats, 1);
+                    EXPECT_EQ(repeats, 3);
+                    EXPECT_EQ(wait, 200000);
+                }
+            )
+        );
     
     // Transmit the command
-    transmitter.transmit_(power_cmd);
+//    mock_protocol_handler->execute(power_cmd);
 }
 
 /**
@@ -224,24 +167,32 @@ TEST(WoleixCommandTransmitterTest, TransmitsNecCommand)
  * Validates that the transmitter correctly transmits a sequence of
  * multiple NEC commands.
  */
-TEST(WoleixCommandTransmitterTest, TransmitsMultipleNecCommands)
+TEST_F(WoleixProtocolHandlerTest, TransmitsMultipleNecCommands)
 {
-    MockRemoteTransmitterBase mock_transmitter;
-    WoleixTransmitter transmitter(&mock_transmitter);
-    
     uint16_t address = 0x00FF;
     std::vector<WoleixCommand> commands;
     commands.push_back(WoleixCommand(WoleixCommand::Type::POWER, address, 200, 1));
     commands.push_back(WoleixCommand(WoleixCommand::Type::MODE, address, 200, 2));
     
     // Expect two NEC transmit calls
-    EXPECT_CALL(mock_transmitter, send_(testing::An<const NECProtocol::ProtocolData&>(), 
-                                        testing::_, testing::_))
+    EXPECT_CALL(*mock_transmitter, send_(testing::An<const NECProtocol::ProtocolData&>(), 
+            testing::_, testing::_))
         .Times(2);
     
-    transmitter.transmit_(commands);
+//    mock_protocol_handler->execute(commands);
 }
 
+TEST_F(WoleixProtocolHandlerTest, EntersSettingModeForTempCommand)
+{
+    const std::vector<WoleixCommand> commands = {
+        WoleixCommand(WoleixCommand::Type::TEMP_UP, ADDRESS_NEC)
+    };
+    
+//    mock_protocol_handler->execute(commands);
+    
+    EXPECT_TRUE(mock_protocol_handler->is_in_temp_setting_mode());
+    EXPECT_EQ(mock_scheduler->scheduled_timeouts.size(), 2);  // next_cmd + setting_mode timeout
+}
 // ============================================================================
 // Main
 // ============================================================================

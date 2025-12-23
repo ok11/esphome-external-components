@@ -1,6 +1,7 @@
 #pragma once
 
 #include "esphome/components/climate/climate_mode.h"
+
 #include "woleix_state_machine.h"
 
 namespace esphome {

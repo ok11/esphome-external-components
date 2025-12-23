@@ -46,7 +46,7 @@ set(COMPONENT_SOURCES
   ../../esphome/components/climate_ir_woleix/climate_ir_woleix.cpp
   ../../esphome/components/climate_ir_woleix/woleix_state_machine.cpp
   ../../esphome/components/climate_ir_woleix/woleix_state_mapper.cpp
-  ../../esphome/components/climate_ir_woleix/woleix_comm.cpp
+  ../../esphome/components/climate_ir_woleix/woleix_protocol_handler.cpp
 )
 
 # Create test executable for climate component
@@ -74,7 +74,13 @@ add_executable(
 add_executable(
   woleix_comm_test
   woleix_comm_test.cpp
-  ../../esphome/components/climate_ir_woleix/woleix_comm.cpp
+  ../../esphome/components/climate_ir_woleix/woleix_protocol_handler.cpp
+)
+
+# Create test executable for command queue
+add_executable(
+  woleix_command_queue_test
+  woleix_command_queue_test.cpp
 )
 
 # Set include directories with mocks having highest priority
@@ -114,6 +120,15 @@ target_include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome/components/climate_ir_woleix
 )
 
+# Set include directories for command queue test
+target_include_directories(
+  woleix_command_queue_test
+  BEFORE PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/mocks
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome/components/climate_ir_woleix
+)
+
 target_link_libraries(
   climate_ir_woleix_test
   GTest::gtest_main
@@ -142,9 +157,17 @@ target_link_libraries(
   esphome_mocks
 )
 
+target_link_libraries(
+  woleix_command_queue_test
+  GTest::gtest_main
+  GTest::gmock_main
+  esphome_mocks
+)
+
 # Enable testing
 include(GoogleTest)
 gtest_discover_tests(climate_ir_woleix_test)
 gtest_discover_tests(woleix_state_machine_test)
 gtest_discover_tests(woleix_state_mapper_test)
 gtest_discover_tests(woleix_comm_test)
+gtest_discover_tests(woleix_command_queue_test)

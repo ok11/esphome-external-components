@@ -16,6 +16,7 @@ static const char *const VERSION = "1.0.0";
  */
 static const char *const TAG = "climate_ir_woleix.climate";
 
+const size_t QUEUE_MAX_CAPACITY = 256;
 /**
  * @brief Minimum temperature supported by the Woleix AC unit in Celsius.
  */
