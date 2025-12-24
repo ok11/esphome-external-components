@@ -7,6 +7,7 @@
 
 #include "woleix_protocol_handler.h"
 
+using esphome::climate_ir_woleix::WoleixCommandQueue;
 using esphome::climate_ir_woleix::WoleixProtocolHandler;
 
 class MockScheduler
@@ -68,7 +69,8 @@ public:
     /// Fire all timeouts (in order of scheduling)
     void fire_all_timeouts()
     {
-        while (!scheduled_timeouts.empty()) {
+        while (!scheduled_timeouts.empty())
+        {
             auto callback = std::move(scheduled_timeouts.front().callback);
             scheduled_timeouts.erase(scheduled_timeouts.begin());
             callback();
@@ -121,9 +123,10 @@ public:
         cancelled_timeouts.clear();
     }
 
-    void run_until_empty()
+    void run_until_empty(WoleixCommandQueue* queue)
     {
-        while (!scheduled_timeouts.empty()) {
+        while (!queue->is_empty())
+        {
             auto callback = std::move(scheduled_timeouts.front().callback);
             scheduled_timeouts.erase(scheduled_timeouts.begin());
             callback();

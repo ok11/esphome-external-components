@@ -84,8 +84,8 @@ public:
 
     float current_humidity{NAN};
     
-    void set_timeout(const std::string &name, uint32_t timeout, std::function<void()> &&f) {}
-    bool cancel_timeout(const std::string &name) { return true; }
+    virtual void set_timeout(const std::string &name, uint32_t timeout, std::function<void()> &&f) {}
+    virtual bool cancel_timeout(const std::string &name) { return true; }
 
     void status_set_warning(const char* message = nullptr) {}
     void status_set_error(const char* message = nullptr) {}

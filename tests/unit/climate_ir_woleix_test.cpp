@@ -87,8 +87,6 @@ public:
         WoleixMode woleix_mode = StateMapper::esphome_to_woleix_mode(mode);
         WoleixFanSpeed woleix_fan_speed = StateMapper::esphome_to_woleix_fan_mode(fan_mode);
 
-//        MockWoleixStateMachine* mock_state_machine = ((MockWoleixStateMachine*)state_machine_.get());
-//        WoleixInternalState woleix_state = get_current_state();
         set_current_state(
             woleix_power, woleix_mode, target_temperature, woleix_fan_speed
         );
@@ -96,7 +94,6 @@ public:
 
     void get_last_state(ClimateMode& mode, float& target_temperature, ClimateFanMode& fan_mode)
     {
-   //     MockWoleixStateMachine* mock_state_machine = ((MockWoleixStateMachine*)state_machine_.get());
         WoleixInternalState woleix_state = get_current_state();
 
         mode = StateMapper::woleix_to_esphome_power(woleix_state.power) 
@@ -105,16 +102,6 @@ public:
         target_temperature = woleix_state.temperature;
         fan_mode = StateMapper::woleix_to_esphome_fan_mode(woleix_state.fan_speed);
     }
-
-    esphome::sensor::Sensor* get_humidity_sensor()
-    {
-        return this->humidity_sensor_;
-    }
-
-    MOCK_METHOD(void, publish_state, (), (override)); 
-
-    // Getter for state_machine_
-    MOCK_METHOD(WoleixInternalState, get_state, (), (const));
 
     void set_current_state(
         WoleixPowerState power, WoleixMode woleix_mode, float temperature, WoleixFanSpeed woleix_fan_speed
@@ -126,11 +113,55 @@ public:
         current_state_.fan_speed = woleix_fan_speed;
     }
 
-    WoleixInternalState get_current_state() {
+    WoleixInternalState get_current_state()
+    {
         return current_state_;
     }
+
+    void set_scheduler(MockScheduler* scheduler)
+    {
+        scheduler_ = scheduler;
+    }
+    
+    // Add convenience method to run until empty
+    void run_until_empty()
+    {
+        if (scheduler_ && command_queue_)
+        {
+            scheduler_->run_until_empty(command_queue_.get());
+        }
+    }
+    
+    // Override Component's set_timeout to use our mock scheduler
+    void set_timeout(const std::string& name, uint32_t delay_ms, std::function<void()>&& callback) override
+    {
+        if (scheduler_)
+        {
+            scheduler_->get_setter()(name, delay_ms, std::move(callback));
+        }
+    }
+    
+    // Override Component's cancel_timeout to use our mock scheduler
+    bool cancel_timeout(const std::string& name) override
+    {
+        if (scheduler_)
+        {
+            scheduler_->get_canceller()(name);
+        }
+        return true;
+    }
+
+    esphome::sensor::Sensor* get_humidity_sensor()
+    {
+        return this->humidity_sensor_;
+    }
+
+    MOCK_METHOD(void, publish_state, (), (override)); 
+    MOCK_METHOD(WoleixInternalState, get_state, (), (const));
     MOCK_METHOD(void, transmit_, (const WoleixCommand& command), ());
-    MOCK_METHOD(void, execute, (const WoleixCommand& command), ());
+
+    
+    MockScheduler* scheduler_{nullptr};
 };
 
 // Test fixture class
@@ -145,7 +176,8 @@ protected:
         // mock_state_machine = new MockWoleixStateMachine(mock_command_queue);
         // mock_protocol_handler = new MockWoleixProtocolHandler(mock_transmitter, mock_command_queue, mock_scheduler);
         mock_climate = new MockWoleixClimate();
-    
+        mock_climate->set_scheduler(mock_scheduler);
+        mock_climate->set_transmitter(mock_transmitter);
         // Initialize optional fan_mode to avoid "bad optional access" errors
         mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
     
@@ -253,6 +285,8 @@ TEST_F(WoleixClimateTest, TurningOffSendsPowerCommand)
     mock_climate->target_temperature = 25.0f;
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
     mock_climate->call_transmit_state();
+
+    mock_climate->run_until_empty();
 }
 
 /**
@@ -274,7 +308,7 @@ TEST_F(WoleixClimateTest, StayingOffDoesNotTransmit)
     mock_climate->target_temperature = 25.0f;
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
     mock_climate->call_transmit_state();
-  
+    mock_climate->run_until_empty();
 }
 
 // ============================================================================

@@ -23,10 +23,12 @@ WoleixClimate::WoleixClimate()
     WoleixStateMachine(),
     WoleixProtocolHandler
     (
-        [this](const std::string& name, uint32_t delay_ms, std::function<void()> callback) {
+        [this](const std::string& name, uint32_t delay_ms, std::function<void()> callback)
+        {
             this->set_timeout(name, delay_ms, std::move(callback));
         },
-        [this](const std::string& name) {
+        [this](const std::string& name)
+        {
             this->cancel_timeout(name);
         }
     )
