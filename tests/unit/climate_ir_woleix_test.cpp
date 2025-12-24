@@ -37,39 +37,6 @@ public:
     MOCK_METHOD(void, send_, (const NECProtocol::ProtocolData& data, uint32_t repeats, uint32_t wait), ());
 };
 
-// class MockWoleixStateMachine : public WoleixStateMachine
-// {
-// public:
-//     MockWoleixStateMachine(MockWoleixCommandQueue* command_queue)
-//         : WoleixStateMachine(command_queue)
-//     {}
-
-//     MOCK_METHOD(WoleixInternalState, get_state, (), (const));
-
-//     void set_current_state(
-//         WoleixPowerState power, WoleixMode woleix_mode, float temperature, WoleixFanSpeed woleix_fan_speed
-//     )
-//     {
-//         current_state_.power = power;
-//         current_state_.mode = woleix_mode;
-//         current_state_.temperature = temperature;
-//         current_state_.fan_speed = woleix_fan_speed;
-//     }
-
-//     WoleixInternalState get_current_state() {
-//         return current_state_;
-//     }
-// };
-
-// // GMock version of ProtocolHandler
-// class MockWoleixProtocolHandler : public WoleixProtocolHandler
-// {
-// public:
-//     MockWoleixProtocolHandler(MockRemoteTransmitterBase* transmitter, MockWoleixCommandQueue* command_queue, MockScheduler* mock_scheduler)
-//         : WoleixProtocolHandler(transmitter, command_queue, mock_scheduler->get_setter(), mock_scheduler->get_canceller()) {}
-//     MOCK_METHOD(void, transmit_, (const WoleixCommand& command), ());
-//     MOCK_METHOD(void, execute, (const WoleixCommand& command), ());
-// };
 
 // GMock version of WoleixClimate
 class MockWoleixClimate : public WoleixClimate
@@ -171,32 +138,22 @@ protected:
     void SetUp() override 
     {
         mock_transmitter = new MockRemoteTransmitterBase();
-//        mock_command_queue = new MockWoleixCommandQueue();
         mock_scheduler = new MockScheduler();
-        // mock_state_machine = new MockWoleixStateMachine(mock_command_queue);
-        // mock_protocol_handler = new MockWoleixProtocolHandler(mock_transmitter, mock_command_queue, mock_scheduler);
         mock_climate = new MockWoleixClimate();
         mock_climate->set_scheduler(mock_scheduler);
-        mock_climate->set_transmitter(mock_transmitter);
-        // Initialize optional fan_mode to avoid "bad optional access" errors
-        mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
-    
-        // Set the mock state machine to defaults after construction
-        // This ensures all tests start from a known state (matching what the real state machine does)
-        mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_COOL, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
+        mock_climate->set_transmitter(mock_transmitter);    
+        mock_climate->setup();
     }
     
-    void TearDown() override {
+    void TearDown() override
+    {
         delete mock_climate;
         delete mock_scheduler;
         delete mock_transmitter;
     }
 
     MockRemoteTransmitterBase* mock_transmitter;
-    MockWoleixCommandQueue* mock_command_queue;
     MockScheduler* mock_scheduler;
-    // MockWoleixStateMachine* mock_state_machine;
-    // MockWoleixProtocolHandler* mock_protocol_handler;
     MockWoleixClimate* mock_climate;
 };
 
@@ -239,7 +196,8 @@ TEST_F(WoleixClimateTest, TraitsConfiguredCorrectly)
 TEST_F(WoleixClimateTest, TurningOnFromOffSendsPowerCommand)
 {
     // Start in OFF mode - set state AFTER constructor has run
-    mock_climate->set_last_state(
+    mock_climate->set_last_state
+    (
         ClimateMode::CLIMATE_MODE_OFF,
         25.0f,
         ClimateFanMode::CLIMATE_FAN_LOW
@@ -325,7 +283,8 @@ TEST_F(WoleixClimateTest, StayingOffDoesNotTransmit)
 TEST_F(WoleixClimateTest, IncreasingTemperatureSendsTempUpCommands)
 {
     // Initialize with a known state
-    mock_climate->set_last_state(
+    mock_climate->set_last_state
+    (
         ClimateMode::CLIMATE_MODE_COOL,
         20.0f,
         ClimateFanMode::CLIMATE_FAN_LOW
@@ -340,6 +299,7 @@ TEST_F(WoleixClimateTest, IncreasingTemperatureSendsTempUpCommands)
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
     mock_climate->target_temperature = 23.0f;
     mock_climate->call_transmit_state();
+    mock_climate->run_until_empty();
 }
 
 /**
@@ -367,8 +327,8 @@ TEST_F(WoleixClimateTest, DecreasingTemperatureSendsTempDownCommands)
     mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
     mock_climate->target_temperature = 23.0f;
     mock_climate->call_transmit_state();  
+    mock_climate->run_until_empty();
 }
-
 /**
  * Test: No temperature change means no temperature commands
  * 
@@ -391,7 +351,8 @@ TEST_F(WoleixClimateTest, NoTemperatureChangeDoesNotSendTempCommands)
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
     mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
     mock_climate->target_temperature = 22.0f;
-    mock_climate->call_transmit_state();  
+    mock_climate->call_transmit_state();
+    mock_climate->run_until_empty();  
 }
 
 /**
@@ -418,6 +379,7 @@ TEST_F(WoleixClimateTest, NonCoolModeDoesNotSendTempCommands)
     mock_climate->mode = ClimateMode::CLIMATE_MODE_FAN_ONLY;
     mock_climate->target_temperature = 25.0f;
     mock_climate->call_transmit_state();  
+    mock_climate->run_until_empty();
 }
 
 // ============================================================================
@@ -448,6 +410,7 @@ TEST_F(WoleixClimateTest, ChangingModeCoolToFanSends2ModeCommands)
     mock_climate->mode = ClimateMode::CLIMATE_MODE_FAN_ONLY;
     mock_climate->target_temperature = 22.0f;
     mock_climate->call_transmit_state();
+    mock_climate->run_until_empty();
 }
 
 /**
@@ -459,7 +422,8 @@ TEST_F(WoleixClimateTest, ChangingModeCoolToFanSends2ModeCommands)
 TEST_F(WoleixClimateTest, ChangingModeDryToCoolSends2ModeCommands)
 {
     // Initialize in COOL mode
-    mock_climate->set_last_state(
+    mock_climate->set_last_state
+    (
         ClimateMode::CLIMATE_MODE_DRY,
         22.0f,
         ClimateFanMode::CLIMATE_FAN_LOW
@@ -474,6 +438,7 @@ TEST_F(WoleixClimateTest, ChangingModeDryToCoolSends2ModeCommands)
     mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
     mock_climate->target_temperature = 22.0f;
     mock_climate->call_transmit_state();
+    mock_climate->run_until_empty();
 }
 
 /**
@@ -485,7 +450,8 @@ TEST_F(WoleixClimateTest, ChangingModeDryToCoolSends2ModeCommands)
 TEST_F(WoleixClimateTest, ChangingModeCoolToDrySends1ModeCommand)
 {
     // Initialize in COOL mode
-    mock_climate->set_last_state(
+    mock_climate->set_last_state
+    (
         ClimateMode::CLIMATE_MODE_COOL,
         22.0f,
         ClimateFanMode::CLIMATE_FAN_LOW
@@ -500,6 +466,7 @@ TEST_F(WoleixClimateTest, ChangingModeCoolToDrySends1ModeCommand)
     mock_climate->mode = ClimateMode::CLIMATE_MODE_DRY;
     mock_climate->target_temperature = 22.0f;
     mock_climate->call_transmit_state();
+    mock_climate->run_until_empty();
 }
 
 // ============================================================================
@@ -515,7 +482,8 @@ TEST_F(WoleixClimateTest, ChangingModeCoolToDrySends1ModeCommand)
 TEST_F(WoleixClimateTest, IncreasingFanSpeedSendsSpeedCommand)
 {
     // Initialize with known state
-    mock_climate->set_last_state(
+    mock_climate->set_last_state
+    (
         ClimateMode::CLIMATE_MODE_FAN_ONLY,
         22.0f,
         ClimateFanMode::CLIMATE_FAN_LOW
@@ -530,7 +498,7 @@ TEST_F(WoleixClimateTest, IncreasingFanSpeedSendsSpeedCommand)
     mock_climate->mode = ClimateMode::CLIMATE_MODE_FAN_ONLY;
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
     mock_climate->call_transmit_state();
-  
+    mock_climate->run_until_empty();
 }
 
 /**
@@ -542,7 +510,8 @@ TEST_F(WoleixClimateTest, IncreasingFanSpeedSendsSpeedCommand)
 TEST_F(WoleixClimateTest, DecreasingFanSpeedSendsSpeedCommand)
 {
     // Initialize with known state
-    mock_climate->set_last_state(
+    mock_climate->set_last_state
+    (
         ClimateMode::CLIMATE_MODE_FAN_ONLY,
         22.0f,
         ClimateFanMode::CLIMATE_FAN_HIGH
@@ -557,7 +526,7 @@ TEST_F(WoleixClimateTest, DecreasingFanSpeedSendsSpeedCommand)
     mock_climate->mode = ClimateMode::CLIMATE_MODE_FAN_ONLY;
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
     mock_climate->call_transmit_state();
-  
+    mock_climate->run_until_empty();
 }
 
 /**
@@ -569,7 +538,8 @@ TEST_F(WoleixClimateTest, DecreasingFanSpeedSendsSpeedCommand)
 TEST_F(WoleixClimateTest, UnchangedFanSpeedDoesNotSendSpeedCommand)
 {
     // Initialize with known state
-    mock_climate->set_last_state(
+    mock_climate->set_last_state
+    (
         ClimateMode::CLIMATE_MODE_COOL,
         22.0f,
         ClimateFanMode::CLIMATE_FAN_HIGH
@@ -583,7 +553,7 @@ TEST_F(WoleixClimateTest, UnchangedFanSpeedDoesNotSendSpeedCommand)
     mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
     mock_climate->call_transmit_state();
-  
+    mock_climate->run_until_empty();
 }
 // ============================================================================
 // Test: Complex State Transitions
@@ -599,7 +569,8 @@ TEST_F(WoleixClimateTest, UnchangedFanSpeedDoesNotSendSpeedCommand)
 TEST_F(WoleixClimateTest, CompleteStateChangeSequence)
 {
     // Start from OFF
-    mock_climate->set_last_state(
+    mock_climate->set_last_state
+    (
         ClimateMode::CLIMATE_MODE_DRY,
         20.0f,
         ClimateFanMode::CLIMATE_FAN_LOW
@@ -617,6 +588,7 @@ TEST_F(WoleixClimateTest, CompleteStateChangeSequence)
     mock_climate->target_temperature = 24.0f;
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
     mock_climate->call_transmit_state();
+    mock_climate->run_until_empty();
 }
 
 // TEST_F(WoleixClimateTest, CarrierFrequencySetCorrectly) {
@@ -779,7 +751,8 @@ TEST_F(WoleixClimateTest, PublishingStateOfHumiditySensorRepublishesItByClimate)
 {
     // Turning on sends: Power, Mode, Speed commands
 
-    mock_climate->set_last_state(
+    mock_climate->set_last_state
+    (
         ClimateMode::CLIMATE_MODE_OFF,
         22.0f,
         ClimateFanMode::CLIMATE_FAN_LOW
@@ -852,6 +825,7 @@ TEST_F(WoleixClimateTest, FanSpeedOnlyTransmittedInFanMode)
     mock_climate->target_temperature = 22.0f;
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
     mock_climate->call_transmit_state();
+    mock_climate->run_until_empty();
 
     // Test in FAN mode
     mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_FAN_ONLY, 22.0f, ClimateFanMode::CLIMATE_FAN_LOW);
@@ -863,6 +837,7 @@ TEST_F(WoleixClimateTest, FanSpeedOnlyTransmittedInFanMode)
     mock_climate->target_temperature = 22.0f;
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
     mock_climate->call_transmit_state();
+    mock_climate->run_until_empty();
 
     // Test that changing temperature in FAN mode doesn't trigger SPEED_COMMAND
     mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_FAN_ONLY, 22.0f, ClimateFanMode::CLIMATE_FAN_LOW);
@@ -874,6 +849,7 @@ TEST_F(WoleixClimateTest, FanSpeedOnlyTransmittedInFanMode)
     mock_climate->target_temperature = 24.0f;
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
     mock_climate->call_transmit_state();
+    mock_climate->run_until_empty();
 }
 
 // ============================================================================
@@ -910,6 +886,7 @@ TEST_F(WoleixClimateTest, TransmitStateSynchronizesInternalState)
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
 
     mock_climate->call_transmit_state();
+    mock_climate->run_until_empty();
 
     // Verify that the internal state has been synchronized with what the state machine computed
     // After the state change, the state machine should have:
@@ -948,6 +925,7 @@ TEST_F(WoleixClimateTest, DefaultProtocolGeneratesNecCommands)
     mock_climate->target_temperature = 25.0f;
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
     mock_climate->call_transmit_state();
+    mock_climate->run_until_empty();
 }
 
 /**
@@ -972,6 +950,7 @@ TEST_F(WoleixClimateTest, SetProtocolNecGeneratesNecCommands)
     mock_climate->target_temperature = 25.0f;
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
     mock_climate->call_transmit_state();
+    mock_climate->run_until_empty();
 }
 
 /**
@@ -999,6 +978,7 @@ TEST_F(WoleixClimateTest, NecCommandsHaveCorrectAddressAndCodes)
     mock_climate->target_temperature = 23.0f;  // +3 degrees = TEMP_UP
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
     mock_climate->call_transmit_state();
+    mock_climate->run_until_empty();
   
     // Verify all commands have correct NEC address
     for (const auto& cmd : captured_commands) {
@@ -1033,6 +1013,7 @@ TEST_F(WoleixClimateTest, PowerOnAfterReset)
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
 
     mock_climate->call_transmit_state();
+    mock_climate->run_until_empty();
 }
 // ============================================================================
 // Main

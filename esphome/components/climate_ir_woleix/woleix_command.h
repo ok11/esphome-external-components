@@ -142,6 +142,11 @@ public:
         if (queue_->size() > max_capacity_ * 0.8) notify_listeners(WX_STATUS_QUEUE_FULL);
         queue_->push_back(command);
     }
+    const WoleixCommand& next()
+    {
+        if (queue_->empty()) throw std::out_of_range("Next called on empty WoleixCommandQueue");
+        return queue_->front();
+    }
     const WoleixCommand& dequeue()
     {
         if (queue_->empty()) throw std::out_of_range("Dequeue called on empty WoleixCommandQueue");

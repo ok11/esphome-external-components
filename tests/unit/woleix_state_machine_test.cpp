@@ -430,7 +430,7 @@ TEST_F(WoleixStateMachineTest, TemperatureIncreaseInCoolMode)
         )
     );
     
-    EXPECT_EQ(count_command(TEMP_UP_COMMAND), 4);
+    EXPECT_EQ(count_command(TEMP_UP_COMMAND), 3);
     
     auto state = mock_state_machine->get_state();
     EXPECT_FLOAT_EQ(state.temperature, 28.0f);
@@ -462,7 +462,7 @@ TEST_F(WoleixStateMachineTest, TemperatureDecreaseInCoolMode)
         )
     );
     
-    EXPECT_EQ(count_command(TEMP_DOWN_COMMAND), 6);
+    EXPECT_EQ(count_command(TEMP_DOWN_COMMAND), 5);
     
     auto state = mock_state_machine->get_state();
     EXPECT_FLOAT_EQ(state.temperature, 20.0f);
@@ -495,7 +495,7 @@ TEST_F(WoleixStateMachineTest, TemperatureClampedToMinimum)
     );
     
     // Should go from 25°C to 15°C (minimum)
-    EXPECT_EQ(count_command(TEMP_DOWN_COMMAND), 11);
+    EXPECT_EQ(count_command(TEMP_DOWN_COMMAND), 10);
 }
 
 /**
@@ -525,7 +525,7 @@ TEST_F(WoleixStateMachineTest, TemperatureClampedToMaximum)
     );
     
     // Should go from 25°C to 30°C (maximum)
-    EXPECT_EQ(count_command(TEMP_UP_COMMAND), 6);
+    EXPECT_EQ(count_command(TEMP_UP_COMMAND), 5);
 }
 
 /**
@@ -729,14 +729,16 @@ TEST_F(WoleixStateMachineTest, CompleteStateChangeFromDefaults)
 TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
 {
     // Change 1: Mode and fan
-    mock_state_machine->set_current_state(
+    mock_state_machine->set_current_state
+    (
         WoleixPowerState::ON,
         WoleixMode::DEHUM,
         25.0f,
         WoleixFanSpeed::LOW
     );
 
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -750,7 +752,8 @@ TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
     EXPECT_EQ(count_command(SPEED_COMMAND), 1);  // LOW->HIGH
 
     // Change 2: Mode and temperature
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -761,10 +764,11 @@ TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
     );
     
     EXPECT_EQ(count_command(MODE_COMMAND), 1);   // DEHUM->FAN->COOL
-    EXPECT_EQ(count_command(TEMP_DOWN_COMMAND), 6); // 25->20
+    EXPECT_EQ(count_command(TEMP_DOWN_COMMAND), 5); // 25->20
 
     // Change 3: Power off
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::OFF,

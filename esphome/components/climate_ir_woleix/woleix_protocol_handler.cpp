@@ -22,7 +22,14 @@ void WoleixProtocolHandler::setup(WoleixCommandQueue* command_queue)
 
 void WoleixProtocolHandler::process_next_command_()
 {
-    if (command_queue_ && command_queue_->is_empty())
+    if (!command_queue_)
+    {
+        ESP_LOGW(TAG, "Command queue not set in protocol handler");
+        set_timeout_(TIMEOUT_NEXT_COMMAND, POLL_COMMAND_INTERVAL_MS,
+            [this]() { process_next_command_(); });
+        return;
+    }
+    if (command_queue_->is_empty())
     {
         // All commands processed
         ESP_LOGD(TAG, "All commands executed");
@@ -34,16 +41,19 @@ void WoleixProtocolHandler::process_next_command_()
         set_timeout_(TIMEOUT_NEXT_COMMAND, POLL_COMMAND_INTERVAL_MS,
             [this]() { process_next_command_(); });
     }
-
-    const auto& cmd = command_queue_->dequeue();
-    
-    if (is_temp_command_(cmd))
-    {
-        handle_temp_command_(cmd);
-    }
     else
     {
-        handle_regular_command_(cmd);
+        const auto& cmd = command_queue_->next();
+    
+        if (is_temp_command_(cmd))
+        {
+            handle_temp_command_(cmd);
+        }
+        else
+        {
+            handle_regular_command_(cmd);
+        }
+
     }
 }
 
@@ -60,6 +70,7 @@ void WoleixProtocolHandler::handle_temp_command_(const WoleixCommand& cmd)
             // Already in setting mode, send directly
             ESP_LOGD(TAG, "In setting mode, sending temp command directly");
             transmit_(cmd);
+            command_queue_->dequeue();
             extend_setting_mode_timeout_();
                         
             // Schedule next command with delay
@@ -89,6 +100,7 @@ void WoleixProtocolHandler::handle_regular_command_(const WoleixCommand& cmd)
 {
     ESP_LOGD(TAG, "Sending regular command");
     transmit_(cmd);
+    command_queue_->dequeue();
     
     set_timeout_(TIMEOUT_NEXT_COMMAND, INTER_COMMAND_DELAY_MS, 
         [this]() { process_next_command_(); });
