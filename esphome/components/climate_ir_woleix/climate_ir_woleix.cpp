@@ -20,39 +20,43 @@ using esphome::climate::ClimateTraits;
 WoleixClimate::WoleixClimate()
   : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX),
     command_queue_(std::make_unique<WoleixCommandQueue>(QUEUE_MAX_CAPACITY)),
-    state_machine_(std::make_shared<WoleixStateMachine>(command_queue_.get())),
-    protocol_handler_
+    WoleixStateMachine(),
+    WoleixProtocolHandler
     (
-        std::make_shared<WoleixProtocolHandler>
-        (
-                transmitter_,
-                command_queue_.get(),
-                [this](const std::string& name, uint32_t delay_ms, std::function<void()> callback) {
-                    this->set_timeout(name, delay_ms, std::move(callback));
-                },
-                [this](const std::string& name) {
-                    this->cancel_timeout(name);
-                }
-        )
+        [this](const std::string& name, uint32_t delay_ms, std::function<void()> callback) {
+            this->set_timeout(name, delay_ms, std::move(callback));
+        },
+        [this](const std::string& name) {
+            this->cancel_timeout(name);
+        }
     )
-{}
-
-
-/**
- * Constructor accepting state machine and transmitter.
- * 
- * Initializes the climate controller with default settings and creates
- * internal state machine and protocol handler instances.
- */
-WoleixClimate::WoleixClimate(WoleixCommandQueue* command_queue, WoleixStateMachine* state_machine, WoleixProtocolHandler* protocol_handler)
-    : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX),
-        command_queue_(command_queue),
-        state_machine_(state_machine),
-        protocol_handler_(protocol_handler)
 {
     command_queue_->register_listener(std::shared_ptr<WoleixListener>(std::shared_ptr<WoleixClimate>{}, this));
     reset_state();
 }
+
+// /**
+//  * Constructor accepting state machine and transmitter.
+//  * 
+//  * Initializes the climate controller with default settings and creates
+//  * internal state machine and protocol handler instances.
+//  */
+// WoleixClimate::WoleixClimate(std::unique_ptr<WoleixCommandQueue> command_queue)
+//   : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX),
+//     command_queue_(std::move(command_queue)),
+//     WoleixStateMachine(command_queue_.get()),
+//     WoleixProtocolHandler
+//     (
+//         command_queue_.get(),
+//         [this](const std::string& name, uint32_t delay_ms, std::function<void()> callback) {
+//             this->set_timeout(name, delay_ms, std::move(callback));
+//         },
+//         [this](const std::string& name) {
+//             this->cancel_timeout(name);
+//         }
+//     )
+// {
+// }
 
 /**
  * Reset the state machine to default values.
@@ -69,8 +73,8 @@ void WoleixClimate::reset_state()
 {
     command_queue_->reset();
 
-    state_machine_->reset();
-    protocol_handler_->reset();
+    WoleixStateMachine::reset();
+    WoleixProtocolHandler::reset();
     
     target_temperature = WOLEIX_TEMP_DEFAULT;
     mode = climate::CLIMATE_MODE_OFF;
@@ -91,7 +95,10 @@ void WoleixClimate::setup()
 
     // Call parent setup first
     ClimateIR::setup();
-  
+
+    WoleixStateMachine::setup(command_queue_.get());
+    WoleixProtocolHandler::setup(command_queue_.get());
+
     // Set up callback to update humidity from sensor
     if (humidity_sensor_ != nullptr)
     {
@@ -119,7 +126,7 @@ void WoleixClimate::setup()
  * 
  * @return Reference to vector of commands needed for the state transition
  */
-void WoleixClimate::calculate_commands_()
+void WoleixClimate::queue_commands_()
 {
     WoleixInternalState target_state;
     // Map ESPHome Climate states to Woleix AC states
@@ -129,7 +136,7 @@ void WoleixClimate::calculate_commands_()
     target_state.temperature = target_temperature;
     
     // Generate command sequence via state machine
-    state_machine_->move_to(target_state);
+    WoleixStateMachine::move_to(target_state);
 }
 
 /**
@@ -142,7 +149,7 @@ void WoleixClimate::calculate_commands_()
 void WoleixClimate::update_state_()
 {
     // Sync internal state with state machine
-    auto current_state = state_machine_->get_state();
+    auto current_state = get_state();
     mode = StateMapper::woleix_to_esphome_power(current_state.power) 
         ? StateMapper::woleix_to_esphome_mode(current_state.mode)
         : ClimateMode::CLIMATE_MODE_OFF;
@@ -162,18 +169,21 @@ void WoleixClimate::update_state_()
  */
 void WoleixClimate::transmit_state()
 {
-    ESP_LOGD(TAG, "Transmitting state - Mode: %d, Temp: %.1f, Fan: %d",
-        static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
+    if (on_hold_)
+    {
+        ESP_LOGW(TAG, "Transmission on hold due to full command queue");
+    }
+    else
+    {
+        ESP_LOGD(TAG, "Transmitting state - Mode: %d, Temp: %.1f, Fan: %d",
+            static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
 
-    calculate_commands_();
-
-    ESP_LOGD(TAG, "Transmitted climate state - Mode: %d, Temp: %.1f, Fan: %d",
+        queue_commands_();
+    }
+    ESP_LOGD(TAG, "Reporting back state - Mode: %d, Temp: %.1f, Fan: %d",
         static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
 
     update_state_();
-
-    ESP_LOGD(TAG, "Synced internal state to - Mode: %d, Temp: %.1f, Fan: %d",
-        static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
 }
 
 /**

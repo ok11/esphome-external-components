@@ -27,8 +27,10 @@ class MockWoleixStateMachine : public WoleixStateMachine
 public:
 
     MockWoleixStateMachine(MockWoleixCommandQueue* command_queue)
-        : WoleixStateMachine(command_queue)
-    {}
+        : WoleixStateMachine()
+    {
+        setup(command_queue);
+    }
 
     void set_current_state(
         WoleixPowerState power, WoleixMode mode, float temperature, WoleixFanSpeed fan_speed

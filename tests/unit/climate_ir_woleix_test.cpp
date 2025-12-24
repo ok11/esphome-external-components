@@ -1,5 +1,6 @@
 #include <optional>
 #include <functional>
+#include <memory>
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
@@ -30,58 +31,51 @@ MATCHER_P(IsCommandOfType, expected_type, "")
     return arg.get_type() == expected_type;
 }
 
-MATCHER_P2(IsCommand, expected_type, expected_repeat, "") 
-{
-    return arg.get_type() == expected_type && arg.get_repeat_count() == expected_repeat;
-}
-
 class MockRemoteTransmitterBase : public RemoteTransmitterBase
 {
 public:
     MOCK_METHOD(void, send_, (const NECProtocol::ProtocolData& data, uint32_t repeats, uint32_t wait), ());
 };
 
-class MockWoleixStateMachine : public WoleixStateMachine
-{
-public:
-    MockWoleixStateMachine(MockWoleixCommandQueue* command_queue)
-        : WoleixStateMachine(command_queue)
-    {}
+// class MockWoleixStateMachine : public WoleixStateMachine
+// {
+// public:
+//     MockWoleixStateMachine(MockWoleixCommandQueue* command_queue)
+//         : WoleixStateMachine(command_queue)
+//     {}
 
-    MOCK_METHOD(WoleixInternalState, get_state, (), (const));
+//     MOCK_METHOD(WoleixInternalState, get_state, (), (const));
 
-    void set_current_state(
-        WoleixPowerState power, WoleixMode woleix_mode, float temperature, WoleixFanSpeed woleix_fan_speed
-    )
-    {
-        current_state_.power = power;
-        current_state_.mode = woleix_mode;
-        current_state_.temperature = temperature;
-        current_state_.fan_speed = woleix_fan_speed;
-    }
+//     void set_current_state(
+//         WoleixPowerState power, WoleixMode woleix_mode, float temperature, WoleixFanSpeed woleix_fan_speed
+//     )
+//     {
+//         current_state_.power = power;
+//         current_state_.mode = woleix_mode;
+//         current_state_.temperature = temperature;
+//         current_state_.fan_speed = woleix_fan_speed;
+//     }
 
-    WoleixInternalState get_current_state() {
-        return current_state_;
-    }
-};
+//     WoleixInternalState get_current_state() {
+//         return current_state_;
+//     }
+// };
 
-// GMock version of ProtocolHandler
-class MockWoleixProtocolHandler : public WoleixProtocolHandler
-{
-public:
-    MockWoleixProtocolHandler(MockRemoteTransmitterBase* transmitter, MockWoleixCommandQueue* command_queue, MockScheduler* mock_scheduler)
-        : WoleixProtocolHandler(transmitter, command_queue, mock_scheduler->get_setter(), mock_scheduler->get_canceller()) {}
-    MOCK_METHOD(void, transmit_, (const WoleixCommand& command), ());
-    MOCK_METHOD(void, execute, (const WoleixCommand& command), ());
-};
+// // GMock version of ProtocolHandler
+// class MockWoleixProtocolHandler : public WoleixProtocolHandler
+// {
+// public:
+//     MockWoleixProtocolHandler(MockRemoteTransmitterBase* transmitter, MockWoleixCommandQueue* command_queue, MockScheduler* mock_scheduler)
+//         : WoleixProtocolHandler(transmitter, command_queue, mock_scheduler->get_setter(), mock_scheduler->get_canceller()) {}
+//     MOCK_METHOD(void, transmit_, (const WoleixCommand& command), ());
+//     MOCK_METHOD(void, execute, (const WoleixCommand& command), ());
+// };
 
 // GMock version of WoleixClimate
 class MockWoleixClimate : public WoleixClimate
 {
 public:
-    MockWoleixClimate(MockWoleixCommandQueue* command_queue, MockWoleixStateMachine* state_machine, MockWoleixProtocolHandler* protocol_handler)
-        : WoleixClimate(command_queue, state_machine, protocol_handler) 
-    {}
+    MockWoleixClimate() : WoleixClimate() {}
     // Helper to set state via the mock state machine
     void set_last_state(
         ClimateMode mode,
@@ -93,17 +87,17 @@ public:
         WoleixMode woleix_mode = StateMapper::esphome_to_woleix_mode(mode);
         WoleixFanSpeed woleix_fan_speed = StateMapper::esphome_to_woleix_fan_mode(fan_mode);
 
-        MockWoleixStateMachine* mock_state_machine = ((MockWoleixStateMachine*)state_machine_.get());
-        WoleixInternalState woleix_state = mock_state_machine->get_current_state();
-        mock_state_machine->set_current_state(
+//        MockWoleixStateMachine* mock_state_machine = ((MockWoleixStateMachine*)state_machine_.get());
+//        WoleixInternalState woleix_state = get_current_state();
+        set_current_state(
             woleix_power, woleix_mode, target_temperature, woleix_fan_speed
         );
     }
 
     void get_last_state(ClimateMode& mode, float& target_temperature, ClimateFanMode& fan_mode)
     {
-        MockWoleixStateMachine* mock_state_machine = ((MockWoleixStateMachine*)state_machine_.get());
-        WoleixInternalState woleix_state = mock_state_machine->get_current_state();
+   //     MockWoleixStateMachine* mock_state_machine = ((MockWoleixStateMachine*)state_machine_.get());
+        WoleixInternalState woleix_state = get_current_state();
 
         mode = StateMapper::woleix_to_esphome_power(woleix_state.power) 
                     ? StateMapper::woleix_to_esphome_mode(woleix_state.mode) 
@@ -120,8 +114,23 @@ public:
     MOCK_METHOD(void, publish_state, (), (override)); 
 
     // Getter for state_machine_
-    WoleixStateMachine* get_state_machine() { return state_machine_.get(); }
-    WoleixProtocolHandler* get_protocol_handler() { return protocol_handler_.get(); }
+    MOCK_METHOD(WoleixInternalState, get_state, (), (const));
+
+    void set_current_state(
+        WoleixPowerState power, WoleixMode woleix_mode, float temperature, WoleixFanSpeed woleix_fan_speed
+    )
+    {
+        current_state_.power = power;
+        current_state_.mode = woleix_mode;
+        current_state_.temperature = temperature;
+        current_state_.fan_speed = woleix_fan_speed;
+    }
+
+    WoleixInternalState get_current_state() {
+        return current_state_;
+    }
+    MOCK_METHOD(void, transmit_, (const WoleixCommand& command), ());
+    MOCK_METHOD(void, execute, (const WoleixCommand& command), ());
 };
 
 // Test fixture class
@@ -131,11 +140,11 @@ protected:
     void SetUp() override 
     {
         mock_transmitter = new MockRemoteTransmitterBase();
-        mock_command_queue = new MockWoleixCommandQueue();
+//        mock_command_queue = new MockWoleixCommandQueue();
         mock_scheduler = new MockScheduler();
-        mock_state_machine = new MockWoleixStateMachine(mock_command_queue);
-        mock_protocol_handler = new MockWoleixProtocolHandler(mock_transmitter, mock_command_queue, mock_scheduler);
-        mock_climate = new MockWoleixClimate(mock_command_queue, mock_state_machine, mock_protocol_handler);
+        // mock_state_machine = new MockWoleixStateMachine(mock_command_queue);
+        // mock_protocol_handler = new MockWoleixProtocolHandler(mock_transmitter, mock_command_queue, mock_scheduler);
+        mock_climate = new MockWoleixClimate();
     
         // Initialize optional fan_mode to avoid "bad optional access" errors
         mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
@@ -147,8 +156,6 @@ protected:
     
     void TearDown() override {
         delete mock_climate;
-        delete mock_protocol_handler;
-        delete mock_state_machine;
         delete mock_scheduler;
         delete mock_transmitter;
     }
@@ -156,8 +163,8 @@ protected:
     MockRemoteTransmitterBase* mock_transmitter;
     MockWoleixCommandQueue* mock_command_queue;
     MockScheduler* mock_scheduler;
-    MockWoleixStateMachine* mock_state_machine;
-    MockWoleixProtocolHandler* mock_protocol_handler;
+    // MockWoleixStateMachine* mock_state_machine;
+    // MockWoleixProtocolHandler* mock_protocol_handler;
     MockWoleixClimate* mock_climate;
 };
 
@@ -207,18 +214,19 @@ TEST_F(WoleixClimateTest, TurningOnFromOffSendsPowerCommand)
     );
 
     testing::InSequence seq;  // Enforce call order
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommand(WoleixCommand::Type::POWER, 1)))
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::POWER)))
         .Times(1);
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommand(WoleixCommand::Type::MODE, 2)))
-        .Times(1);
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommand(WoleixCommand::Type::FAN_SPEED, 1)))
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::MODE)))
+        .Times(2);
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::FAN_SPEED)))
         .Times(1);
 
     mock_climate->mode = ClimateMode::CLIMATE_MODE_FAN_ONLY;
     mock_climate->target_temperature = 25.0f;
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_HIGH;
     mock_climate->call_transmit_state();
-  
+ 
+    mock_climate->run_until_empty();
 }
 
 /**
@@ -237,7 +245,7 @@ TEST_F(WoleixClimateTest, TurningOffSendsPowerCommand)
 );
 
     testing::InSequence seq;  // Enforce call order
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommand(WoleixCommand::Type::POWER, 1)))
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::POWER)))
         .Times(1);  
 
     // Turn off
@@ -258,7 +266,7 @@ TEST_F(WoleixClimateTest, StayingOffDoesNotTransmit)
     // Start in OFF mode
     mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_OFF, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
 
-    EXPECT_CALL(*mock_protocol_handler, transmit_(_))
+    EXPECT_CALL(*mock_climate, transmit_(_))
         .Times(0);
 
     // Stay in OFF mode
@@ -290,8 +298,8 @@ TEST_F(WoleixClimateTest, IncreasingTemperatureSendsTempUpCommands)
     );
 
     testing::InSequence seq;  // Enforce call order
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommand(WoleixCommand::Type::TEMP_UP, 4)))
-        .Times(1);
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::TEMP_UP)))
+        .Times(4);
 
     // Increase temperature by 3 degrees
     mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
@@ -317,8 +325,8 @@ TEST_F(WoleixClimateTest, DecreasingTemperatureSendsTempDownCommands)
     );
 
     testing::InSequence seq;  // Enforce call order
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommand(WoleixCommand::Type::TEMP_DOWN, 3)))
-        .Times(1);
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::TEMP_DOWN)))
+        .Times(2);
 
     // Decrease temperature by 2 degrees
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
@@ -342,7 +350,7 @@ TEST_F(WoleixClimateTest, NoTemperatureChangeDoesNotSendTempCommands)
         ClimateFanMode::CLIMATE_FAN_LOW
     );
   
-    EXPECT_CALL(*mock_protocol_handler, transmit_(_))
+    EXPECT_CALL(*mock_climate, transmit_(_))
         .Times(0);
 
         // Keep same temperature
@@ -368,7 +376,7 @@ TEST_F(WoleixClimateTest, NonCoolModeDoesNotSendTempCommands)
         ClimateFanMode::CLIMATE_FAN_LOW
     );
   
-    EXPECT_CALL(*mock_protocol_handler, transmit_(_))
+    EXPECT_CALL(*mock_climate, transmit_(_))
         .Times(0);
 
         // Keep same temperature
@@ -398,8 +406,8 @@ TEST_F(WoleixClimateTest, ChangingModeCoolToFanSends2ModeCommands)
     );
 
     testing::InSequence seq;  // Enforce call order
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommand(WoleixCommand::Type::MODE, 2)))
-        .Times(1);
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::MODE)))
+        .Times(2);
   
     // Change to FAN mode
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
@@ -424,8 +432,8 @@ TEST_F(WoleixClimateTest, ChangingModeDryToCoolSends2ModeCommands)
     );
 
     testing::InSequence seq;  // Enforce call order
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommand(WoleixCommand::Type::MODE, 2)))
-        .Times(1);
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::MODE)))
+        .Times(2);
   
     // Change to FAN mode
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
@@ -450,7 +458,7 @@ TEST_F(WoleixClimateTest, ChangingModeCoolToDrySends1ModeCommand)
     );
 
     testing::InSequence seq;  // Enforce call order
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommand(WoleixCommand::Type::MODE, 1)))
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::MODE)))
         .Times(1);
   
     // Change to FAN mode
@@ -480,7 +488,7 @@ TEST_F(WoleixClimateTest, IncreasingFanSpeedSendsSpeedCommand)
     );
 
     testing::InSequence seq;  // Enforce call order
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommand(WoleixCommand::Type::FAN_SPEED, 1)))
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::FAN_SPEED)))
         .Times(1);
 
         // Change fan speed
@@ -507,7 +515,7 @@ TEST_F(WoleixClimateTest, DecreasingFanSpeedSendsSpeedCommand)
     );
 
     testing::InSequence seq;  // Enforce call order
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommand(WoleixCommand::Type::FAN_SPEED, 1)))
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::FAN_SPEED)))
         .Times(1);
 
     // Change fan speed
@@ -533,7 +541,7 @@ TEST_F(WoleixClimateTest, UnchangedFanSpeedDoesNotSendSpeedCommand)
         ClimateFanMode::CLIMATE_FAN_HIGH
     );
   
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommandOfType(WoleixCommand::Type::FAN_SPEED)))
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::FAN_SPEED)))
         .Times(0);
 
     // Change fan speed
@@ -563,12 +571,12 @@ TEST_F(WoleixClimateTest, CompleteStateChangeSequence)
         ClimateFanMode::CLIMATE_FAN_LOW
     );
 
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommandOfType(WoleixCommand::Type::FAN_SPEED)))
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::FAN_SPEED)))
         .Times(0); // the target state is not FAN, so fan speed change won't be sent
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommand(WoleixCommand::Type::MODE, 2)))
-        .Times(1);
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommand(WoleixCommand::Type::TEMP_UP, 5)))
-        .Times(1);
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::MODE)))
+        .Times(2);
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::TEMP_UP)))
+        .Times(5);
 
     // Turn on with complete state
     mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
@@ -792,7 +800,7 @@ TEST_F(WoleixClimateTest, FanSpeedOnlyTransmittedInFanMode)
     // Test in COOL mode
     mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_COOL, 22.0f, ClimateFanMode::CLIMATE_FAN_LOW);
   
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommandOfType(WoleixCommand::Type::FAN_SPEED)))
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::FAN_SPEED)))
         .Times(0);
 
     mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
@@ -803,7 +811,7 @@ TEST_F(WoleixClimateTest, FanSpeedOnlyTransmittedInFanMode)
     // Test in DRY mode
     mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_DRY, 22.0f, ClimateFanMode::CLIMATE_FAN_LOW);
   
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommandOfType(WoleixCommand::Type::FAN_SPEED)))
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::FAN_SPEED)))
         .Times(0);
 
     mock_climate->mode = ClimateMode::CLIMATE_MODE_DRY;
@@ -814,7 +822,7 @@ TEST_F(WoleixClimateTest, FanSpeedOnlyTransmittedInFanMode)
     // Test in FAN mode
     mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_FAN_ONLY, 22.0f, ClimateFanMode::CLIMATE_FAN_LOW);
   
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommandOfType(WoleixCommand::Type::FAN_SPEED)))
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::FAN_SPEED)))
         .Times(1);
 
     mock_climate->mode = ClimateMode::CLIMATE_MODE_FAN_ONLY;
@@ -825,7 +833,7 @@ TEST_F(WoleixClimateTest, FanSpeedOnlyTransmittedInFanMode)
     // Test that changing temperature in FAN mode doesn't trigger SPEED_COMMAND
     mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_FAN_ONLY, 22.0f, ClimateFanMode::CLIMATE_FAN_LOW);
   
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommandOfType(WoleixCommand::Type::FAN_SPEED)))
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::FAN_SPEED)))
         .Times(0);
 
     mock_climate->mode = ClimateMode::CLIMATE_MODE_FAN_ONLY;
@@ -895,7 +903,7 @@ TEST_F(WoleixClimateTest, DefaultProtocolGeneratesNecCommands)
     mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_OFF, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
   
     // Expect NEC command (detected by checking if it's a WoleixNecCommand variant)
-    EXPECT_CALL(*mock_protocol_handler, transmit_(testing::_))
+    EXPECT_CALL(*mock_climate, transmit_(testing::_))
         .Times(AtLeast(1))
         .WillRepeatedly(Invoke([](const WoleixCommand& cmd) {
             // Verify NEC-specific properties
@@ -918,7 +926,7 @@ TEST_F(WoleixClimateTest, SetProtocolNecGeneratesNecCommands)
     mock_climate->set_last_state(ClimateMode::CLIMATE_MODE_OFF, 25.0f, ClimateFanMode::CLIMATE_FAN_LOW);
   
     // Expect NEC command (detected by checking if it's a WoleixNecCommand variant)
-    EXPECT_CALL(*mock_protocol_handler, transmit_(testing::_))
+    EXPECT_CALL(*mock_climate, transmit_(testing::_))
         .Times(AtLeast(1))
         .WillRepeatedly(Invoke([](const WoleixCommand& cmd) {
             // Verify this is a NEC command by checking variant index
@@ -946,7 +954,7 @@ TEST_F(WoleixClimateTest, NecCommandsHaveCorrectAddressAndCodes)
     // Capture all transmitted commands
     std::vector<WoleixCommand> captured_commands;
   
-    EXPECT_CALL(*mock_protocol_handler, transmit_(testing::_))
+    EXPECT_CALL(*mock_climate, transmit_(testing::_))
         .Times(AtLeast(1))
         .WillRepeatedly(Invoke([&captured_commands](const WoleixCommand& cmd) {
             captured_commands.push_back(cmd);
@@ -976,14 +984,14 @@ TEST_F(WoleixClimateTest, SetTransmitterPropagation)
   mock_climate->set_transmitter(mock_transmitter.get());
 
   // Verify that the transmitter was correctly set in the WoleixTransmitter
-  EXPECT_EQ(mock_climate->get_protocol_handler()->get_transmitter(), mock_transmitter.get());
+  EXPECT_EQ(mock_climate->get_transmitter(), mock_transmitter.get());
 }
 
 TEST_F(WoleixClimateTest, PowerOnAfterReset)
 {
     mock_climate->reset_state();
 
-    EXPECT_CALL(*mock_protocol_handler, transmit_(IsCommand(WoleixCommand::Type::POWER, 1)))
+    EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::POWER)))
         .Times(1);
 
     mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;

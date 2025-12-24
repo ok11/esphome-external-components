@@ -14,29 +14,15 @@ namespace climate_ir_woleix {
 using remote_base::NECData;
 using remote_base::NECProtocol;
 
-void WoleixProtocolHandler::process()
+void WoleixProtocolHandler::setup(WoleixCommandQueue* command_queue)
 {
-    process_(nullptr);
-}
-
-void WoleixProtocolHandler::process_(std::function<void()> on_complete)
-{
-    if (command_queue_->is_empty())
-    {
-        if (on_complete) on_complete();
-        return;
-    }
-
-    ESP_LOGD(TAG, "Executing %u commands", command_queue_->length());
-    
-    on_complete_ = on_complete;
-    
+    command_queue_ = command_queue;
     process_next_command_();
 }
 
 void WoleixProtocolHandler::process_next_command_()
 {
-    if (command_queue_->is_empty())
+    if (command_queue_ && command_queue_->is_empty())
     {
         // All commands processed
         ESP_LOGD(TAG, "All commands executed");

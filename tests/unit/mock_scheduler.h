@@ -120,4 +120,52 @@ public:
         scheduled_timeouts.clear();
         cancelled_timeouts.clear();
     }
+
+    void run_until_empty()
+    {
+        while (!scheduled_timeouts.empty()) {
+            auto callback = std::move(scheduled_timeouts.front().callback);
+            scheduled_timeouts.erase(scheduled_timeouts.begin());
+            callback();
+        }
+    }
+};
+
+/**
+ * @brief Synchronous variant of MockScheduler for testing.
+ * 
+ * This scheduler extends MockScheduler with a run_until_empty() method that
+ * processes all scheduled timeouts synchronously until the queue is empty.
+ * This is useful for tests that need to verify command execution without
+ * manually firing timeouts.
+ * 
+ * Usage:
+ *   SynchronousMockScheduler scheduler;
+ *   // ... set up protocol handler with scheduler.get_setter(), etc.
+ *   climate->call_transmit_state();  // Enqueues commands
+ *   scheduler.run_until_empty();     // Executes all commands synchronously
+ *   // Now all EXPECT_CALL assertions have been satisfied
+ */
+class SynchronousMockScheduler : public MockScheduler
+{
+public:
+    /**
+     * @brief Execute all scheduled timeouts until the queue is empty.
+     * 
+     * This method processes timeouts in FIFO order, executing their callbacks
+     * immediately. If a callback schedules more timeouts, they will be processed
+     * in subsequent iterations of the loop.
+     * 
+     * This allows tests to execute asynchronous command sequences synchronously,
+     * making it possible to verify all command transmissions happen during the
+     * test method execution.
+     */
+    void run_until_empty()
+    {
+        while (!scheduled_timeouts.empty()) {
+            auto callback = std::move(scheduled_timeouts.front().callback);
+            scheduled_timeouts.erase(scheduled_timeouts.begin());
+            callback();
+        }
+    }
 };

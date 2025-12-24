@@ -58,6 +58,8 @@ using climate_ir::ClimateIR;
  */
 class WoleixClimate
   : public ClimateIR,
+    public WoleixStateMachine,
+    public WoleixProtocolHandler,
     protected WoleixCommandQueueListener
 {
 public:
@@ -86,10 +88,10 @@ public:
      * 
      * @param transmitter Pointer to the RemoteTransmitterBase object
      */
-    void set_transmitter(RemoteTransmitterBase* transmitter)
+    void set_transmitter(RemoteTransmitterBase* transmitter) override
     {
         ClimateIR::set_transmitter(transmitter);
-        protocol_handler_->set_transmitter(transmitter);
+        WoleixProtocolHandler::set_transmitter(transmitter);
     }
 
     /**
@@ -114,28 +116,31 @@ public:
      * 
      * @return true if the device is on, false otherwise
      */
-    virtual bool is_on() { return this->state_machine_->get_state().power == WoleixPowerState::ON; }
+    virtual bool is_on() { return get_state().power == WoleixPowerState::ON; }
 
 protected:
 
-    void hold()
+    // /**
+    //  * Constructor with custom command queue, state machine and protocol handler.
+    //  * 
+    //  * @param command_queue Pointer to external command queue (for testing)
+    //  * @param state_machine Pointer to external state machine (for testing)
+    //  * @param protocol_handler Pointer to external protocol handler (for testing)
+    //  */
+    // WoleixClimate(std::unique_ptr<WoleixCommandQueue> command_queue);
+
+    void hold() override
     {
+        on_hold_ = true;
         ESP_LOGW(TAG, "Queue full (%d)", command_queue_->length());
         status_momentary_error("queue_full", 2000);
     }
 
-    void resume()
+    void resume() override
     {
+        on_hold_ = false;
         ESP_LOGI(TAG, "Queue is empty again");
     }
-    /**
-     * Constructor with custom command queue, state machine and protocol handler.
-     * 
-     * @param command_queue Pointer to external command queue (for testing)
-     * @param state_machine Pointer to external state machine (for testing)
-     * @param protocol_handler Pointer to external protocol handler (for testing)
-     */
-    WoleixClimate(WoleixCommandQueue* command_queue, WoleixStateMachine* state_machine, WoleixProtocolHandler* protocol_handler);
 
     /**
      * Transmit the current state via IR.
@@ -157,7 +162,7 @@ protected:
      * 
      * @return Vector of WoleixCommand objects representing the necessary IR commands.
      */
-    virtual void calculate_commands_();
+    virtual void queue_commands_();
 
     /**
      * Update internal state based on the current state machine state.
@@ -165,10 +170,11 @@ protected:
     virtual void update_state_();
 
     std::unique_ptr<WoleixCommandQueue> command_queue_;         /**< Command queue for asynchronous execution */
-    std::shared_ptr<WoleixStateMachine> state_machine_;         /**< State machine for command generation and state management */
-    std::shared_ptr<WoleixProtocolHandler> protocol_handler_;   /**< Protocol handler for sending IR commands */
+//    std::shared_ptr<WoleixStateMachine> state_machine_;         /**< State machine for command generation and state management */
+//    std::shared_ptr<WoleixProtocolHandler> protocol_handler_;   /**< Protocol handler for sending IR commands */
 
     sensor::Sensor* humidity_sensor_{nullptr};  /**< Optional humidity sensor */
+    bool on_hold_{false};                     /**< Flag indicating if command transmission is on hold */
 };
 
 }  // namespace climate_ir_woleix

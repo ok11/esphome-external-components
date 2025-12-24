@@ -48,10 +48,8 @@ public:
      * 
      * @param transmitter ESPHome remote transmitter to use for IR output
      */
-    WoleixProtocolHandler(RemoteTransmitterBase* transmitter, WoleixCommandQueue* command_queue, TimeoutSetter set_timeout, TimeoutCanceller cancel_timeout)
-      : transmitter_(transmitter),
-        command_queue_(command_queue),
-        set_timeout_(std::move(set_timeout)),
+    WoleixProtocolHandler(TimeoutSetter set_timeout, TimeoutCanceller cancel_timeout)
+      : set_timeout_(std::move(set_timeout)),
         cancel_timeout_(std::move(cancel_timeout)) 
     {}
     
@@ -66,16 +64,7 @@ public:
      * 
      * @param commands Commands to execute
      */
-    void process();
-
-    /**
-     * Execute commands synchronously.
-     * 
-     * Returns immediately.
-     * 
-     * @param commands Command to execute  
-     */
-//    void execute(const WoleixCommand& commands);
+    void setup(WoleixCommandQueue* command_queue);
 
     /**
      * Reset protocol state (e.g., after AC power cycle).
@@ -104,16 +93,6 @@ public:
     }
 
 protected:
-
-    /**
-     * Execute commands with completion callback.
-     * 
-     * For cases where caller needs to know when transmission is done.
-     * 
-     * @param commands Commands to execute  
-     * @param on_complete Callback when all commands are sent
-     */
-    void process_(std::function<void()> on_complete);
 
     /**
      * @brief Transmit a single command.

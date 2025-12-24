@@ -119,17 +119,20 @@ private:
  * 
  * @see WoleixInternalState
  */
-class WoleixStateMachine: protected WoleixCommandQueueListener
+class WoleixStateMachine
 {
 public:
     /**
      * Default constructor.
      * 
      * Initializes the state machine with default device settings:
-     * power=ON, mode=COOL, temperature=25°C, fan_speed=LOW
+     * power=OFF, mode=COOL, temperature=25°C, fan_speed=LOW
      */
-    WoleixStateMachine(WoleixCommandQueue* command_queue);
+    WoleixStateMachine();
 
+    virtual ~WoleixStateMachine() = default;
+
+    void setup(WoleixCommandQueue* command_queue);
     /**
      * Set the target state and generate the command sequence needed.
      * 
@@ -172,15 +175,6 @@ public:
     const WoleixInternalState& get_state() const { return current_state_; }
 
 protected:
-
-    /**
-     * Factory constructor.
-     * 
-     * Initializes the state machine with default device settings:
-     * power=ON, mode=COOL, temperature=25°C, fan_speed=LOW
-     * and sets the command factory
-     */
-    WoleixStateMachine(WoleixCommandQueue* command_queue, WoleixCommandFactory* command_factory);
 
     /**
      * Generate IR commands to change power state.

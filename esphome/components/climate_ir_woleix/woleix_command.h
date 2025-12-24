@@ -144,6 +144,7 @@ public:
     }
     const WoleixCommand& dequeue()
     {
+        if (queue_->empty()) throw std::out_of_range("Dequeue called on empty WoleixCommandQueue");
         if (queue_->size() < max_capacity_ * 0.2) notify_listeners(WX_STATUS_QUEUE_EMPTY);
         const auto& cmd = queue_->front();
         queue_->pop_front();
@@ -157,7 +158,7 @@ public:
             listener->notify(*this, status);
         }
     }
-    void reset() { queue_.reset(); }
+    void reset() { queue_->clear(); }
     bool is_empty() const { return queue_->empty(); }
     uint16_t length() const { return queue_->size(); }
     const WoleixCommand& get_command(int index) const { return queue_->at(index); }
