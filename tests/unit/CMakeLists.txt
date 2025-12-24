@@ -72,15 +72,20 @@ add_executable(
 
 # Create test executable for state mapper
 add_executable(
-  woleix_comm_test
-  woleix_comm_test.cpp
-  ../../esphome/components/climate_ir_woleix/woleix_protocol_handler.cpp
+  woleix_commands_test
+  woleix_commands_test.cpp
 )
 
 # Create test executable for command queue
 add_executable(
   woleix_command_queue_test
   woleix_command_queue_test.cpp
+)
+
+add_executable(
+  woleix_protocol_handler_test
+  woleix_protocol_handler_test.cpp
+  ../../esphome/components/climate_ir_woleix/woleix_protocol_handler.cpp
 )
 
 # Set include directories with mocks having highest priority
@@ -102,6 +107,15 @@ target_include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome/components/climate_ir_woleix
 )
 
+# Set include directories for protocol handler test
+target_include_directories(
+  woleix_protocol_handler_test
+  BEFORE PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/mocks
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome/components/climate_ir_woleix
+)
+
 # Set include directories for state mapper test
 target_include_directories(
   woleix_state_mapper_test
@@ -113,7 +127,7 @@ target_include_directories(
 
 # Set include directories for state mapper test
 target_include_directories(
-  woleix_comm_test
+  woleix_commands_test
   BEFORE PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/mocks
   ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome
@@ -144,6 +158,13 @@ target_link_libraries(
 )
 
 target_link_libraries(
+  woleix_protocol_handler_test
+  GTest::gtest_main
+  GTest::gmock_main
+  esphome_mocks
+)
+
+target_link_libraries(
   woleix_state_mapper_test
   GTest::gtest_main
   GTest::gmock_main
@@ -151,7 +172,7 @@ target_link_libraries(
 )
 
 target_link_libraries(
-  woleix_comm_test
+  woleix_commands_test
   GTest::gtest_main
   GTest::gmock_main
   esphome_mocks
@@ -169,5 +190,6 @@ include(GoogleTest)
 gtest_discover_tests(climate_ir_woleix_test)
 gtest_discover_tests(woleix_state_machine_test)
 gtest_discover_tests(woleix_state_mapper_test)
-gtest_discover_tests(woleix_comm_test)
+gtest_discover_tests(woleix_protocol_handler_test)
+gtest_discover_tests(woleix_commands_test)
 gtest_discover_tests(woleix_command_queue_test)

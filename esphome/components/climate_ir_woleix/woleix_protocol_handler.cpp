@@ -24,7 +24,7 @@ void WoleixProtocolHandler::process_next_command_()
 {
     if (!command_queue_)
     {
-        ESP_LOGW(TAG, "Command queue not set in protocol handler");
+        ESP_LOGW(TAG, "Command queue not (yet) set in protocol handler, waiting...");
         set_timeout_(TIMEOUT_NEXT_COMMAND, POLL_COMMAND_INTERVAL_MS,
             [this]() { process_next_command_(); });
         return;
@@ -53,7 +53,6 @@ void WoleixProtocolHandler::process_next_command_()
         {
             handle_regular_command_(cmd);
         }
-
     }
 }
 

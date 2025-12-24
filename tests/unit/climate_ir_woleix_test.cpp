@@ -95,7 +95,11 @@ public:
     {
         if (scheduler_ && command_queue_)
         {
-            scheduler_->run_until_empty(command_queue_.get());
+            // Process commands one at a time without triggering setting mode timeout
+            while (!command_queue_->is_empty())
+            {
+                scheduler_->fire_timeout("proto_next_cmd");
+            }
         }
     }
     
@@ -277,7 +281,8 @@ TEST_F(WoleixClimateTest, StayingOffDoesNotTransmit)
  * Test: Increasing temperature sends multiple TEMP_UP commands
  * 
  * When raising the temperature (e.g., from 20°C to 23°C), the component
- * should send the correct number of TEMP_UP IR commands (3 in this case).
+ * should send n+1 TEMP_UP IR commands (4 in this case: 1 to enter setting
+ * mode + 3 to actually change the temperature).
  * Temperature adjustment only works in COOL mode.
  */
 TEST_F(WoleixClimateTest, IncreasingTemperatureSendsTempUpCommands)
@@ -291,6 +296,7 @@ TEST_F(WoleixClimateTest, IncreasingTemperatureSendsTempUpCommands)
     );
 
     testing::InSequence seq;  // Enforce call order
+    // n+1 rule: 3 degree change = 4 transmissions (1 enter setting mode + 3 actual)
     EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::TEMP_UP)))
         .Times(4);
 
@@ -306,7 +312,8 @@ TEST_F(WoleixClimateTest, IncreasingTemperatureSendsTempUpCommands)
  * Test: Decreasing temperature sends multiple TEMP_DOWN commands
  * 
  * When lowering the temperature (e.g., from 25°C to 23°C), the component
- * should send the correct number of TEMP_DOWN IR commands (2 in this case).
+ * should send n+1 TEMP_DOWN IR commands (3 in this case: 1 to enter setting
+ * mode + 2 to actually change the temperature).
  * Temperature adjustment only works in COOL mode.
  */
 TEST_F(WoleixClimateTest, DecreasingTemperatureSendsTempDownCommands)
@@ -319,8 +326,9 @@ TEST_F(WoleixClimateTest, DecreasingTemperatureSendsTempDownCommands)
     );
 
     testing::InSequence seq;  // Enforce call order
+    // n+1 rule: 2 degree change = 3 transmissions (1 enter setting mode + 2 actual)
     EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::TEMP_DOWN)))
-        .Times(2);
+        .Times(3);
 
     // Decrease temperature by 2 degrees
     mock_climate->fan_mode = ClimateFanMode::CLIMATE_FAN_LOW;
@@ -565,10 +573,13 @@ TEST_F(WoleixClimateTest, UnchangedFanSpeedDoesNotSendSpeedCommand)
  * Tests a complex transition changing mode (DRY→COOL), temperature (20→24°C),
  * and fan speed (LOW→HIGH) simultaneously. Validates that all necessary
  * commands are generated in the correct order and quantity.
+ * 
+ * Note: Temperature change follows n+1 rule (4 degree change = 5 transmissions:
+ * 1 to enter setting mode + 4 to actually change the temperature).
  */
 TEST_F(WoleixClimateTest, CompleteStateChangeSequence)
 {
-    // Start from OFF
+    // Start from DRY mode
     mock_climate->set_last_state
     (
         ClimateMode::CLIMATE_MODE_DRY,
@@ -580,6 +591,7 @@ TEST_F(WoleixClimateTest, CompleteStateChangeSequence)
         .Times(0); // the target state is not FAN, so fan speed change won't be sent
     EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::MODE)))
         .Times(2);
+    // n+1 rule: 4 degree change (20→24) = 5 transmissions
     EXPECT_CALL(*mock_climate, transmit_(IsCommandOfType(WoleixCommand::Type::TEMP_UP)))
         .Times(5);
 
