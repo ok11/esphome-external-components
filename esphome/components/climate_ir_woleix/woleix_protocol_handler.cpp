@@ -22,6 +22,7 @@ void WoleixProtocolHandler::setup(WoleixCommandQueue* command_queue)
     {
         command_queue_ = command_queue;
         command_queue_->register_consumer(this);
+        if (command_queue_->length() > 0) start_processing();
     }
     else
     {
