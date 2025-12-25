@@ -208,29 +208,46 @@ public:
         unregister_listener(consumer);
     }
 
-    const void enqueue(const WoleixCommand& command)
+    void enqueue(const WoleixCommand& command)
     {
         if (queue_->size() == max_capacity_)
+        {
             notify_listeners(WX_STATUS_QUEUE_FULL);
-        if (queue_->size() > max_capacity_ * QUEUE_HIGH_WATERMARK)
+        }
+        else if (queue_->size() > max_capacity_ * QUEUE_HIGH_WATERMARK)
+        {
             notify_listeners(WX_STATUS_QUEUE_AT_HIGH_WATERMARK);
+        }
+
         queue_->push_back(command);
+
         if (queue_->size() == 1)
-            notify_listeners(WX_STATUS_QUEUE_COMMAND_ENQUEUED); 
+        {
+            notify_listeners(WX_STATUS_QUEUE_COMMAND_ENQUEUED);
+        }
     }
-    const WoleixCommand& next()
+    const WoleixCommand& get() const
     {
         if (queue_->empty()) throw std::out_of_range("Next called on empty WoleixCommandQueue");
         return queue_->front();
     }
     void dequeue()
     {
-        if (queue_->empty()) throw std::out_of_range("Dequeue called on empty WoleixCommandQueue");
-        if (queue_->size() < max_capacity_ * QUEUE_LOW_WATERMARK)
-            notify_listeners(WX_STATUS_QUEUE_AT_LOW_WATERMARK);
-        queue_->pop_front();
         if (queue_->empty())
+        {
+            throw std::out_of_range("Dequeue called on empty WoleixCommandQueue");
+        }
+        if (queue_->size() < max_capacity_ * QUEUE_LOW_WATERMARK)
+        {
+            notify_listeners(WX_STATUS_QUEUE_AT_LOW_WATERMARK);
+        }
+
+        queue_->pop_front();
+        
+        if (queue_->empty())
+        {
             notify_listeners(WX_STATUS_QUEUE_EMPTY);
+        }
     }
 
     void notify_listeners(const WoleixStatus& status) const
@@ -243,7 +260,6 @@ public:
     void reset() { queue_->clear(); }
     bool is_empty() const { return queue_->empty(); }
     uint16_t length() const { return queue_->size(); }
-    const WoleixCommand& get_command(int index) const { return queue_->at(index); }
     size_t max_capacity() const { return max_capacity_; }
 
 protected:

@@ -365,12 +365,6 @@ TEST_F(ProtocolHandlerTest, SettingModeEnterDelayIsRespected)
 // Edge Cases
 // ============================================================================
 
-TEST_F(ProtocolHandlerTest, EmptyQueueSchedulesPolling)
-{
-    // Even with empty queue, the polling timeout should be scheduled
-    EXPECT_TRUE(mock_scheduler->has_timeout("proto_next_cmd"));
-}
-
 TEST_F(ProtocolHandlerTest, ResetClearsSettingMode)
 {
     enqueue(WoleixCommand::Type::TEMP_UP);

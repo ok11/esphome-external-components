@@ -18,7 +18,7 @@ using remote_base::NECProtocol;
 
 void WoleixProtocolHandler::setup(WoleixCommandQueue* command_queue)
 {
-    if (command_queue_)
+    if (command_queue)
     {
         command_queue_ = command_queue;
         command_queue_->register_consumer(this);
@@ -47,7 +47,7 @@ void WoleixProtocolHandler::process_next_command_()
     }
     else
     {
-        const auto& cmd = command_queue_->next();
+        const auto& cmd = command_queue_->get();
     
         if (is_temp_command_(cmd))
         {

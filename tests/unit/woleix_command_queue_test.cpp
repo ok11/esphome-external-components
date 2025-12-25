@@ -108,7 +108,7 @@ TEST_F(WoleixCommandQueueTest, GetCommandFromEmptyQueue)
     ASSERT_TRUE(mock_queue->is_empty());
     EXPECT_THROW
     (
-        mock_queue->next(),
+        mock_queue->get(),
         std::out_of_range
     );
 }
@@ -135,8 +135,8 @@ TEST_F(WoleixCommandQueueTest, GetCommandAtValidIndex)
     mock_queue->enqueue(cmd1);
     mock_queue->enqueue(cmd2);
 
-    EXPECT_EQ(mock_queue->get_command(0).get_type(), WoleixCommand::Type::POWER);
-    EXPECT_EQ(mock_queue->get_command(1).get_type(), WoleixCommand::Type::TEMP_UP);
+    EXPECT_EQ(mock_queue->get(0).get_type(), WoleixCommand::Type::POWER);
+    EXPECT_EQ(mock_queue->get(1).get_type(), WoleixCommand::Type::TEMP_UP);
 }
 
 TEST_F(WoleixCommandQueueTest, GetCommandAtInvalidIndex)
@@ -144,7 +144,7 @@ TEST_F(WoleixCommandQueueTest, GetCommandAtInvalidIndex)
     WoleixCommand cmd(WoleixCommand::Type::POWER, 0xFB04);
     mock_queue->enqueue(cmd);
 
-    EXPECT_THROW(mock_queue->get_command(1), std::out_of_range);
+    EXPECT_THROW(mock_queue->get(1), std::out_of_range);
 }
 
 TEST_F(WoleixCommandQueueTest, ProducersNotifiedWhenQueueAtHighWatermark)

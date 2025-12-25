@@ -9,6 +9,9 @@ class MockWoleixCommandQueue: public WoleixCommandQueue
 {
 public:
     MockWoleixCommandQueue() : WoleixCommandQueue(16) {}
+    
+    // Bring the base class get() method into scope
+    using WoleixCommandQueue::get;
     // Helper to count specific commands in the queue and sum their repeat counts
     int count_command(WoleixCommand::Type type)
     {
@@ -20,4 +23,5 @@ public:
         );
     }
 
+    const WoleixCommand& get(int index) const { return queue_->at(index); }
 };

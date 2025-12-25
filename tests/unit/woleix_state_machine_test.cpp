@@ -917,11 +917,11 @@ TEST_F(WoleixStateMachineTest, CommandOrderingIsCorrect)
     EXPECT_EQ(mock_command_queue->length(), 3);
 
     // First command should be POWER
-    EXPECT_EQ(mock_command_queue->get_command(0).get_type(), POWER_COMMAND);
+    EXPECT_EQ(mock_command_queue->get(0).get_type(), POWER_COMMAND);
     // Second command must be MODE (DEHUM->FAN)
-    EXPECT_EQ(mock_command_queue->get_command(1).get_type(), MODE_COMMAND);
+    EXPECT_EQ(mock_command_queue->get(1).get_type(), MODE_COMMAND);
     // Third command must be SPEED (LOW->HIGH)
-    EXPECT_EQ(mock_command_queue->get_command(2).get_type(), SPEED_COMMAND);
+    EXPECT_EQ(mock_command_queue->get(2).get_type(), SPEED_COMMAND);
 }
 
 /**
