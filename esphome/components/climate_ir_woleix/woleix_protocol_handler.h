@@ -166,7 +166,10 @@ protected:
      */
     static bool is_temp_command_(const WoleixCommand& cmd);
 
-    void start_processing() override { process_next_command_(); }
+    void start_processing() override
+    {
+        set_timeout_(TIMEOUT_NEXT_COMMAND, 0, [this]() { process_next_command_(); }); 
+    }
 
 private:
 
