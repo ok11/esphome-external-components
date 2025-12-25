@@ -96,39 +96,39 @@ TEST(WoleixStatusTest, SeverityEnum)
 }
 
 // Mock classes for WoleixListener and WoleixReporter
-class MockWoleixListener : public WoleixListener
+class MockWoleixStatusObserver : public WoleixStatusObserver
 {
 public:
-    MOCK_METHOD(void, notify, (const WoleixReporter&, const WoleixStatus&), (override));
+    MOCK_METHOD(void, observe, (const WoleixStatusReporter&, const WoleixStatus&), (override));
 };
 
-class MockWoleixReporter : public WoleixReporter
+class MockWoleixStatusReporter : public WoleixStatusReporter
 {
 public:
-    MOCK_METHOD(void, register_listener, (WoleixListener*), (override));
-    MOCK_METHOD(void, unregister_listener, (WoleixListener*), (override));
+    MOCK_METHOD(void, register_observer, (WoleixStatusObserver*), (override));
+    MOCK_METHOD(void, unregister_observer, (WoleixStatusObserver*), (override));
 };
 
-// Test WoleixListener and WoleixReporter
-TEST(WoleixStatusTest, ListenerAndReporter)
+// Test WoleixStatusObserver and WoleixStatusReporter
+TEST(WoleixStatusTest, StatusObserverAndStatusReporter)
 {
-    MockWoleixReporter reporter;
-    MockWoleixListener listener1, listener2;
+    MockWoleixStatusReporter reporter;
+    MockWoleixStatusObserver observer1, observer2;
 
-    EXPECT_CALL(reporter, register_listener(&listener1));
-    EXPECT_CALL(reporter, register_listener(&listener2));
-    EXPECT_CALL(reporter, unregister_listener(&listener1));
+    EXPECT_CALL(reporter, register_observer(&observer1));
+    EXPECT_CALL(reporter, register_observer(&observer2));
+    EXPECT_CALL(reporter, unregister_observer(&observer1));
 
-    reporter.register_listener(&listener1);
-    reporter.register_listener(&listener2);
-    reporter.unregister_listener(&listener1);
+    reporter.register_observer(&observer1);
+    reporter.register_observer(&observer2);
+    reporter.unregister_observer(&observer1);
 
     auto category = Category::make(1, 1, "TestCategory");
     WoleixStatus status(WoleixStatus::Severity::WX_SEVERITY_INFO, category, "Test notification");
 
-    EXPECT_CALL(listener2, notify(testing::Ref(reporter), testing::Eq(status)));
+    EXPECT_CALL(observer2, observe(testing::Ref(reporter), testing::Eq(status)));
 
-    listener2.notify(reporter, status);
+    observer2.observe(reporter, status);
 }
 
 int main(int argc, char **argv)

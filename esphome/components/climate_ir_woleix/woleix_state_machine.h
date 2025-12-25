@@ -144,7 +144,7 @@ public:
 
     virtual ~WoleixStateMachine() = default;
 
-    void setup(WoleixCommandQueue* command_queue);
+    void setup();
     /**
      * Set the target state and generate the command sequence needed.
      * 
@@ -161,7 +161,7 @@ public:
      * @note Turning power OFF will queue power command only, ignoring other parameters
      * @note Turning power ON from OFF will reset all settings to defaults
      */
-    void move_to(const WoleixInternalState& target_state);
+    const std::vector<WoleixCommand>& move_to(const WoleixInternalState& target_state);
 
     /**
      * Reset the internal state to device defaults.
@@ -240,19 +240,22 @@ protected:
      */
     void enqueue_command_(const WoleixCommand& command);
 
-    void hold()
-    {
-        on_hold_ = true;
-    }
+    // void hold()
+    // {
+    //     on_hold_ = true;
+    // }
 
-    void resume()
-    {
-        on_hold_ = false;
-    }
+    // void resume()
+    // {
+    //     on_hold_ = false;
+    // }
     WoleixInternalState current_state_;  /**< Current tracked state of the AC unit */
     std::unique_ptr<WoleixCommandFactory> command_factory_{nullptr};  /**< Factory for creating IR commands */
-    WoleixCommandQueue* command_queue_;
 
+//    WoleixCommandQueue* command_queue_;
+
+    std::vector<WoleixCommand> commands_;
+    
     bool on_hold_{false};
 
 };

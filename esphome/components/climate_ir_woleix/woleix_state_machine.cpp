@@ -30,9 +30,9 @@ WoleixStateMachine::WoleixStateMachine()
     reset();
 }
 
-void WoleixStateMachine::setup(WoleixCommandQueue* command_queue)
+void WoleixStateMachine::setup()
 {
-    command_queue_ = command_queue;
+    // command_queue_ = command_queue;
 }
 /**
  * Calculate and generate the command sequence needed to reach target state.
@@ -51,13 +51,15 @@ void WoleixStateMachine::setup(WoleixCommandQueue* command_queue)
  * 
  * Side effect: fills in the command queue with commnds in the right order
  */
-void WoleixStateMachine::move_to(const WoleixInternalState& target_state)
+const std::vector<WoleixCommand>& WoleixStateMachine::move_to(const WoleixInternalState& target_state)
 {
-    if (!command_queue_)
-    {
-        ESP_LOGE(TAG, "WoleixStateMachine not initialized with command queue");
-        return;
-    }
+    // if (!command_queue_)
+    // {
+    //     ESP_LOGE(TAG, "WoleixStateMachine not initialized with command queue");
+    //     return;
+    // }
+
+    commands_.clear();
 
     WoleixPowerState power = target_state.power;
     WoleixMode mode = target_state.mode;
@@ -85,14 +87,15 @@ void WoleixStateMachine::move_to(const WoleixInternalState& target_state)
             generate_fan_commands_(fan_speed);
         }
         
-        ESP_LOGD(TAG, "Calculated and queued %u commands for state transition: power=%d, mode=%d, temp=%.1f, fan=%d",
-            command_queue_->length(),
+        ESP_LOGD(TAG, "Calculated and queued %zu commands for state transition: power=%d, mode=%d, temp=%.1f, fan=%d",
+            commands_.size(),
             static_cast<int>(power),
             static_cast<int>(mode),
             temperature,
             static_cast<int>(fan_speed));
 
     }
+    return commands_;
 }
 
 /**
@@ -106,7 +109,8 @@ void WoleixStateMachine::move_to(const WoleixInternalState& target_state)
 void WoleixStateMachine::reset()
 {
     current_state_ = WoleixInternalState();  // Reset to defaults
-    
+    commands_.clear();
+
     ESP_LOGD(TAG, "State machine reset to defaults: ON, COOL, 25°C, LOW fan");
 }
 
@@ -263,7 +267,7 @@ int WoleixStateMachine::calculate_mode_steps_(WoleixMode from_mode, WoleixMode t
  */
 void WoleixStateMachine::enqueue_command_(const WoleixCommand& command)
 {
-    if (!on_hold_) command_queue_->enqueue(command);
+    if (!on_hold_) commands_.push_back(command);
 }
 
 }  // namespace climate_ir_woleix

@@ -16,6 +16,7 @@
 
 #include "woleix_constants.h"
 #include "woleix_command.h"
+#include "woleix_status.h"
 #include "woleix_protocol_handler.h"
 #include "woleix_state_mapper.h"
 #include "woleix_state_machine.h"
@@ -60,7 +61,8 @@ class WoleixClimate
   : public ClimateIR,
     public WoleixStateMachine,
     public WoleixProtocolHandler,
-    protected WoleixCommandQueueProducer
+    protected WoleixCommandQueueProducer,
+    protected WoleixStatusObserver
 {
 public:
     /**
@@ -120,34 +122,49 @@ public:
 
 protected:
 
-    // /**
-    //  * Constructor with custom command queue, state machine and protocol handler.
-    //  * 
-    //  * @param command_queue Pointer to external command queue (for testing)
-    //  * @param state_machine Pointer to external state machine (for testing)
-    //  * @param protocol_handler Pointer to external protocol handler (for testing)
-    //  */
-    // WoleixClimate(std::unique_ptr<WoleixCommandQueue> command_queue);
+    void observe(const WoleixStatusReporter& reporter, const WoleixStatus& status) override
+    {
+        if (status.get_severity() == WoleixStatus::Severity::WX_SEVERITY_ERROR)
+        {
+            ESP_LOGE(TAG, "Error (%s): %s", status.get_category().name, status.get_message().c_str());
+            status_set_error(status.get_message().c_str());
+        }
+        if (status.get_severity() == WoleixStatus::Severity::WX_SEVERITY_WARNING)
+        {
+            ESP_LOGW(TAG, "Warning (%s): %s", status.get_category().name, status.get_message().c_str());
+            status_set_warning(status.get_message().c_str());
+        }
+        if (status.get_severity() == WoleixStatus::Severity::WX_SEVERITY_INFO)
+        {
+            ESP_LOGI(TAG, "Info (%s): %s", status.get_category().name, status.get_message().c_str());
+        }
+        if (status.get_severity() == WoleixStatus::Severity::WX_SEVERITY_DEBUG)
+        {
+            ESP_LOGD(TAG, "Debug (%s): %s", status.get_category().name, status.get_message().c_str());
+        }
+    }
 
-    void hold_enqueing() override
+    void on_high_watermark() override
     {
         ESP_LOGW(TAG, "Queue at its high watermark (%d)", command_queue_->length());
-        status_set_warning("queue_high_watermark");
+        status_set_warning("Queue.AtHighWatermark");
     }
 
-    void stop_enqueing() override
+    void on_low_watermark() override
     {
-        ESP_LOGE(TAG, "Queue is full (%d)", command_queue_->length());
-        status_set_error("queue_full");
+        ESP_LOGI(TAG, "Queue at its high watermark (%d)", command_queue_->length());
     }
 
-    void resume_enqueing() override
+    void on_full() override
     {
-        ESP_LOGI(TAG, "Queue is at low watermark again");
-        status_clear_error();
-        status_clear_warning();
+        ESP_LOGE(TAG, "Queue full");
+        status_set_error("Queue.Full");
     }
 
+    void on_empty() override
+    {
+        ESP_LOGI(TAG, "Queue empty");
+    }
     /**
      * Transmit the current state via IR.
      * 
@@ -168,7 +185,7 @@ protected:
      * 
      * @return Vector of WoleixCommand objects representing the necessary IR commands.
      */
-    virtual void queue_commands_();
+    virtual bool enqueue_commands_();
 
     /**
      * Update internal state based on the current state machine state.

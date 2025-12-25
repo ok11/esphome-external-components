@@ -99,8 +99,6 @@ protected:
     uint32_t repeat_count_{1};  /**< Number of times to repeat the command */
 };
 
-//using namespace esphome::climate_ir_woleix::CategoryId;
-
 namespace StatusCategory::Queue
 {
     inline constexpr auto AT_HIGH_WATERMARK = 
@@ -153,79 +151,87 @@ const WoleixStatus WX_STATUS_QUEUE_COMMAND_ENQUEUED = WoleixStatus
 static constexpr float QUEUE_HIGH_WATERMARK = 0.8f;
 static constexpr float QUEUE_LOW_WATERMARK = 0.2f;
 
-class WoleixCommandQueueProducer: public WoleixListener
+class WoleixCommandQueueProducer
 {
 public:
-
-    virtual void notify(const WoleixReporter& reporter, const WoleixStatus& status)
-    {
-        if (status == WX_STATUS_QUEUE_FULL) stop_enqueing();
-        if (status == WX_STATUS_QUEUE_AT_HIGH_WATERMARK) hold_enqueing();
-        if (status == WX_STATUS_QUEUE_AT_LOW_WATERMARK) resume_enqueing();
-    }
-
-    virtual void hold_enqueing() = 0;
-    virtual void resume_enqueing() = 0;
-    virtual void stop_enqueing() = 0;
+    virtual void on_high_watermark() = 0;
+    virtual void on_low_watermark() = 0;
+    virtual void on_full() = 0;
+    virtual void on_empty() = 0;
 };
 
-class WoleixCommandQueueConsumer: public WoleixListener
+class WoleixCommandQueueConsumer
 {
 public:
-
-    virtual void notify(const WoleixReporter& reporter, const WoleixStatus& status)
-    {
-        if (status == WX_STATUS_QUEUE_COMMAND_ENQUEUED) start_processing();
-    }
-
-    virtual void start_processing() = 0;
+    virtual void on_command() = 0;
 };
 
-class WoleixCommandQueue: protected WoleixReporter
+class WoleixCommandQueue
 {
 public:
-
-
     WoleixCommandQueue(size_t max_capacity)
         : max_capacity_(max_capacity), queue_(std::make_unique<std::deque<WoleixCommand>>())
     {}
 
     void register_producer(WoleixCommandQueueProducer* producer)
     {
-        register_listener(producer); 
+        producers_.push_back(producer);
     }
     void unregister_producer(WoleixCommandQueueProducer* producer)
     {
-        unregister_listener(producer);
+        std::erase(producers_, producer);
     }
 
     void register_consumer(WoleixCommandQueueConsumer* consumer)
     {
-        register_listener(consumer);
+        consumers_.push_back(consumer);
     }
     void unregister_consumer(WoleixCommandQueueConsumer* consumer)
     {
-        unregister_listener(consumer);
+        std::erase(consumers_, consumer);
     }
 
-    void enqueue(const WoleixCommand& command)
+    bool enqueue(const WoleixCommand& command)
     {
         if (queue_->size() == max_capacity_)
         {
-            notify_listeners(WX_STATUS_QUEUE_FULL);
+            on_full();
+            return false;
         }
         else if (queue_->size() > max_capacity_ * QUEUE_HIGH_WATERMARK)
         {
-            notify_listeners(WX_STATUS_QUEUE_AT_HIGH_WATERMARK);
+            on_high_watermark();
         }
 
         queue_->push_back(command);
 
         if (queue_->size() == 1)
         {
-            notify_listeners(WX_STATUS_QUEUE_COMMAND_ENQUEUED);
+            on_command();
         }
+        return true;
     }
+    bool enqueue(const std::vector<WoleixCommand>& commands)
+    {
+        if (max_capacity_ - queue_->size() - commands.size() < 0)
+        {
+            on_full();
+            return false;
+        }
+        else if (max_capacity_ * QUEUE_HIGH_WATERMARK - queue_->size()  - commands.size() < 0)
+        {
+            on_high_watermark();
+        }
+
+        queue_->insert(queue_->end(), commands.begin(), commands.end());
+
+        if (queue_->size() == commands.size())
+        {
+            on_command();
+        }
+        return true;
+    }
+
     const WoleixCommand& get() const
     {
         if (queue_->empty()) throw std::out_of_range("Next called on empty WoleixCommandQueue");
@@ -239,24 +245,57 @@ public:
         }
         if (queue_->size() < max_capacity_ * QUEUE_LOW_WATERMARK)
         {
-            notify_listeners(WX_STATUS_QUEUE_AT_LOW_WATERMARK);
+            on_low_watermark();
         }
 
         queue_->pop_front();
         
         if (queue_->empty())
         {
-            notify_listeners(WX_STATUS_QUEUE_EMPTY);
+            on_empty();
         }
     }
 
-    void notify_listeners(const WoleixStatus& status) const
+    void on_high_watermark() const
     {
-        for (const auto& listener : listeners_)
+        for (const auto& producer : producers_)
         {
-            listener->notify(*this, status);
+            producer->on_high_watermark();
         }
     }
+
+    void on_low_watermark() const
+    {
+        for (const auto& producer : producers_)
+        {
+            producer->on_low_watermark();
+        }
+    }
+
+    void on_empty() const
+    {
+        for (const auto& producer : producers_)
+        {
+            producer->on_empty();
+        }
+    }
+
+    void on_full() const
+    {
+        for (const auto& producer : producers_)
+        {
+            producer->on_full();
+        }
+    }
+
+    void on_command() const
+    {
+        for (const auto& consumer : consumers_)
+        {
+            consumer->on_command();
+        }
+    }
+
     void reset() { queue_->clear(); }
     bool is_empty() const { return queue_->empty(); }
     uint16_t length() const { return queue_->size(); }
@@ -264,13 +303,11 @@ public:
 
 protected:
 
-    void register_listener(WoleixListener* listener) { listeners_.push_back(listener); }
-    void unregister_listener(WoleixListener* listener) { std::erase(listeners_, listener); }
-
     size_t max_capacity_;
     std::unique_ptr<std::deque<WoleixCommand>> queue_;
 
-    std::vector<WoleixListener*> listeners_;
+    std::vector<WoleixCommandQueueProducer*> producers_;
+    std::vector<WoleixCommandQueueConsumer*> consumers_;
 };
     
 } // namespace climate_ir_woleix

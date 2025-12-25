@@ -64,7 +64,7 @@ public:
         cancel_timeout_(std::move(cancel_timeout)) 
     {}
     
-    virtual ~WoleixProtocolHandler() = default;
+    virtual ~WoleixProtocolHandler() { cleanup_(); } 
 
     /**
      * Execute commands synchronously (from caller's perspective).
@@ -166,7 +166,14 @@ protected:
      */
     static bool is_temp_command_(const WoleixCommand& cmd);
 
-    void start_processing() override
+    void cleanup_()
+    {
+        command_queue_->unregister_consumer(this);
+        cancel_timeout_(TIMEOUT_SETTING_MODE);
+        cancel_timeout_(TIMEOUT_NEXT_COMMAND);
+    }
+
+    void on_command() override
     {
         set_timeout_(TIMEOUT_NEXT_COMMAND, 0, [this]() { process_next_command_(); }); 
     }

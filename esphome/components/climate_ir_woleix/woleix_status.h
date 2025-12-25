@@ -13,6 +13,7 @@ namespace CategoryId
     inline constexpr uint16_t Core = 0;
     inline constexpr uint16_t CommandQueue = 1;
     inline constexpr uint16_t StateMachine = 2;
+    inline constexpr uint16_t ProtocolHandler = 3;
 }
 
 struct Category
@@ -60,18 +61,18 @@ protected:
     std::string message_;
 };
 
-class WoleixListener;
+class WoleixStatusObserver;
 
-class WoleixReporter
+class WoleixStatusReporter
 {
-    virtual void register_listener(WoleixListener* listener) = 0;
-    virtual void unregister_listener(WoleixListener* listener) = 0;
+    virtual void register_observer(WoleixStatusObserver* observer) = 0;
+    virtual void unregister_observer(WoleixStatusObserver* observer) = 0;
 };
 
-class WoleixListener
+class WoleixStatusObserver
 {
 public:
-    virtual void notify(const WoleixReporter& reporter, const WoleixStatus& status) = 0;
+    virtual void observe(const WoleixStatusReporter& reporter, const WoleixStatus& status) = 0;
 };
 }
 }

@@ -98,7 +98,7 @@ void WoleixClimate::setup()
     // Call parent setup first
     ClimateIR::setup();
 
-    WoleixStateMachine::setup(command_queue_.get());
+    WoleixStateMachine::setup();
     WoleixProtocolHandler::setup(command_queue_.get());
 
     // Set up callback to update humidity from sensor
@@ -128,7 +128,7 @@ void WoleixClimate::setup()
  * 
  * @return Reference to vector of commands needed for the state transition
  */
-void WoleixClimate::queue_commands_()
+bool WoleixClimate::enqueue_commands_()
 {
     WoleixInternalState target_state;
     // Map ESPHome Climate states to Woleix AC states
@@ -138,7 +138,9 @@ void WoleixClimate::queue_commands_()
     target_state.temperature = target_temperature;
     
     // Generate command sequence via state machine
-    WoleixStateMachine::move_to(target_state);
+    const std::vector<WoleixCommand>& commands = WoleixStateMachine::move_to(target_state);
+
+    return command_queue_->enqueue(commands);
 }
 
 /**
@@ -180,7 +182,8 @@ void WoleixClimate::transmit_state()
         ESP_LOGD(TAG, "Transmitting state - Mode: %d, Temp: %.1f, Fan: %d",
             static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
 
-        queue_commands_();
+        if (!enqueue_commands_())
+            ESP_LOGE(TAG, "Failed state transmission");
     }
     ESP_LOGD(TAG, "Reporting back state - Mode: %d, Temp: %.1f, Fan: %d",
         static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));

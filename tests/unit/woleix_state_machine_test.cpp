@@ -5,8 +5,6 @@
 #include "climate_ir_woleix.h"
 #include "woleix_state_machine.h"
 
-#include "mock_queue.h"
-
 using namespace esphome::climate_ir_woleix;
 using esphome::climate_ir_woleix::WoleixInternalState;
 
@@ -26,10 +24,10 @@ class MockWoleixStateMachine : public WoleixStateMachine
 {
 public:
 
-    MockWoleixStateMachine(MockWoleixCommandQueue* command_queue)
+    MockWoleixStateMachine()
         : WoleixStateMachine()
     {
-        setup(command_queue);
+        setup();
     }
 
     void set_current_state(const WoleixInternalState& state)
@@ -49,20 +47,26 @@ class WoleixStateMachineTest : public testing::Test
 protected:
     void SetUp() override
     {
-        mock_command_queue = new MockWoleixCommandQueue();
-        mock_state_machine = new MockWoleixStateMachine(mock_command_queue);
+        mock_state_machine = new MockWoleixStateMachine();
     }
     
     void TearDown() override
     {
         delete mock_state_machine;
-        delete mock_command_queue;
     }
     
-    MockWoleixCommandQueue* mock_command_queue;
     MockWoleixStateMachine* mock_state_machine;
 
-    int count_command(WoleixCommand::Type type) { return mock_command_queue->count_command(type); }
+    int count_command(const std::vector<WoleixCommand>& queue, WoleixCommand::Type type)
+    {
+        return std::accumulate(queue.begin(), queue.end(), 0,
+            [type](int sum, const WoleixCommand& cmd)
+            {
+                return sum + (cmd.get_type() == type ? cmd.get_repeat_count() : 0);
+            }
+        );
+
+    }
     
 };
 
@@ -140,7 +144,7 @@ TEST_F(WoleixStateMachineTest, PowerOffFromOnSendsPowerCommand)
     );
 
     // Start from ON (default state)
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -151,8 +155,8 @@ TEST_F(WoleixStateMachineTest, PowerOffFromOnSendsPowerCommand)
         )
     );
     
-    EXPECT_EQ(mock_command_queue->length(), 1);
-    EXPECT_EQ(count_command(POWER_COMMAND), 1);
+    EXPECT_EQ(queue.size(), 1);
+    EXPECT_EQ(count_command(queue, POWER_COMMAND), 1);
     
     // Verify state updated
     auto state = mock_state_machine->get_state();
@@ -181,7 +185,7 @@ TEST_F(WoleixStateMachineTest, PowerOnFromOffSendsPowerCommand)
     );
     
     // Now turn back on
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -193,7 +197,7 @@ TEST_F(WoleixStateMachineTest, PowerOnFromOffSendsPowerCommand)
     );
     
     // Should send: POWER (on), MODE x2 (COOL->DEHUM->FAN), TEMP_DOWN x5, SPEED
-    EXPECT_EQ(count_command(POWER_COMMAND), 1);
+    EXPECT_EQ(count_command(queue, POWER_COMMAND), 1);
     
     auto state = mock_state_machine->get_state();
     EXPECT_EQ(state.power, WoleixPowerState::ON);
@@ -219,7 +223,7 @@ TEST_F(WoleixStateMachineTest, PowerOffIgnoresOtherStateChanges)
         )
     );
 
-    mock_state_machine->move_to(
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to(
         WoleixInternalState
         (
             WoleixPowerState::OFF,
@@ -230,10 +234,10 @@ TEST_F(WoleixStateMachineTest, PowerOffIgnoresOtherStateChanges)
     );
     
     // Only POWER command should be sent
-    EXPECT_EQ(mock_command_queue->length(), 1);
-    EXPECT_EQ(count_command(POWER_COMMAND), 1);
-    EXPECT_EQ(count_command(MODE_COMMAND), 0);
-    EXPECT_EQ(count_command(SPEED_COMMAND), 0);
+    EXPECT_EQ(queue.size(), 1);
+    EXPECT_EQ(count_command(queue, POWER_COMMAND), 1);
+    EXPECT_EQ(count_command(queue, MODE_COMMAND), 0);
+    EXPECT_EQ(count_command(queue, SPEED_COMMAND), 0);
 }
 
 // ============================================================================
@@ -259,7 +263,7 @@ TEST_F(WoleixStateMachineTest, ModeTransitionCoolToDehum)
         )
     );
 
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -271,7 +275,7 @@ TEST_F(WoleixStateMachineTest, ModeTransitionCoolToDehum)
     );
     
     // COOL -> DEHUM = 1 step
-    EXPECT_EQ(count_command(MODE_COMMAND), 1);
+    EXPECT_EQ(count_command(queue, MODE_COMMAND), 1);
 }
 
 /**
@@ -293,7 +297,7 @@ TEST_F(WoleixStateMachineTest, ModeTransitionCoolToFan)
         )
     );
 
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -305,7 +309,7 @@ TEST_F(WoleixStateMachineTest, ModeTransitionCoolToFan)
     );
     
     // COOL -> DEHUM -> FAN = 2 steps
-    EXPECT_EQ(count_command(MODE_COMMAND), 2);
+    EXPECT_EQ(count_command(queue, MODE_COMMAND), 2);
 }
 
 /**
@@ -328,7 +332,7 @@ TEST_F(WoleixStateMachineTest, ModeTransitionDehumToFan)
     );
 
     // Now go to FAN
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -340,7 +344,7 @@ TEST_F(WoleixStateMachineTest, ModeTransitionDehumToFan)
     );
     
     // DEHUM -> FAN = 1 step
-    EXPECT_EQ(count_command(MODE_COMMAND), 1);
+    EXPECT_EQ(count_command(queue, MODE_COMMAND), 1);
 }
 
 /**
@@ -363,7 +367,7 @@ TEST_F(WoleixStateMachineTest, ModeTransitionFanToCool)
     );
     
     // Now go to COOL
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -375,7 +379,7 @@ TEST_F(WoleixStateMachineTest, ModeTransitionFanToCool)
     );
     
     // FAN -> COOL = 1 step (wraps around)
-    EXPECT_EQ(count_command(MODE_COMMAND), 1);
+    EXPECT_EQ(count_command(queue, MODE_COMMAND), 1);
 }
 
 /**
@@ -398,7 +402,7 @@ TEST_F(WoleixStateMachineTest, ModeTransitionDehumToCool)
     );
     
     // Now go to COOL
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -410,7 +414,7 @@ TEST_F(WoleixStateMachineTest, ModeTransitionDehumToCool)
     );
     
     // DEHUM -> FAN -> COOL = 2 steps
-    EXPECT_EQ(count_command(MODE_COMMAND), 2);
+    EXPECT_EQ(count_command(queue, MODE_COMMAND), 2);
 }
 
 /**
@@ -432,7 +436,7 @@ TEST_F(WoleixStateMachineTest, NoModeChangeGeneratesNoModeCommands)
         )
     );
 
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -443,7 +447,7 @@ TEST_F(WoleixStateMachineTest, NoModeChangeGeneratesNoModeCommands)
         )
     );
     
-    EXPECT_EQ(count_command(MODE_COMMAND), 0);
+    EXPECT_EQ(count_command(queue, MODE_COMMAND), 0);
 }
 
 // ============================================================================
@@ -470,7 +474,7 @@ TEST_F(WoleixStateMachineTest, TemperatureIncreaseInCoolMode)
         )
     );
 
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -481,7 +485,7 @@ TEST_F(WoleixStateMachineTest, TemperatureIncreaseInCoolMode)
         )
     );
     
-    EXPECT_EQ(count_command(TEMP_UP_COMMAND), 3);
+    EXPECT_EQ(count_command(queue, TEMP_UP_COMMAND), 3);
     
     auto state = mock_state_machine->get_state();
     EXPECT_FLOAT_EQ(state.temperature, 28.0f);
@@ -507,7 +511,7 @@ TEST_F(WoleixStateMachineTest, TemperatureDecreaseInCoolMode)
         )
     );
 
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -518,7 +522,7 @@ TEST_F(WoleixStateMachineTest, TemperatureDecreaseInCoolMode)
         )
     );
     
-    EXPECT_EQ(count_command(TEMP_DOWN_COMMAND), 5);
+    EXPECT_EQ(count_command(queue, TEMP_DOWN_COMMAND), 5);
     
     auto state = mock_state_machine->get_state();
     EXPECT_FLOAT_EQ(state.temperature, 20.0f);
@@ -544,7 +548,7 @@ TEST_F(WoleixStateMachineTest, TemperatureClampedToMinimum)
         )
     );
 
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -556,7 +560,7 @@ TEST_F(WoleixStateMachineTest, TemperatureClampedToMinimum)
     );
     
     // Should go from 25°C to 15°C (minimum)
-    EXPECT_EQ(count_command(TEMP_DOWN_COMMAND), 10);
+    EXPECT_EQ(count_command(queue, TEMP_DOWN_COMMAND), 10);
 }
 
 /**
@@ -579,7 +583,7 @@ TEST_F(WoleixStateMachineTest, TemperatureClampedToMaximum)
         )
     );
 
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -591,7 +595,7 @@ TEST_F(WoleixStateMachineTest, TemperatureClampedToMaximum)
     );
     
     // Should go from 25°C to 30°C (maximum)
-    EXPECT_EQ(count_command(TEMP_UP_COMMAND), 5);
+    EXPECT_EQ(count_command(queue, TEMP_UP_COMMAND), 5);
 }
 
 /**
@@ -615,7 +619,7 @@ TEST_F(WoleixStateMachineTest, TemperatureIgnoredInDehumMode)
     );
     
     // Now try to change temperature
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -627,8 +631,8 @@ TEST_F(WoleixStateMachineTest, TemperatureIgnoredInDehumMode)
     );
     
     // No temperature commands in DEHUM mode
-    EXPECT_EQ(count_command(TEMP_UP_COMMAND), 0);
-    EXPECT_EQ(count_command(TEMP_DOWN_COMMAND), 0);
+    EXPECT_EQ(count_command(queue, TEMP_UP_COMMAND), 0);
+    EXPECT_EQ(count_command(queue, TEMP_DOWN_COMMAND), 0);
 }
 
 /**
@@ -652,7 +656,7 @@ TEST_F(WoleixStateMachineTest, TemperatureIgnoredInFanMode)
     );
     
     // Now try to change temperature
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -664,8 +668,8 @@ TEST_F(WoleixStateMachineTest, TemperatureIgnoredInFanMode)
     );
     
     // No temperature commands in FAN mode
-    EXPECT_EQ(count_command(TEMP_UP_COMMAND), 0);
-    EXPECT_EQ(count_command(TEMP_DOWN_COMMAND), 0);
+    EXPECT_EQ(count_command(queue, TEMP_UP_COMMAND), 0);
+    EXPECT_EQ(count_command(queue, TEMP_DOWN_COMMAND), 0);
 }
 
 // ============================================================================
@@ -690,7 +694,7 @@ TEST_F(WoleixStateMachineTest, FanSpeedLowToHigh)
             WoleixFanSpeed::LOW
         )
     );
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -701,7 +705,7 @@ TEST_F(WoleixStateMachineTest, FanSpeedLowToHigh)
         )
     );
     
-    EXPECT_EQ(count_command(SPEED_COMMAND), 1);
+    EXPECT_EQ(count_command(queue, SPEED_COMMAND), 1);
     
     auto state = mock_state_machine->get_state();
     EXPECT_EQ(state.fan_speed, WoleixFanSpeed::HIGH);
@@ -727,7 +731,7 @@ TEST_F(WoleixStateMachineTest, FanSpeedHighToLow)
     );
     
     // Now go to LOW
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -738,7 +742,7 @@ TEST_F(WoleixStateMachineTest, FanSpeedHighToLow)
         )
     );
     
-    EXPECT_EQ(count_command(SPEED_COMMAND), 1);
+    EXPECT_EQ(count_command(queue, SPEED_COMMAND), 1);
     
     auto state = mock_state_machine->get_state();
     EXPECT_EQ(state.fan_speed, WoleixFanSpeed::LOW);
@@ -763,7 +767,7 @@ TEST_F(WoleixStateMachineTest, NoFanSpeedChangeGeneratesNoCommands)
         )
     );
 
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -774,7 +778,7 @@ TEST_F(WoleixStateMachineTest, NoFanSpeedChangeGeneratesNoCommands)
         )
     );
     
-    EXPECT_EQ(count_command(SPEED_COMMAND), 0);
+    EXPECT_EQ(count_command(queue, SPEED_COMMAND), 0);
 }
 
 // ============================================================================
@@ -793,7 +797,7 @@ TEST_F(WoleixStateMachineTest, CompleteStateChangeFromDefaults)
     mock_state_machine->reset();
 
     // Change everything from defaults
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -806,9 +810,9 @@ TEST_F(WoleixStateMachineTest, CompleteStateChangeFromDefaults)
     
     // Should have: 2x MODE, 1x SPEED
     // Temperature is ignored because target mode is FAN
-    EXPECT_EQ(count_command(MODE_COMMAND), 2);
-    EXPECT_EQ(count_command(SPEED_COMMAND), 1);
-    EXPECT_EQ(count_command(TEMP_UP_COMMAND), 0);  // Ignored in FAN mode
+    EXPECT_EQ(count_command(queue, MODE_COMMAND), 2);
+    EXPECT_EQ(count_command(queue, SPEED_COMMAND), 1);
+    EXPECT_EQ(count_command(queue, TEMP_UP_COMMAND), 0);  // Ignored in FAN mode
 }
 
 /**
@@ -832,7 +836,7 @@ TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
         )
     );
 
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue1 = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -843,13 +847,11 @@ TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
         )
     );
     
-    EXPECT_EQ(count_command(MODE_COMMAND), 1);   // DEHUM->FAN
-    EXPECT_EQ(count_command(SPEED_COMMAND), 1);  // LOW->HIGH
-
-    mock_command_queue->reset();
+    EXPECT_EQ(count_command(queue1, MODE_COMMAND), 1);   // DEHUM->FAN
+    EXPECT_EQ(count_command(queue1, SPEED_COMMAND), 1);  // LOW->HIGH
 
     // Change 2: Mode and temperature
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue2 = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -860,13 +862,11 @@ TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
         )
     );
     
-    EXPECT_EQ(count_command(MODE_COMMAND), 1);   // DEHUM->FAN->COOL
-    EXPECT_EQ(count_command(TEMP_DOWN_COMMAND), 5); // 25->20
-
-    mock_command_queue->reset();
+    EXPECT_EQ(count_command(queue2, MODE_COMMAND), 1);   // DEHUM->FAN->COOL
+    EXPECT_EQ(count_command(queue2, TEMP_DOWN_COMMAND), 5); // 25->20
 
     // Change 3: Power off
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue3 = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -877,9 +877,8 @@ TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
         )
     );
     
-    EXPECT_EQ(count_command(POWER_COMMAND), 1);  // Turn off
+    EXPECT_EQ(count_command(queue3, POWER_COMMAND), 1);  // Turn off
 
-    mock_command_queue->reset();
 }
 
 /**
@@ -903,7 +902,7 @@ TEST_F(WoleixStateMachineTest, CommandOrderingIsCorrect)
         )
     );
     
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -914,14 +913,14 @@ TEST_F(WoleixStateMachineTest, CommandOrderingIsCorrect)
         )
     );
     
-    EXPECT_EQ(mock_command_queue->length(), 3);
+    EXPECT_EQ(queue.size(), 3);
 
     // First command should be POWER
-    EXPECT_EQ(mock_command_queue->get(0).get_type(), POWER_COMMAND);
+    EXPECT_EQ(queue.at(0).get_type(), POWER_COMMAND);
     // Second command must be MODE (DEHUM->FAN)
-    EXPECT_EQ(mock_command_queue->get(1).get_type(), MODE_COMMAND);
+    EXPECT_EQ(queue.at(1).get_type(), MODE_COMMAND);
     // Third command must be SPEED (LOW->HIGH)
-    EXPECT_EQ(mock_command_queue->get(2).get_type(), SPEED_COMMAND);
+    EXPECT_EQ(queue.at(2).get_type(), SPEED_COMMAND);
 }
 
 /**
@@ -945,7 +944,7 @@ TEST_F(WoleixStateMachineTest, EmptyCommandsAfterNoChange)
     );
     
     // Set same state again
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -957,7 +956,7 @@ TEST_F(WoleixStateMachineTest, EmptyCommandsAfterNoChange)
     );
     
     // No state change, no commands
-    EXPECT_EQ(mock_command_queue->length(), 0);
+    EXPECT_EQ(queue.size(), 0);
 }
 
 // ============================================================================
@@ -984,7 +983,7 @@ TEST_F(WoleixStateMachineTest, TemperatureRoundingHandled)
         )
     );
 
-    mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
     (
         WoleixInternalState
         (
@@ -996,7 +995,7 @@ TEST_F(WoleixStateMachineTest, TemperatureRoundingHandled)
     );
     
     // 25 -> 28 = 3 steps (rounds up)
-    EXPECT_EQ(count_command(TEMP_UP_COMMAND), 3);
+    EXPECT_EQ(count_command(queue, TEMP_UP_COMMAND), 3);
 }
 
 // ============================================================================
