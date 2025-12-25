@@ -33,7 +33,7 @@ WoleixClimate::WoleixClimate()
         }
     )
 {
-    command_queue_->register_listener(std::shared_ptr<WoleixListener>(std::shared_ptr<WoleixClimate>{}, this));
+    command_queue_->register_producer(this);
     reset_state();
 }
 

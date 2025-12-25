@@ -8,16 +8,25 @@
 
 #include "woleix_protocol_handler.h"
 
-namespace esphome {
-namespace climate_ir_woleix {
+namespace esphome
+{
+namespace climate_ir_woleix
+{
 
 using remote_base::NECData;
 using remote_base::NECProtocol;
 
 void WoleixProtocolHandler::setup(WoleixCommandQueue* command_queue)
 {
-    command_queue_ = command_queue;
-    process_next_command_();
+    if (command_queue_)
+    {
+        command_queue_ = command_queue;
+        command_queue_->register_consumer(this);
+    }
+    else
+    {
+        ESP_LOGE(TAG, "Null command queue passed");
+    }
 }
 
 void WoleixProtocolHandler::process_next_command_()
@@ -25,9 +34,6 @@ void WoleixProtocolHandler::process_next_command_()
     if (!command_queue_)
     {
         ESP_LOGW(TAG, "Command queue not (yet) set in protocol handler, waiting...");
-        set_timeout_(TIMEOUT_NEXT_COMMAND, POLL_COMMAND_INTERVAL_MS,
-            [this]() { process_next_command_(); });
-        return;
     }
     if (command_queue_->is_empty())
     {
@@ -38,8 +44,6 @@ void WoleixProtocolHandler::process_next_command_()
             on_complete_();
             on_complete_ = nullptr;
         }
-        set_timeout_(TIMEOUT_NEXT_COMMAND, POLL_COMMAND_INTERVAL_MS,
-            [this]() { process_next_command_(); });
     }
     else
     {
@@ -127,10 +131,6 @@ void WoleixProtocolHandler::reset()
     
     temp_state_ = TempProtocolState::IDLE;
     on_complete_ = nullptr;
-
-    set_timeout_(TIMEOUT_NEXT_COMMAND, POLL_COMMAND_INTERVAL_MS,
-        [this]() { process_next_command_(); });
-
 }
 
 bool WoleixProtocolHandler::is_temp_command_(const WoleixCommand& cmd)
@@ -150,6 +150,11 @@ bool WoleixProtocolHandler::is_temp_command_(const WoleixCommand& cmd)
  */
 void WoleixProtocolHandler::transmit_(const WoleixCommand& command)
 {
+    if (!transmitter_)
+    {
+        ESP_LOGE(TAG, "Transmitter not set, cannot send command");
+        return;
+    }
     NECData nec_data;
     nec_data.address = command.get_address();
     nec_data.command = command.get_command();

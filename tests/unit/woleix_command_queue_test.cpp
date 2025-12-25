@@ -3,43 +3,74 @@
 #include <memory>
 #include <stdexcept>
 
-#include "../../esphome/components/climate_ir_woleix/woleix_command.h"
-#include "../../esphome/components/climate_ir_woleix/woleix_constants.h"
-#include "../../esphome/components/climate_ir_woleix/woleix_management.h"
+#include "woleix_constants.h"
+#include "woleix_command.h"
+#include "woleix_status.h"
+
+#include "mock_queue.h"
 
 using namespace esphome::climate_ir_woleix;
 using ::testing::_;
 using ::testing::AtLeast;
+
+// Producer notification tests
+class MockWoleixCommandQueueProducer : public WoleixCommandQueueProducer
+{
+public:
+    MOCK_METHOD(void, stop_enqueing, (), (override));
+    MOCK_METHOD(void, hold_enqueing, (), (override));
+    MOCK_METHOD(void, resume_enqueing, (), (override));
+};
+
+// Consumer notification tests
+class MockWoleixCommandQueueConsumer : public WoleixCommandQueueConsumer
+{
+public:
+    MOCK_METHOD(void, start_processing, (), (override));
+};
+
 
 class WoleixCommandQueueTest : public ::testing::Test
 {
 protected:
     void SetUp() override
     {
-        queue = std::make_unique<WoleixCommandQueue>(10);  // Max capacity of 10
+        mock_queue = new MockWoleixCommandQueue();  // Max capacity of 16
+        mock_consumer = new MockWoleixCommandQueueConsumer();
+        mock_producer = new MockWoleixCommandQueueProducer();
+
+        mock_queue->register_consumer(mock_consumer);
+        mock_queue->register_producer(mock_producer);
     }
 
     void TearDown() override
     {
-        queue.reset();
+        mock_queue->unregister_consumer(mock_consumer);
+        mock_queue->unregister_producer(mock_producer);
+
+        delete mock_consumer;
+        delete mock_producer;
+        delete mock_queue;
     }
 
-    std::unique_ptr<WoleixCommandQueue> queue;
+    MockWoleixCommandQueueConsumer* mock_consumer;
+    MockWoleixCommandQueueProducer* mock_producer;
+    MockWoleixCommandQueue* mock_queue;
 };
 
 // Constructor test
 TEST_F(WoleixCommandQueueTest, ConstructorSetsMaxCapacity)
 {
-    EXPECT_EQ(queue->max_capacity(), 10);
+    EXPECT_EQ(mock_queue->max_capacity(), 16);
 }
 
 // Enqueue operation tests
 TEST_F(WoleixCommandQueueTest, EnqueueSingleCommand)
 {
     WoleixCommand cmd(WoleixCommand::Type::POWER, 0xFB04);
-    queue->enqueue(cmd);
-    EXPECT_EQ(queue->length(), 1);
-    EXPECT_FALSE(queue->is_empty());
+    mock_queue->enqueue(cmd);
+    EXPECT_EQ(mock_queue->length(), 1);
+    EXPECT_FALSE(mock_queue->is_empty());
 }
 
 TEST_F(WoleixCommandQueueTest, EnqueueMultipleCommands)
@@ -47,31 +78,37 @@ TEST_F(WoleixCommandQueueTest, EnqueueMultipleCommands)
     for (int i = 0; i < 5; ++i)
     {
         WoleixCommand cmd(WoleixCommand::Type::TEMP_UP, 0xFB04);
-        queue->enqueue(cmd);
+        mock_queue->enqueue(cmd);
     }
-    EXPECT_EQ(queue->length(), 5);
+    EXPECT_EQ(mock_queue->length(), 5);
 }
 
 // Dequeue operation tests
 TEST_F(WoleixCommandQueueTest, DequeueFromNonEmptyQueue)
 {
     WoleixCommand cmd(WoleixCommand::Type::POWER, 0xFB04);
-    queue->enqueue(cmd);
+    mock_queue->enqueue(cmd);
     
-    const WoleixCommand& dequeued = queue->dequeue();
-    EXPECT_EQ(dequeued.get_type(), WoleixCommand::Type::POWER);
-    EXPECT_TRUE(queue->is_empty());
+    mock_queue->dequeue();
+    EXPECT_TRUE(mock_queue->is_empty());
 }
 
 TEST_F(WoleixCommandQueueTest, DequeueFromEmptyQueue)
 {
-    ASSERT_TRUE(queue->is_empty());
+    ASSERT_TRUE(mock_queue->is_empty());
     EXPECT_THROW
     (
-        {
-            WoleixCommand cmd = queue->dequeue();
-            (void)cmd;  // Suppress unused variable warning
-        },
+        mock_queue->dequeue(),
+        std::out_of_range
+    );
+}
+
+TEST_F(WoleixCommandQueueTest, GetCommandFromEmptyQueue)
+{
+    ASSERT_TRUE(mock_queue->is_empty());
+    EXPECT_THROW
+    (
+        mock_queue->next(),
         std::out_of_range
     );
 }
@@ -82,20 +119,12 @@ TEST_F(WoleixCommandQueueTest, ResetClearsQueue)
     for (int i = 0; i < 5; ++i)
     {
         WoleixCommand cmd(WoleixCommand::Type::TEMP_UP, 0xFB04);
-        queue->enqueue(cmd);
+        mock_queue->enqueue(cmd);
     }
-    ASSERT_EQ(queue->length(), 5);
-    queue->reset();
-    EXPECT_TRUE(queue->is_empty());
-    EXPECT_EQ(queue->length(), 0);
-    EXPECT_THROW
-    (
-        {
-            WoleixCommand cmd = queue->dequeue();
-            (void)cmd;  // Suppress unused variable warning
-        },
-        std::out_of_range
-    );
+    ASSERT_EQ(mock_queue->length(), 5);
+    mock_queue->reset();
+    EXPECT_TRUE(mock_queue->is_empty());
+    EXPECT_EQ(mock_queue->length(), 0);
 }
 
 // Get_command operation tests
@@ -103,71 +132,66 @@ TEST_F(WoleixCommandQueueTest, GetCommandAtValidIndex)
 {
     WoleixCommand cmd1(WoleixCommand::Type::POWER, 0xFB04);
     WoleixCommand cmd2(WoleixCommand::Type::TEMP_UP, 0xFB04);
-    queue->enqueue(cmd1);
-    queue->enqueue(cmd2);
+    mock_queue->enqueue(cmd1);
+    mock_queue->enqueue(cmd2);
 
-    EXPECT_EQ(queue->get_command(0).get_type(), WoleixCommand::Type::POWER);
-    EXPECT_EQ(queue->get_command(1).get_type(), WoleixCommand::Type::TEMP_UP);
+    EXPECT_EQ(mock_queue->get_command(0).get_type(), WoleixCommand::Type::POWER);
+    EXPECT_EQ(mock_queue->get_command(1).get_type(), WoleixCommand::Type::TEMP_UP);
 }
 
 TEST_F(WoleixCommandQueueTest, GetCommandAtInvalidIndex)
 {
     WoleixCommand cmd(WoleixCommand::Type::POWER, 0xFB04);
-    queue->enqueue(cmd);
+    mock_queue->enqueue(cmd);
 
-    EXPECT_THROW(queue->get_command(1), std::out_of_range);
+    EXPECT_THROW(mock_queue->get_command(1), std::out_of_range);
 }
 
-// Listener notification tests
-class MockWoleixListener : public WoleixCommandQueueListener
+TEST_F(WoleixCommandQueueTest, ProducersNotifiedWhenQueueAtHighWatermark)
 {
-public:
-    MOCK_METHOD(void, notify, (const WoleixReporter& reporter, const WoleixStatus& status), (override));
-    MOCK_METHOD(void, hold, (), (override));
-    MOCK_METHOD(void, resume, (), (override));
-};
+    EXPECT_CALL(*mock_producer, hold_enqueing()).Times(2);
 
-TEST_F(WoleixCommandQueueTest, ListenersNotifiedWhenQueueBecomesFull)
-{
-    auto listener = std::make_shared<MockWoleixListener>();
-    queue->register_listener(listener);
-
-    EXPECT_CALL(*listener, notify(_, WX_STATUS_QUEUE_FULL)).Times(1);
-
-    // Enqueue 9 commands (90% of max_capacity)
-    for (int i = 0; i < 9; ++i)
+    // Enqueue 14 commands (78% of max_capacity)
+    for (int i = 0; i < 14; ++i)
     {
         WoleixCommand cmd(WoleixCommand::Type::TEMP_UP, 0xFB04);
-        queue->enqueue(cmd);
+        mock_queue->enqueue(cmd);
     }
 
     // Enqueue one more command to trigger the notification
     WoleixCommand cmd(WoleixCommand::Type::TEMP_UP, 0xFB04);
-    queue->enqueue(cmd);
+    mock_queue->enqueue(cmd);
 
     // Verify that the listener was notified
-    testing::Mock::VerifyAndClearExpectations(listener.get());
+    testing::Mock::VerifyAndClearExpectations(mock_producer);
+
 }
 
-TEST_F(WoleixCommandQueueTest, ListenersNotifiedWhenQueueBecomesEmpty)
+TEST_F(WoleixCommandQueueTest, ProducersNotifiedWhenQueueAtLowWatermark)
 {
-    auto listener = std::make_shared<MockWoleixListener>();
-    queue->register_listener(listener);
-
     // Enqueue 3 commands
     for (int i = 0; i < 3; ++i)
     {
         WoleixCommand cmd(WoleixCommand::Type::TEMP_UP, 0xFB04);
-        queue->enqueue(cmd);
+        mock_queue->enqueue(cmd);
     }
 
-    EXPECT_CALL(*listener, notify(_, WX_STATUS_QUEUE_EMPTY)).Times(1);
+    EXPECT_CALL(*mock_producer, resume_enqueing()).Times(3);
 
     // Dequeue 3 commands
     for (int i = 0; i < 3; ++i)
     {
-        queue->dequeue();
+        mock_queue->dequeue();
     }
+}
+
+TEST_F(WoleixCommandQueueTest, ConsumersNotifiedOnEnquedCommand)
+{
+    WoleixCommand cmd(WoleixCommand::Type::TEMP_UP, 0xFB04);
+
+    EXPECT_CALL(*mock_consumer, start_processing()).Times(1);
+
+    mock_queue->enqueue(cmd);
 }
 
 int main(int argc, char **argv)

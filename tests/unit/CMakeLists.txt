@@ -82,6 +82,12 @@ add_executable(
   woleix_command_queue_test.cpp
 )
 
+# Create test executable for WoleixStatus
+add_executable(
+  woleix_status_test
+  woleix_status_test.cpp
+)
+
 add_executable(
   woleix_protocol_handler_test
   woleix_protocol_handler_test.cpp
@@ -143,6 +149,15 @@ target_include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome/components/climate_ir_woleix
 )
 
+# Set include directories for command queue test
+target_include_directories(
+  woleix_status_test
+  BEFORE PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/mocks
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome/components/climate_ir_woleix
+)
+
 target_link_libraries(
   climate_ir_woleix_test
   GTest::gtest_main
@@ -185,6 +200,13 @@ target_link_libraries(
   esphome_mocks
 )
 
+target_link_libraries(
+  woleix_status_test
+  GTest::gtest_main
+  GTest::gmock_main
+  esphome_mocks
+)
+
 # Enable testing
 include(GoogleTest)
 gtest_discover_tests(climate_ir_woleix_test)
@@ -193,3 +215,4 @@ gtest_discover_tests(woleix_state_mapper_test)
 gtest_discover_tests(woleix_protocol_handler_test)
 gtest_discover_tests(woleix_commands_test)
 gtest_discover_tests(woleix_command_queue_test)
+gtest_discover_tests(woleix_status_test)

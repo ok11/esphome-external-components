@@ -32,14 +32,12 @@ public:
         setup(command_queue);
     }
 
-    void set_current_state(
-        WoleixPowerState power, WoleixMode mode, float temperature, WoleixFanSpeed fan_speed
-    )
+    void set_current_state(const WoleixInternalState& state)
     {
-        current_state_.power = power;
-        current_state_.mode = mode;
-        current_state_.temperature = temperature;
-        current_state_.fan_speed = fan_speed;
+        current_state_.power = state.power;
+        current_state_.mode = state.mode;
+        current_state_.temperature = state.temperature;
+        current_state_.fan_speed = state.fan_speed;
     }
 
     using WoleixStateMachine::move_to;
@@ -97,11 +95,15 @@ TEST_F(WoleixStateMachineTest, InitialStateIsCorrect)
 TEST_F(WoleixStateMachineTest, ResetRestoresDefaultState)
 {
     // Set state
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::FAN,
-        20.0f,
-        WoleixFanSpeed::HIGH
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::FAN,
+            20.0f,
+            WoleixFanSpeed::HIGH
+        )
     );
 
     // Reset
@@ -126,15 +128,20 @@ TEST_F(WoleixStateMachineTest, ResetRestoresDefaultState)
  */
 TEST_F(WoleixStateMachineTest, PowerOffFromOnSendsPowerCommand)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::COOL,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::COOL,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
 
     // Start from ON (default state)
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::OFF,
@@ -162,15 +169,20 @@ TEST_F(WoleixStateMachineTest, PowerOffFromOnSendsPowerCommand)
 TEST_F(WoleixStateMachineTest, PowerOnFromOffSendsPowerCommand)
 {
     // First turn off
-    mock_state_machine->set_current_state(
-        WoleixPowerState::OFF,
-        WoleixMode::COOL,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::OFF,
+            WoleixMode::COOL,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
     
     // Now turn back on
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -196,11 +208,15 @@ TEST_F(WoleixStateMachineTest, PowerOnFromOffSendsPowerCommand)
  */
 TEST_F(WoleixStateMachineTest, PowerOffIgnoresOtherStateChanges)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::COOL,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::COOL,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
 
     mock_state_machine->move_to(
@@ -232,14 +248,19 @@ TEST_F(WoleixStateMachineTest, PowerOffIgnoresOtherStateChanges)
  */
 TEST_F(WoleixStateMachineTest, ModeTransitionCoolToDehum)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::COOL,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::COOL,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
 
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -261,14 +282,19 @@ TEST_F(WoleixStateMachineTest, ModeTransitionCoolToDehum)
  */
 TEST_F(WoleixStateMachineTest, ModeTransitionCoolToFan)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::COOL,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::COOL,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
 
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -290,15 +316,20 @@ TEST_F(WoleixStateMachineTest, ModeTransitionCoolToFan)
  */
 TEST_F(WoleixStateMachineTest, ModeTransitionDehumToFan)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::DEHUM,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::DEHUM,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
 
     // Now go to FAN
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -320,15 +351,20 @@ TEST_F(WoleixStateMachineTest, ModeTransitionDehumToFan)
  */
 TEST_F(WoleixStateMachineTest, ModeTransitionFanToCool)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::FAN,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::FAN,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
     
     // Now go to COOL
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -350,15 +386,20 @@ TEST_F(WoleixStateMachineTest, ModeTransitionFanToCool)
  */
 TEST_F(WoleixStateMachineTest, ModeTransitionDehumToCool)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::DEHUM,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::DEHUM,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
     
     // Now go to COOL
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -380,14 +421,19 @@ TEST_F(WoleixStateMachineTest, ModeTransitionDehumToCool)
  */
 TEST_F(WoleixStateMachineTest, NoModeChangeGeneratesNoModeCommands)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::COOL,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::COOL,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
 
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -413,14 +459,19 @@ TEST_F(WoleixStateMachineTest, NoModeChangeGeneratesNoModeCommands)
  */
 TEST_F(WoleixStateMachineTest, TemperatureIncreaseInCoolMode)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::COOL,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::COOL,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
 
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -445,14 +496,19 @@ TEST_F(WoleixStateMachineTest, TemperatureIncreaseInCoolMode)
  */
 TEST_F(WoleixStateMachineTest, TemperatureDecreaseInCoolMode)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::COOL,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::COOL,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
 
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -477,14 +533,19 @@ TEST_F(WoleixStateMachineTest, TemperatureDecreaseInCoolMode)
  */
 TEST_F(WoleixStateMachineTest, TemperatureClampedToMinimum)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::COOL,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::COOL,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
 
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -507,14 +568,19 @@ TEST_F(WoleixStateMachineTest, TemperatureClampedToMinimum)
  */
 TEST_F(WoleixStateMachineTest, TemperatureClampedToMaximum)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::COOL,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::COOL,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
 
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -537,15 +603,20 @@ TEST_F(WoleixStateMachineTest, TemperatureClampedToMaximum)
  */
 TEST_F(WoleixStateMachineTest, TemperatureIgnoredInDehumMode)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::DEHUM,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::DEHUM,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
     
     // Now try to change temperature
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -569,15 +640,20 @@ TEST_F(WoleixStateMachineTest, TemperatureIgnoredInDehumMode)
  */
 TEST_F(WoleixStateMachineTest, TemperatureIgnoredInFanMode)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::FAN,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::FAN,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
     
     // Now try to change temperature
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -604,13 +680,18 @@ TEST_F(WoleixStateMachineTest, TemperatureIgnoredInFanMode)
  */
 TEST_F(WoleixStateMachineTest, FanSpeedLowToHigh)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::FAN,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::FAN,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -634,15 +715,20 @@ TEST_F(WoleixStateMachineTest, FanSpeedLowToHigh)
  */
 TEST_F(WoleixStateMachineTest, FanSpeedHighToLow)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::FAN,
-        25.0f,
-        WoleixFanSpeed::HIGH
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::FAN,
+            25.0f,
+            WoleixFanSpeed::HIGH
+        )
     );
     
     // Now go to LOW
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -666,14 +752,19 @@ TEST_F(WoleixStateMachineTest, FanSpeedHighToLow)
  */
 TEST_F(WoleixStateMachineTest, NoFanSpeedChangeGeneratesNoCommands)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::COOL,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::COOL,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
 
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -702,7 +793,8 @@ TEST_F(WoleixStateMachineTest, CompleteStateChangeFromDefaults)
     mock_state_machine->reset();
 
     // Change everything from defaults
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -731,10 +823,13 @@ TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
     // Change 1: Mode and fan
     mock_state_machine->set_current_state
     (
-        WoleixPowerState::ON,
-        WoleixMode::DEHUM,
-        25.0f,
-        WoleixFanSpeed::LOW
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::DEHUM,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
 
     mock_state_machine->move_to
@@ -748,8 +843,10 @@ TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
         )
     );
     
-    EXPECT_EQ(count_command(MODE_COMMAND), 1);   // COOL->DEHUM
+    EXPECT_EQ(count_command(MODE_COMMAND), 1);   // DEHUM->FAN
     EXPECT_EQ(count_command(SPEED_COMMAND), 1);  // LOW->HIGH
+
+    mock_command_queue->reset();
 
     // Change 2: Mode and temperature
     mock_state_machine->move_to
@@ -766,6 +863,8 @@ TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
     EXPECT_EQ(count_command(MODE_COMMAND), 1);   // DEHUM->FAN->COOL
     EXPECT_EQ(count_command(TEMP_DOWN_COMMAND), 5); // 25->20
 
+    mock_command_queue->reset();
+
     // Change 3: Power off
     mock_state_machine->move_to
     (
@@ -779,6 +878,8 @@ TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
     );
     
     EXPECT_EQ(count_command(POWER_COMMAND), 1);  // Turn off
+
+    mock_command_queue->reset();
 }
 
 /**
@@ -791,14 +892,19 @@ TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
 TEST_F(WoleixStateMachineTest, CommandOrderingIsCorrect)
 {
     // Power on from off should process in order: POWER, MODE, TEMP, FAN
-    mock_state_machine->set_current_state(
-        WoleixPowerState::OFF,
-        WoleixMode::DEHUM,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::OFF,
+            WoleixMode::DEHUM,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
     
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -827,15 +933,20 @@ TEST_F(WoleixStateMachineTest, CommandOrderingIsCorrect)
  */
 TEST_F(WoleixStateMachineTest, EmptyCommandsAfterNoChange)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::COOL,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::COOL,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
     
     // Set same state again
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,
@@ -862,14 +973,19 @@ TEST_F(WoleixStateMachineTest, EmptyCommandsAfterNoChange)
  */
 TEST_F(WoleixStateMachineTest, TemperatureRoundingHandled)
 {
-    mock_state_machine->set_current_state(
-        WoleixPowerState::ON,
-        WoleixMode::COOL,
-        25.0f,
-        WoleixFanSpeed::LOW
+    mock_state_machine->set_current_state
+    (
+        WoleixInternalState
+        (
+            WoleixPowerState::ON,
+            WoleixMode::COOL,
+            25.0f,
+            WoleixFanSpeed::LOW
+        )
     );
 
-    mock_state_machine->move_to(
+    mock_state_machine->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::ON,

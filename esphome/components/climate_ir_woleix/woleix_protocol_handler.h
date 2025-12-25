@@ -10,8 +10,10 @@
 #include "woleix_constants.h"
 #include "woleix_command.h"
 
-namespace esphome {
-namespace climate_ir_woleix {
+namespace esphome
+{
+namespace climate_ir_woleix
+{
 
 using remote_base::RemoteTransmitterBase;
 
@@ -19,7 +21,7 @@ using remote_base::RemoteTransmitterBase;
 /**
  * Protocol states for temperature setting mode.
  */
-enum class TempProtocolState
+enum class TempProtocolState: uint8_t
 {
     IDLE,           ///< Not in temperature setting mode
     SETTING_ACTIVE  ///< In setting mode, subsequent temp commands go through directly
@@ -34,8 +36,17 @@ enum class TempProtocolState
  * data and transmits them through the configured IR transmitter.
  * 
  * The transmitter handles command delays and repeats automatically.
+ * IMPORTANT: Woleix Temperature Protocol
+ * 
+ * The Woleix AC requires n+1 IR commands to change temperature by n degrees:
+ *   1. First command: Enters "setting mode" (displays current temp, no change)
+ *   2. Commands 2-n+1: Actually change the temperature
+ * 
+ * The state machine queues n commands (logical changes).
+ * The protocol handler transmits n+1 commands (physical protocol).
  */
-class WoleixProtocolHandler {
+class WoleixProtocolHandler: protected WoleixCommandQueueConsumer
+{
 public:
 
     /// Function type for scheduling a timeout
@@ -112,7 +123,6 @@ protected:
     static constexpr uint32_t TEMP_SETTING_MODE_TIMEOUT_MS = 5000;
     static constexpr uint32_t TEMP_ENTER_DELAY_MS = 150;
     static constexpr uint32_t INTER_COMMAND_DELAY_MS = 200;
-    static constexpr uint32_t POLL_COMMAND_INTERVAL_MS = 600;
 
     // Timeout names
     static constexpr const char* TIMEOUT_SETTING_MODE = "proto_setting_mode";
@@ -156,6 +166,8 @@ protected:
      */
     static bool is_temp_command_(const WoleixCommand& cmd);
 
+    void start_processing() override { process_next_command_(); }
+
 private:
 
     // Command queue for async execution
@@ -166,9 +178,6 @@ private:
     TempProtocolState temp_state_{TempProtocolState::IDLE};
     
     std::function<void()> on_complete_;
-    
-    // Pending temp commands while entering setting mode
-    std::vector<WoleixCommand> pending_temp_commands_;
 };
 
 }  // namespace climate_ir_woleix

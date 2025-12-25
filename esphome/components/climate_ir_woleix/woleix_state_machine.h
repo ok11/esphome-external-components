@@ -82,6 +82,18 @@ struct WoleixInternalState {
     }
 };
 
+class WoleixInternalStateBuilder
+{
+public:
+    WoleixInternalStateBuilder& power(WoleixPowerState p) { state_.power = p; return *this; }
+    WoleixInternalStateBuilder& mode(WoleixMode m) { state_.mode = m; return *this; }
+    WoleixInternalStateBuilder& temperature(float t) { state_.temperature = t; return *this; }
+    WoleixInternalStateBuilder& fan(WoleixFanSpeed f) { state_.fan_speed = f; return *this; }
+    WoleixInternalState build() { return state_; }
+private:
+    WoleixInternalState state_;
+};
+
 class WoleixCommandFactory
 {
 public:
@@ -149,7 +161,7 @@ public:
      * @note Turning power OFF will queue power command only, ignoring other parameters
      * @note Turning power ON from OFF will reset all settings to defaults
      */
-    const void move_to(const WoleixInternalState& target_state);
+    void move_to(const WoleixInternalState& target_state);
 
     /**
      * Reset the internal state to device defaults.
@@ -238,7 +250,7 @@ protected:
         on_hold_ = false;
     }
     WoleixInternalState current_state_;  /**< Current tracked state of the AC unit */
-    WoleixCommandFactory* command_factory_{nullptr};  /**< Factory for creating IR commands */
+    std::unique_ptr<WoleixCommandFactory> command_factory_{nullptr};  /**< Factory for creating IR commands */
     WoleixCommandQueue* command_queue_;
 
     bool on_hold_{false};

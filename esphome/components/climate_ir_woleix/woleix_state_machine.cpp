@@ -1,5 +1,6 @@
 #include <cmath>
 #include <algorithm>
+#include <array>
 
 #include "esphome/core/log.h"
 
@@ -14,15 +15,17 @@ namespace climate_ir_woleix {
  * The Woleix AC cycles through modes in this order when the MODE button
  * is pressed: COOL → DEHUM → FAN → COOL (wraps around).
  */
-static const std::vector<WoleixMode> MODE_SWITCH_SEQUENCE = 
+static constexpr std::array<WoleixMode, 3> MODE_SWITCH_SEQUENCE =
 {
     WoleixMode::COOL,
     WoleixMode::DEHUM,
     WoleixMode::FAN
 };
 
+static constexpr float TEMP_EPSILON = 0.5f; 
+
 WoleixStateMachine::WoleixStateMachine()
-  : command_factory_(new WoleixCommandFactory(ADDRESS_NEC)) 
+  : command_factory_(std::make_unique<WoleixCommandFactory>(ADDRESS_NEC)) 
 {
     reset();
 }
@@ -44,13 +47,11 @@ void WoleixStateMachine::setup(WoleixCommandQueue* command_queue)
  * The function updates internal state as commands are generated and returns
  * a reference to the complete command queue.
  * 
- * @param power Target power state (ON/OFF)
- * @param mode Target operating mode (COOL/DEHUM/FAN)
- * @param temperature Target temperature in Celsius (15-30°C, only used in COOL mode)
- * @param fan_speed Target fan speed (LOW/HIGH, only used in FAN mode)
- * @return Reference to vector of generated commands
+ * @param power Target internal state
+ * 
+ * Side effect: fills in the command queue with commnds in the right order
  */
-const void WoleixStateMachine::move_to(const WoleixInternalState& target_state)
+void WoleixStateMachine::move_to(const WoleixInternalState& target_state)
 {
     if (!command_queue_)
     {
@@ -178,33 +179,22 @@ void WoleixStateMachine::generate_temperature_commands_(float target_temp)
 
         float temp_diff = target_temp - current_state_.temperature;
 
-        if (temp_diff > 0.1f)
-        {
-            // Temperature increase needed
-            int steps = std::lround(std::abs(temp_diff));  // Round to nearest integer
+        int steps = static_cast<int>(std::round(temp_diff));
 
-            for (int i = 0; i < steps; i++)
-            {
-                enqueue_command_(command_factory_->create(WoleixCommand::Type::TEMP_UP));
-            }
-            current_state_.temperature += steps;
-            
-            ESP_LOGD(TAG, "Temperature UP: %d steps to %.1f°C", steps, current_state_.temperature);
-            
-        }
-        else if (temp_diff < -0.1f)
+        if (steps == 0) return;
+
+        WoleixCommand::Type type = (steps > 0)
+            ? WoleixCommand::Type::TEMP_UP
+            : WoleixCommand::Type::TEMP_DOWN;
+
+        for (int i = 0; i < std::abs(steps); i++)
         {
-            // Temperature decrease needed
-            int steps = std::lround(std::abs(temp_diff));  // Round to nearest integer
-            
-            for (int i = 0; i < steps; i++)
-            {
-                enqueue_command_(command_factory_->create(WoleixCommand::Type::TEMP_DOWN));
-            }
-            current_state_.temperature -= steps;
-            
-            ESP_LOGD(TAG, "Temperature DOWN: %d steps to %.1f°C", steps, current_state_.temperature);
+            enqueue_command_(command_factory_->create(type));
         }
+        current_state_.temperature += steps;
+        
+        ESP_LOGD(TAG, "Temperature change: %d steps to %.1f°C", 
+            steps, current_state_.temperature);
     }
 }
 

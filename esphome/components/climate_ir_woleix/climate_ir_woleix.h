@@ -60,7 +60,7 @@ class WoleixClimate
   : public ClimateIR,
     public WoleixStateMachine,
     public WoleixProtocolHandler,
-    protected WoleixCommandQueueListener
+    protected WoleixCommandQueueProducer
 {
 public:
     /**
@@ -129,17 +129,23 @@ protected:
     //  */
     // WoleixClimate(std::unique_ptr<WoleixCommandQueue> command_queue);
 
-    void hold() override
+    void hold_enqueing() override
     {
-        on_hold_ = true;
-        ESP_LOGW(TAG, "Queue full (%d)", command_queue_->length());
-        status_momentary_error("queue_full", 2000);
+        ESP_LOGW(TAG, "Queue at its high watermark (%d)", command_queue_->length());
+        status_set_warning("queue_high_watermark");
     }
 
-    void resume() override
+    void stop_enqueing() override
     {
-        on_hold_ = false;
-        ESP_LOGI(TAG, "Queue is empty again");
+        ESP_LOGE(TAG, "Queue is full (%d)", command_queue_->length());
+        status_set_error("queue_full");
+    }
+
+    void resume_enqueing() override
+    {
+        ESP_LOGI(TAG, "Queue is at low watermark again");
+        status_clear_error();
+        status_clear_warning();
     }
 
     /**

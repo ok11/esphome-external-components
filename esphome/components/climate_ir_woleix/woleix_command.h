@@ -7,10 +7,12 @@
 #include <set>
 
 #include "woleix_constants.h"
-#include "woleix_management.h"
+#include "woleix_status.h"
 
-namespace esphome {
-namespace climate_ir_woleix {
+namespace esphome
+{
+namespace climate_ir_woleix
+{
 
 /**
  * @brief Represents a single Woleix IR command using the NEC protocol.
@@ -97,35 +99,89 @@ protected:
     uint32_t repeat_count_{1};  /**< Number of times to repeat the command */
 };
 
-const WoleixStatus WX_STATUS_QUEUE_FULL = WoleixStatus
+//using namespace esphome::climate_ir_woleix::CategoryId;
+
+namespace StatusCategory::Queue
+{
+    inline constexpr auto AT_HIGH_WATERMARK = 
+        Category::make(CategoryId::CommandQueue, 1, "CommandQueue.AtHighWatermark");
+    inline constexpr auto AT_LOW_WATERMARK = 
+        Category::make(CategoryId::CommandQueue, 2, "CommandQueue.AtLowWatermark");
+    inline constexpr auto EMPTY = 
+        Category::make(CategoryId::CommandQueue, 3, "CommandQueue.Empty");
+    inline constexpr auto FULL = 
+        Category::make(CategoryId::CommandQueue, 4, "CommandQueue.Full");
+    inline constexpr auto COMMAND_ENQUEUED = 
+        Category::make(CategoryId::CommandQueue, 5, "CommandQueue.CommandEnqueued");
+}
+
+const WoleixStatus WX_STATUS_QUEUE_AT_HIGH_WATERMARK = WoleixStatus
 (
-    WoleixStatus::Severity::WX_SEVERITY_ERROR,
-    WoleixStatus::Category::WX_CAT_QUEUE_FULL,
-    "The command queue is full"
+    WoleixStatus::Severity::WX_SEVERITY_WARNING,
+    StatusCategory::Queue::AT_HIGH_WATERMARK,
+    "The command queue is at high watermark"
+);
+
+const WoleixStatus WX_STATUS_QUEUE_AT_LOW_WATERMARK = WoleixStatus
+(
+    WoleixStatus::Severity::WX_SEVERITY_INFO,
+    StatusCategory::Queue::AT_LOW_WATERMARK,
+    "The command queue is at low watermark"
 );
 
 const WoleixStatus WX_STATUS_QUEUE_EMPTY = WoleixStatus
 (
     WoleixStatus::Severity::WX_SEVERITY_INFO,
-    WoleixStatus::Category::WX_CAT_QUEUE_EMPTY,
+    StatusCategory::Queue::EMPTY,
     "The command queue is empty"
 );
 
-class WoleixCommandQueueListener: public WoleixListener {
+const WoleixStatus WX_STATUS_QUEUE_FULL = WoleixStatus
+(
+    WoleixStatus::Severity::WX_SEVERITY_ERROR,
+    StatusCategory::Queue::FULL,
+    "The command queue is full"
+);
+
+const WoleixStatus WX_STATUS_QUEUE_COMMAND_ENQUEUED = WoleixStatus
+(
+    WoleixStatus::Severity::WX_SEVERITY_INFO,
+    StatusCategory::Queue::COMMAND_ENQUEUED,
+    "A command is enqueued into the command queue"
+);
+
+static constexpr float QUEUE_HIGH_WATERMARK = 0.8f;
+static constexpr float QUEUE_LOW_WATERMARK = 0.2f;
+
+class WoleixCommandQueueProducer: public WoleixListener
+{
 public:
 
     virtual void notify(const WoleixReporter& reporter, const WoleixStatus& status)
     {
-        if (status == WX_STATUS_QUEUE_FULL) hold();
-        if (status == WX_STATUS_QUEUE_EMPTY) resume();
+        if (status == WX_STATUS_QUEUE_FULL) stop_enqueing();
+        if (status == WX_STATUS_QUEUE_AT_HIGH_WATERMARK) hold_enqueing();
+        if (status == WX_STATUS_QUEUE_AT_LOW_WATERMARK) resume_enqueing();
     }
 
-    virtual void hold() = 0;
-    virtual void resume() = 0;
+    virtual void hold_enqueing() = 0;
+    virtual void resume_enqueing() = 0;
+    virtual void stop_enqueing() = 0;
 };
 
+class WoleixCommandQueueConsumer: public WoleixListener
+{
+public:
 
-class WoleixCommandQueue: public WoleixReporter
+    virtual void notify(const WoleixReporter& reporter, const WoleixStatus& status)
+    {
+        if (status == WX_STATUS_QUEUE_COMMAND_ENQUEUED) start_processing();
+    }
+
+    virtual void start_processing() = 0;
+};
+
+class WoleixCommandQueue: protected WoleixReporter
 {
 public:
 
@@ -134,26 +190,47 @@ public:
         : max_capacity_(max_capacity), queue_(std::make_unique<std::deque<WoleixCommand>>())
     {}
 
-    void register_listener(std::shared_ptr<WoleixListener> listener) { listeners_.insert(listener); }
-    void unregister_listener(std::shared_ptr<WoleixListener> listener) { listeners_.erase(listener); }
+    void register_producer(WoleixCommandQueueProducer* producer)
+    {
+        register_listener(producer); 
+    }
+    void unregister_producer(WoleixCommandQueueProducer* producer)
+    {
+        unregister_listener(producer);
+    }
+
+    void register_consumer(WoleixCommandQueueConsumer* consumer)
+    {
+        register_listener(consumer);
+    }
+    void unregister_consumer(WoleixCommandQueueConsumer* consumer)
+    {
+        unregister_listener(consumer);
+    }
 
     const void enqueue(const WoleixCommand& command)
     {
-        if (queue_->size() > max_capacity_ * 0.8) notify_listeners(WX_STATUS_QUEUE_FULL);
+        if (queue_->size() == max_capacity_)
+            notify_listeners(WX_STATUS_QUEUE_FULL);
+        if (queue_->size() > max_capacity_ * QUEUE_HIGH_WATERMARK)
+            notify_listeners(WX_STATUS_QUEUE_AT_HIGH_WATERMARK);
         queue_->push_back(command);
+        if (queue_->size() == 1)
+            notify_listeners(WX_STATUS_QUEUE_COMMAND_ENQUEUED); 
     }
     const WoleixCommand& next()
     {
         if (queue_->empty()) throw std::out_of_range("Next called on empty WoleixCommandQueue");
         return queue_->front();
     }
-    const WoleixCommand& dequeue()
+    void dequeue()
     {
         if (queue_->empty()) throw std::out_of_range("Dequeue called on empty WoleixCommandQueue");
-        if (queue_->size() < max_capacity_ * 0.2) notify_listeners(WX_STATUS_QUEUE_EMPTY);
-        const auto& cmd = queue_->front();
+        if (queue_->size() < max_capacity_ * QUEUE_LOW_WATERMARK)
+            notify_listeners(WX_STATUS_QUEUE_AT_LOW_WATERMARK);
         queue_->pop_front();
-        return cmd;
+        if (queue_->empty())
+            notify_listeners(WX_STATUS_QUEUE_EMPTY);
     }
 
     void notify_listeners(const WoleixStatus& status) const
@@ -170,10 +247,14 @@ public:
     size_t max_capacity() const { return max_capacity_; }
 
 protected:
+
+    void register_listener(WoleixListener* listener) { listeners_.push_back(listener); }
+    void unregister_listener(WoleixListener* listener) { std::erase(listeners_, listener); }
+
     size_t max_capacity_;
     std::unique_ptr<std::deque<WoleixCommand>> queue_;
 
-    std::set<std::shared_ptr<WoleixListener>> listeners_;
+    std::vector<WoleixListener*> listeners_;
 };
     
 } // namespace climate_ir_woleix
