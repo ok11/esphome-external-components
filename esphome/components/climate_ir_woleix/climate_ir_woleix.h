@@ -148,11 +148,13 @@ protected:
     {
         ESP_LOGW(TAG, "Queue at its high watermark (%d)", command_queue_->length());
         status_set_warning("Queue.AtHighWatermark");
+        on_hold_ = true;
     }
 
     void on_low_watermark() override
     {
         ESP_LOGI(TAG, "Queue at its high watermark (%d)", command_queue_->length());
+        on_hold_ = false;
     }
 
     void on_full() override

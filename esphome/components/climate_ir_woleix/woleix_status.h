@@ -12,7 +12,7 @@ namespace CategoryId
 {
     inline constexpr uint16_t Core = 0;
     inline constexpr uint16_t CommandQueue = 1;
-    inline constexpr uint16_t StateMachine = 2;
+    inline constexpr uint16_t StateManager = 2;
     inline constexpr uint16_t ProtocolHandler = 3;
 }
 
@@ -61,18 +61,36 @@ protected:
     std::string message_;
 };
 
-class WoleixStatusObserver;
-
-class WoleixStatusReporter
-{
-    virtual void register_observer(WoleixStatusObserver* observer) = 0;
-    virtual void unregister_observer(WoleixStatusObserver* observer) = 0;
-};
+class WoleixStatusReporter;
 
 class WoleixStatusObserver
 {
 public:
     virtual void observe(const WoleixStatusReporter& reporter, const WoleixStatus& status) = 0;
 };
+
+class WoleixStatusReporter
+{
+public:
+    virtual void register_observer(WoleixStatusObserver* observer)
+    {
+        observers_.push_back(observer);
+    }
+    virtual void unregister_observer(WoleixStatusObserver* observer)
+    {
+        std::erase(observers_, observer);
+    }
+
+    virtual void report(const WoleixStatus& status)
+    {
+        for (auto observer : observers_)
+        {
+            observer->observe(*this, status);
+        }
+    } 
+protected:
+    std::vector<WoleixStatusObserver*> observers_;
+};
+
 }
 }

@@ -17,6 +17,13 @@ namespace climate_ir_woleix
 
 using remote_base::RemoteTransmitterBase;
 
+namespace WoleixCategory::ProtocolHandler
+{
+    inline constexpr auto WX_CATEGORY_INVALID_COMMAND_QUEUE = 
+        Category::make(CategoryId::ProtocolHandler, 1, "ProtocolHandler.InvalidCommandQueue");
+    inline constexpr auto WX_CATEGORY_COMMAND_QUEUE_NOT_SET = 
+        Category::make(CategoryId::ProtocolHandler, 2, "ProtocolHandler.CommandQueueNotSet");
+}
 
 /**
  * Protocol states for temperature setting mode.
@@ -45,7 +52,9 @@ enum class TempProtocolState: uint8_t
  * The state machine queues n commands (logical changes).
  * The protocol handler transmits n+1 commands (physical protocol).
  */
-class WoleixProtocolHandler: protected WoleixCommandQueueConsumer
+class WoleixProtocolHandler
+  : protected WoleixCommandQueueConsumer,
+    protected WoleixStatusReporter
 {
 public:
 

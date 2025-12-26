@@ -1,6 +1,7 @@
 #include <cmath>
 #include <algorithm>
 #include <array>
+#include <format>
 
 #include "esphome/core/log.h"
 
@@ -242,8 +243,22 @@ int WoleixStateMachine::calculate_mode_steps_(WoleixMode from_mode, WoleixMode t
     // Check if both modes were found
     if (from_it == MODE_SWITCH_SEQUENCE.end() || to_it == MODE_SWITCH_SEQUENCE.end())
     {
-        ESP_LOGW(TAG, "Invalid mode in sequence: from=%d, to=%d", 
-            static_cast<int>(from_mode), static_cast<int>(to_mode));
+        report
+        (
+            WoleixStatus
+            (
+                WoleixStatus::Severity::WX_SEVERITY_WARNING,
+                WoleixCategory::StateManager::WX_CATEGORY_INVALID_MODE,
+                std::format
+                (
+                    "Invalid mode in sequence: from={}, to={}", 
+                    "static_cast<uint8_t>(from_mode)", 
+                    "static_cast<uint8_t>(to_mode)"
+                )
+            )
+        );
+        // ESP_LOGW(TAG, "Invalid mode in sequence: from=%d, to=%d", 
+        //     static_cast<int>(from_mode), static_cast<int>(to_mode));
         return 0;
     }
     
@@ -267,7 +282,7 @@ int WoleixStateMachine::calculate_mode_steps_(WoleixMode from_mode, WoleixMode t
  */
 void WoleixStateMachine::enqueue_command_(const WoleixCommand& command)
 {
-    if (!on_hold_) commands_.push_back(command);
+    commands_.push_back(command);
 }
 
 }  // namespace climate_ir_woleix

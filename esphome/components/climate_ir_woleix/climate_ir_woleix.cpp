@@ -101,6 +101,9 @@ void WoleixClimate::setup()
     WoleixStateMachine::setup();
     WoleixProtocolHandler::setup(command_queue_.get());
 
+    WoleixStateMachine::register_observer(this);
+    WoleixProtocolHandler::register_observer(this);
+    
     // Set up callback to update humidity from sensor
     if (humidity_sensor_ != nullptr)
     {

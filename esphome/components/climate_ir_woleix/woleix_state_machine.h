@@ -108,6 +108,12 @@ private:
     uint16_t address_;
 };
 
+namespace WoleixCategory::StateManager
+{
+    inline constexpr auto WX_CATEGORY_INVALID_MODE = 
+        Category::make(CategoryId::StateManager, 1, "StateManager.InvalidMode");
+}
+
 /**
  * @brief State machine for Woleix AC unit control via IR commands.
  * 
@@ -131,7 +137,7 @@ private:
  * 
  * @see WoleixInternalState
  */
-class WoleixStateMachine
+class WoleixStateMachine: protected WoleixStatusReporter
 {
 public:
     /**
@@ -240,6 +246,7 @@ protected:
      */
     void enqueue_command_(const WoleixCommand& command);
 
+
     // void hold()
     // {
     //     on_hold_ = true;
@@ -256,8 +263,7 @@ protected:
 
     std::vector<WoleixCommand> commands_;
     
-    bool on_hold_{false};
-
+//    bool on_hold_{false};
 };
 
 }  // namespace climate_ir_woleix

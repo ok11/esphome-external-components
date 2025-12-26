@@ -26,7 +26,16 @@ void WoleixProtocolHandler::setup(WoleixCommandQueue* command_queue)
     }
     else
     {
-        ESP_LOGE(TAG, "Null command queue passed");
+        report
+        (
+            WoleixStatus
+            (
+                WoleixStatus::Severity::WX_SEVERITY_ERROR,
+                WoleixCategory::ProtocolHandler::WX_CATEGORY_INVALID_COMMAND_QUEUE,
+                "Invalid (null) command queue received during setup"
+            )
+        );
+//        ESP_LOGE(TAG, "Null command queue passed");
     }
 }
 
@@ -34,7 +43,16 @@ void WoleixProtocolHandler::process_next_command_()
 {
     if (!command_queue_)
     {
-        ESP_LOGW(TAG, "Command queue not (yet) set in protocol handler, waiting...");
+        report
+        (
+            WoleixStatus
+            (
+                WoleixStatus::Severity::WX_SEVERITY_WARNING,
+                WoleixCategory::ProtocolHandler::WX_CATEGORY_COMMAND_QUEUE_NOT_SET,
+                "Command queue not set during processing"
+            )
+        );
+//        ESP_LOGW(TAG, "Command queue not (yet) set in protocol handler, waiting...");
     }
     if (command_queue_->is_empty())
     {
