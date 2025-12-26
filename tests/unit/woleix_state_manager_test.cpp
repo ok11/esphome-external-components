@@ -3,7 +3,7 @@
 #include <numeric>
 
 #include "climate_ir_woleix.h"
-#include "woleix_state_machine.h"
+#include "woleix_state_manager.h"
 
 using namespace esphome::climate_ir_woleix;
 using esphome::climate_ir_woleix::WoleixInternalState;
@@ -20,12 +20,12 @@ static const WoleixCommand::Type TEMP_UP_COMMAND = WoleixCommand::Type::TEMP_UP;
 static const WoleixCommand::Type TEMP_DOWN_COMMAND = WoleixCommand::Type::TEMP_DOWN;
 static const WoleixCommand::Type SPEED_COMMAND = WoleixCommand::Type::FAN_SPEED;
 
-class MockWoleixStateMachine : public WoleixStateMachine
+class MockWoleixStateManager : public WoleixStateManager
 {
 public:
 
-    MockWoleixStateMachine()
-        : WoleixStateMachine()
+    MockWoleixStateManager()
+        : WoleixStateManager()
     {
         setup();
     }
@@ -38,24 +38,24 @@ public:
         current_state_.fan_speed = state.fan_speed;
     }
 
-    using WoleixStateMachine::move_to;
+    using WoleixStateManager::move_to;
 };
 
-// Test fixture for WoleixStateMachine
-class WoleixStateMachineTest : public testing::Test
+// Test fixture for WoleixStateManager
+class WoleixStateManagerTest : public testing::Test
 {
 protected:
     void SetUp() override
     {
-        mock_state_machine = new MockWoleixStateMachine();
+        mock_state_manager = new MockWoleixStateManager();
     }
     
     void TearDown() override
     {
-        delete mock_state_machine;
+        delete mock_state_manager;
     }
     
-    MockWoleixStateMachine* mock_state_machine;
+    MockWoleixStateManager* mock_state_manager;
 
     int count_command(const std::vector<WoleixCommand>& queue, WoleixCommand::Type type)
     {
@@ -75,14 +75,14 @@ protected:
 // ============================================================================
 
 /**
- * Test: State machine initializes with correct default values
+ * Test: State manager initializes with correct default values
  * 
- * Verifies that on construction, the state machine starts with device defaults:
+ * Verifies that on construction, the state manager starts with device defaults:
  * power=ON, mode=COOL, temperature=25°C, fan_speed=LOW
  */
-TEST_F(WoleixStateMachineTest, InitialStateIsCorrect)
+TEST_F(WoleixStateManagerTest, InitialStateIsCorrect)
 {
-    auto state = mock_state_machine->get_state();
+    auto state = mock_state_manager->get_state();
     
     EXPECT_EQ(state.power, WoleixPowerState::OFF);
     EXPECT_EQ(state.mode, WoleixMode::COOL);
@@ -91,15 +91,15 @@ TEST_F(WoleixStateMachineTest, InitialStateIsCorrect)
 }
 
 /**
- * Test: reset() restores state machine to defaults
+ * Test: reset() restores state manager to defaults
  * 
  * Validates that calling reset() after changing state restores all values
  * to the device defaults, providing a way to recover from state sync issues.
  */
-TEST_F(WoleixStateMachineTest, ResetRestoresDefaultState)
+TEST_F(WoleixStateManagerTest, ResetRestoresDefaultState)
 {
     // Set state
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -111,9 +111,9 @@ TEST_F(WoleixStateMachineTest, ResetRestoresDefaultState)
     );
 
     // Reset
-    mock_state_machine->reset();
+    mock_state_manager->reset();
     
-    auto state = mock_state_machine->get_state();
+    auto state = mock_state_manager->get_state();
     EXPECT_EQ(state.power, WoleixPowerState::OFF);
     EXPECT_EQ(state.mode, WoleixMode::COOL);
     EXPECT_FLOAT_EQ(state.temperature, 25.0f);
@@ -130,9 +130,9 @@ TEST_F(WoleixStateMachineTest, ResetRestoresDefaultState)
  * Validates that transitioning from ON to OFF state generates exactly
  * one POWER IR command and updates the internal power state.
  */
-TEST_F(WoleixStateMachineTest, PowerOffFromOnSendsPowerCommand)
+TEST_F(WoleixStateManagerTest, PowerOffFromOnSendsPowerCommand)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -144,7 +144,7 @@ TEST_F(WoleixStateMachineTest, PowerOffFromOnSendsPowerCommand)
     );
 
     // Start from ON (default state)
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -159,7 +159,7 @@ TEST_F(WoleixStateMachineTest, PowerOffFromOnSendsPowerCommand)
     EXPECT_EQ(count_command(queue, POWER_COMMAND), 1);
     
     // Verify state updated
-    auto state = mock_state_machine->get_state();
+    auto state = mock_state_manager->get_state();
     EXPECT_EQ(state.power, WoleixPowerState::OFF);
 }
 
@@ -170,10 +170,10 @@ TEST_F(WoleixStateMachineTest, PowerOffFromOnSendsPowerCommand)
  * then generates commands to reach the requested state. Verifies POWER
  * command is sent and state is updated to ON.
  */
-TEST_F(WoleixStateMachineTest, PowerOnFromOffSendsPowerCommand)
+TEST_F(WoleixStateManagerTest, PowerOnFromOffSendsPowerCommand)
 {
     // First turn off
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -185,7 +185,7 @@ TEST_F(WoleixStateMachineTest, PowerOnFromOffSendsPowerCommand)
     );
     
     // Now turn back on
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -199,7 +199,7 @@ TEST_F(WoleixStateMachineTest, PowerOnFromOffSendsPowerCommand)
     // Should send: POWER (on), MODE x2 (COOL->DEHUM->FAN), TEMP_DOWN x5, SPEED
     EXPECT_EQ(count_command(queue, POWER_COMMAND), 1);
     
-    auto state = mock_state_machine->get_state();
+    auto state = mock_state_manager->get_state();
     EXPECT_EQ(state.power, WoleixPowerState::ON);
 }
 
@@ -210,9 +210,9 @@ TEST_F(WoleixStateMachineTest, PowerOnFromOffSendsPowerCommand)
  * should be ignored. Only the POWER command is sent regardless of
  * other requested changes.
  */
-TEST_F(WoleixStateMachineTest, PowerOffIgnoresOtherStateChanges)
+TEST_F(WoleixStateManagerTest, PowerOffIgnoresOtherStateChanges)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -223,7 +223,8 @@ TEST_F(WoleixStateMachineTest, PowerOffIgnoresOtherStateChanges)
         )
     );
 
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to(
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
+    (
         WoleixInternalState
         (
             WoleixPowerState::OFF,
@@ -250,9 +251,9 @@ TEST_F(WoleixStateMachineTest, PowerOffIgnoresOtherStateChanges)
  * Tests the circular mode sequence. Going from COOL to DEHUM is the
  * first step in the cycle, requiring exactly 1 MODE command.
  */
-TEST_F(WoleixStateMachineTest, ModeTransitionCoolToDehum)
+TEST_F(WoleixStateManagerTest, ModeTransitionCoolToDehum)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -263,7 +264,7 @@ TEST_F(WoleixStateMachineTest, ModeTransitionCoolToDehum)
         )
     );
 
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -284,9 +285,9 @@ TEST_F(WoleixStateMachineTest, ModeTransitionCoolToDehum)
  * Tests the circular mode sequence. Going from COOL to FAN requires
  * passing through DEHUM: COOL→DEHUM→FAN (2 steps).
  */
-TEST_F(WoleixStateMachineTest, ModeTransitionCoolToFan)
+TEST_F(WoleixStateManagerTest, ModeTransitionCoolToFan)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -297,7 +298,7 @@ TEST_F(WoleixStateMachineTest, ModeTransitionCoolToFan)
         )
     );
 
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -318,9 +319,9 @@ TEST_F(WoleixStateMachineTest, ModeTransitionCoolToFan)
  * Tests the circular mode sequence. Going from DEHUM to FAN is the
  * next step in the cycle, requiring exactly 1 MODE command.
  */
-TEST_F(WoleixStateMachineTest, ModeTransitionDehumToFan)
+TEST_F(WoleixStateManagerTest, ModeTransitionDehumToFan)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -332,7 +333,7 @@ TEST_F(WoleixStateMachineTest, ModeTransitionDehumToFan)
     );
 
     // Now go to FAN
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -353,9 +354,9 @@ TEST_F(WoleixStateMachineTest, ModeTransitionDehumToFan)
  * Tests the circular mode sequence. Going from FAN to COOL wraps around
  * the cycle, requiring exactly 1 MODE command: FAN→COOL.
  */
-TEST_F(WoleixStateMachineTest, ModeTransitionFanToCool)
+TEST_F(WoleixStateManagerTest, ModeTransitionFanToCool)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -367,7 +368,7 @@ TEST_F(WoleixStateMachineTest, ModeTransitionFanToCool)
     );
     
     // Now go to COOL
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -388,9 +389,9 @@ TEST_F(WoleixStateMachineTest, ModeTransitionFanToCool)
  * Tests the circular mode sequence. Going from DEHUM to COOL requires
  * passing through FAN: DEHUM→FAN→COOL (2 steps).
  */
-TEST_F(WoleixStateMachineTest, ModeTransitionDehumToCool)
+TEST_F(WoleixStateManagerTest, ModeTransitionDehumToCool)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -402,7 +403,7 @@ TEST_F(WoleixStateMachineTest, ModeTransitionDehumToCool)
     );
     
     // Now go to COOL
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -423,9 +424,9 @@ TEST_F(WoleixStateMachineTest, ModeTransitionDehumToCool)
  * When the target mode matches the current mode, no MODE commands
  * should be generated.
  */
-TEST_F(WoleixStateMachineTest, NoModeChangeGeneratesNoModeCommands)
+TEST_F(WoleixStateManagerTest, NoModeChangeGeneratesNoModeCommands)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -436,7 +437,7 @@ TEST_F(WoleixStateMachineTest, NoModeChangeGeneratesNoModeCommands)
         )
     );
 
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -461,9 +462,9 @@ TEST_F(WoleixStateMachineTest, NoModeChangeGeneratesNoModeCommands)
  * generates the correct number of TEMP_UP commands (3 in this case) and
  * updates the internal temperature state.
  */
-TEST_F(WoleixStateMachineTest, TemperatureIncreaseInCoolMode)
+TEST_F(WoleixStateManagerTest, TemperatureIncreaseInCoolMode)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -474,7 +475,7 @@ TEST_F(WoleixStateMachineTest, TemperatureIncreaseInCoolMode)
         )
     );
 
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -487,7 +488,7 @@ TEST_F(WoleixStateMachineTest, TemperatureIncreaseInCoolMode)
     
     EXPECT_EQ(count_command(queue, TEMP_UP_COMMAND), 3);
     
-    auto state = mock_state_machine->get_state();
+    auto state = mock_state_manager->get_state();
     EXPECT_FLOAT_EQ(state.temperature, 28.0f);
 }
 
@@ -498,9 +499,9 @@ TEST_F(WoleixStateMachineTest, TemperatureIncreaseInCoolMode)
  * generates the correct number of TEMP_DOWN commands (5 in this case) and
  * updates the internal temperature state.
  */
-TEST_F(WoleixStateMachineTest, TemperatureDecreaseInCoolMode)
+TEST_F(WoleixStateManagerTest, TemperatureDecreaseInCoolMode)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -511,7 +512,7 @@ TEST_F(WoleixStateMachineTest, TemperatureDecreaseInCoolMode)
         )
     );
 
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -524,7 +525,7 @@ TEST_F(WoleixStateMachineTest, TemperatureDecreaseInCoolMode)
     
     EXPECT_EQ(count_command(queue, TEMP_DOWN_COMMAND), 5);
     
-    auto state = mock_state_machine->get_state();
+    auto state = mock_state_manager->get_state();
     EXPECT_FLOAT_EQ(state.temperature, 20.0f);
 }
 
@@ -535,9 +536,9 @@ TEST_F(WoleixStateMachineTest, TemperatureDecreaseInCoolMode)
  * machine should clamp it to 15°C and generate the appropriate number
  * of TEMP_DOWN commands to reach the minimum.
  */
-TEST_F(WoleixStateMachineTest, TemperatureClampedToMinimum)
+TEST_F(WoleixStateManagerTest, TemperatureClampedToMinimum)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -548,7 +549,7 @@ TEST_F(WoleixStateMachineTest, TemperatureClampedToMinimum)
         )
     );
 
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -570,9 +571,9 @@ TEST_F(WoleixStateMachineTest, TemperatureClampedToMinimum)
  * machine should clamp it to 30°C and generate the appropriate number
  * of TEMP_UP commands to reach the maximum.
  */
-TEST_F(WoleixStateMachineTest, TemperatureClampedToMaximum)
+TEST_F(WoleixStateManagerTest, TemperatureClampedToMaximum)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -583,7 +584,7 @@ TEST_F(WoleixStateMachineTest, TemperatureClampedToMaximum)
         )
     );
 
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -605,9 +606,9 @@ TEST_F(WoleixStateMachineTest, TemperatureClampedToMaximum)
  * temperature change requests should be ignored and no temperature commands
  * should be generated.
  */
-TEST_F(WoleixStateMachineTest, TemperatureIgnoredInDehumMode)
+TEST_F(WoleixStateManagerTest, TemperatureIgnoredInDehumMode)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -619,7 +620,7 @@ TEST_F(WoleixStateMachineTest, TemperatureIgnoredInDehumMode)
     );
     
     // Now try to change temperature
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -642,9 +643,9 @@ TEST_F(WoleixStateMachineTest, TemperatureIgnoredInDehumMode)
  * temperature change requests should be ignored and no temperature commands
  * should be generated.
  */
-TEST_F(WoleixStateMachineTest, TemperatureIgnoredInFanMode)
+TEST_F(WoleixStateManagerTest, TemperatureIgnoredInFanMode)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -656,7 +657,7 @@ TEST_F(WoleixStateMachineTest, TemperatureIgnoredInFanMode)
     );
     
     // Now try to change temperature
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -682,9 +683,9 @@ TEST_F(WoleixStateMachineTest, TemperatureIgnoredInFanMode)
  * Validates that changing fan speed from LOW to HIGH generates exactly
  * one SPEED IR command and updates the internal fan speed state.
  */
-TEST_F(WoleixStateMachineTest, FanSpeedLowToHigh)
+TEST_F(WoleixStateManagerTest, FanSpeedLowToHigh)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -694,7 +695,7 @@ TEST_F(WoleixStateMachineTest, FanSpeedLowToHigh)
             WoleixFanSpeed::LOW
         )
     );
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -707,7 +708,7 @@ TEST_F(WoleixStateMachineTest, FanSpeedLowToHigh)
     
     EXPECT_EQ(count_command(queue, SPEED_COMMAND), 1);
     
-    auto state = mock_state_machine->get_state();
+    auto state = mock_state_manager->get_state();
     EXPECT_EQ(state.fan_speed, WoleixFanSpeed::HIGH);
 }
 
@@ -717,9 +718,9 @@ TEST_F(WoleixStateMachineTest, FanSpeedLowToHigh)
  * Validates that changing fan speed from HIGH to LOW generates exactly
  * one SPEED IR command (toggle) and updates the internal fan speed state.
  */
-TEST_F(WoleixStateMachineTest, FanSpeedHighToLow)
+TEST_F(WoleixStateManagerTest, FanSpeedHighToLow)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -731,7 +732,7 @@ TEST_F(WoleixStateMachineTest, FanSpeedHighToLow)
     );
     
     // Now go to LOW
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -744,7 +745,7 @@ TEST_F(WoleixStateMachineTest, FanSpeedHighToLow)
     
     EXPECT_EQ(count_command(queue, SPEED_COMMAND), 1);
     
-    auto state = mock_state_machine->get_state();
+    auto state = mock_state_manager->get_state();
     EXPECT_EQ(state.fan_speed, WoleixFanSpeed::LOW);
 }
 
@@ -754,9 +755,9 @@ TEST_F(WoleixStateMachineTest, FanSpeedHighToLow)
  * When the target fan speed matches the current fan speed, no SPEED
  * commands should be generated.
  */
-TEST_F(WoleixStateMachineTest, NoFanSpeedChangeGeneratesNoCommands)
+TEST_F(WoleixStateManagerTest, NoFanSpeedChangeGeneratesNoCommands)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -767,7 +768,7 @@ TEST_F(WoleixStateMachineTest, NoFanSpeedChangeGeneratesNoCommands)
         )
     );
 
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -792,12 +793,12 @@ TEST_F(WoleixStateMachineTest, NoFanSpeedChangeGeneratesNoCommands)
  * Validates that temperature is correctly ignored when target mode doesn't
  * support temperature control (FAN mode in this case).
  */
-TEST_F(WoleixStateMachineTest, CompleteStateChangeFromDefaults)
+TEST_F(WoleixStateManagerTest, CompleteStateChangeFromDefaults)
 {
-    mock_state_machine->reset();
+    mock_state_manager->reset();
 
     // Change everything from defaults
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -822,10 +823,10 @@ TEST_F(WoleixStateMachineTest, CompleteStateChangeFromDefaults)
  * changes, with each change building on the previous state. Tests that
  * the command queue is properly cleared between changes.
  */
-TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
+TEST_F(WoleixStateManagerTest, MultipleSequentialChanges)
 {
     // Change 1: Mode and fan
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -836,7 +837,7 @@ TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
         )
     );
 
-    const std::vector<WoleixCommand>& queue1 = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue1 = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -851,7 +852,7 @@ TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
     EXPECT_EQ(count_command(queue1, SPEED_COMMAND), 1);  // LOW->HIGH
 
     // Change 2: Mode and temperature
-    const std::vector<WoleixCommand>& queue2 = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue2 = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -866,7 +867,7 @@ TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
     EXPECT_EQ(count_command(queue2, TEMP_DOWN_COMMAND), 5); // 25->20
 
     // Change 3: Power off
-    const std::vector<WoleixCommand>& queue3 = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue3 = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -888,10 +889,10 @@ TEST_F(WoleixStateMachineTest, MultipleSequentialChanges)
  * generated in the correct order: POWER first, then MODE, TEMP, and FAN.
  * This ensures the AC unit processes commands in the expected sequence.
  */
-TEST_F(WoleixStateMachineTest, CommandOrderingIsCorrect)
+TEST_F(WoleixStateManagerTest, CommandOrderingIsCorrect)
 {
     // Power on from off should process in order: POWER, MODE, TEMP, FAN
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -902,7 +903,7 @@ TEST_F(WoleixStateMachineTest, CommandOrderingIsCorrect)
         )
     );
     
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -930,9 +931,9 @@ TEST_F(WoleixStateMachineTest, CommandOrderingIsCorrect)
  * commands only on the first call. The second call should return an empty
  * command queue since there's no state change.
  */
-TEST_F(WoleixStateMachineTest, EmptyCommandsAfterNoChange)
+TEST_F(WoleixStateManagerTest, EmptyCommandsAfterNoChange)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -944,7 +945,7 @@ TEST_F(WoleixStateMachineTest, EmptyCommandsAfterNoChange)
     );
     
     // Set same state again
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (
@@ -970,9 +971,9 @@ TEST_F(WoleixStateMachineTest, EmptyCommandsAfterNoChange)
  * rounded to the nearest integer (28°C) when calculating the number of
  * temperature adjustment commands needed.
  */
-TEST_F(WoleixStateMachineTest, TemperatureRoundingHandled)
+TEST_F(WoleixStateManagerTest, TemperatureRoundingHandled)
 {
-    mock_state_machine->set_current_state
+    mock_state_manager->set_current_state
     (
         WoleixInternalState
         (
@@ -983,7 +984,7 @@ TEST_F(WoleixStateMachineTest, TemperatureRoundingHandled)
         )
     );
 
-    const std::vector<WoleixCommand>& queue = mock_state_machine->move_to
+    const std::vector<WoleixCommand>& queue = mock_state_manager->move_to
     (
         WoleixInternalState
         (

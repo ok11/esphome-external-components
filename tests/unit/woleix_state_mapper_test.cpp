@@ -3,7 +3,7 @@
 #include "esphome/components/climate/climate_mode.h"
 
 #include "woleix_state_mapper.h"
-#include "woleix_state_machine.h"
+#include "woleix_state_manager.h"
 
 using namespace esphome::climate_ir_woleix;
 using namespace esphome::climate;
@@ -15,7 +15,8 @@ using namespace esphome::climate;
 class StateMapperTest : public testing::Test
 {
 protected:
-    void SetUp() override {
+    void SetUp() override
+    {
         // No setup needed for static methods
     }
 };

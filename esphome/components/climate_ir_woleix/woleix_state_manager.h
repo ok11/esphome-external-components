@@ -115,7 +115,7 @@ namespace WoleixCategory::StateManager
 }
 
 /**
- * @brief State machine for Woleix AC unit control via IR commands.
+ * @brief State manager for Woleix AC unit control via IR commands.
  * 
  * This class manages the internal state of the AC unit and generates
  * the necessary sequence of IR commands to transition
@@ -129,26 +129,26 @@ namespace WoleixCategory::StateManager
  * 
  * Usage example:
  * @code
- * WoleixStateMachine state_machine;
- * state_machine.move_to(WoleixPowerState::ON, WoleixMode::COOL, 24.0f, WoleixFanSpeed::HIGH);
- * auto commands = state_machine.get_commands();
+ * WoleixStateManager state_manager;
+ * state_manager.move_to(WoleixPowerState::ON, WoleixMode::COOL, 24.0f, WoleixFanSpeed::HIGH);
+ * auto commands = state_manager.get_commands();
  * // Transmit commands via IR
  * @endcode
  * 
  * @see WoleixInternalState
  */
-class WoleixStateMachine: protected WoleixStatusReporter
+class WoleixStateManager: protected WoleixStatusReporter
 {
 public:
     /**
      * Default constructor.
      * 
-     * Initializes the state machine with default device settings:
+     * Initializes the state manager with default device settings:
      * power=OFF, mode=COOL, temperature=25°C, fan_speed=LOW
      */
-    WoleixStateMachine();
+    WoleixStateManager();
 
-    virtual ~WoleixStateMachine() = default;
+    virtual ~WoleixStateManager() = default;
 
     void setup();
     /**

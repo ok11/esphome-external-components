@@ -20,7 +20,7 @@ using esphome::climate::ClimateTraits;
 WoleixClimate::WoleixClimate()
   : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX),
     command_queue_(std::make_unique<WoleixCommandQueue>(QUEUE_MAX_CAPACITY)),
-    WoleixStateMachine(),
+    WoleixStateManager(),
     WoleixProtocolHandler
     (
         [this](const std::string& name, uint32_t delay_ms, std::function<void()> callback)
@@ -38,15 +38,15 @@ WoleixClimate::WoleixClimate()
 }
 
 // /**
-//  * Constructor accepting state machine and transmitter.
+//  * Constructor accepting state manager and transmitter.
 //  * 
 //  * Initializes the climate controller with default settings and creates
-//  * internal state machine and protocol handler instances.
+//  * internal state manager and protocol handler instances.
 //  */
 // WoleixClimate::WoleixClimate(std::unique_ptr<WoleixCommandQueue> command_queue)
 //   : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX),
 //     command_queue_(std::move(command_queue)),
-//     WoleixStateMachine(command_queue_.get()),
+//     WoleixStateManager(command_queue_.get()),
 //     WoleixProtocolHandler
 //     (
 //         command_queue_.get(),
@@ -61,7 +61,7 @@ WoleixClimate::WoleixClimate()
 // }
 
 /**
- * Reset the state machine to default values.
+ * Reset the state manager to default values.
  * 
  * This method resets the internal state tracking to device defaults:
  * power=ON, mode=COOL, temperature=25°C, fan_speed=LOW.
@@ -75,7 +75,7 @@ void WoleixClimate::reset_state()
 {
     command_queue_->reset();
 
-    WoleixStateMachine::reset();
+    WoleixStateManager::reset();
     WoleixProtocolHandler::reset();
     
     target_temperature = WOLEIX_TEMP_DEFAULT;
@@ -98,10 +98,10 @@ void WoleixClimate::setup()
     // Call parent setup first
     ClimateIR::setup();
 
-    WoleixStateMachine::setup();
+    WoleixStateManager::setup();
     WoleixProtocolHandler::setup(command_queue_.get());
 
-    WoleixStateMachine::register_observer(this);
+    WoleixStateManager::register_observer(this);
     WoleixProtocolHandler::register_observer(this);
     
     // Set up callback to update humidity from sensor
@@ -127,7 +127,7 @@ void WoleixClimate::setup()
  * Calculate commands needed to reach the target state.
  * 
  * Converts ESPHome climate states to Woleix-specific states using StateMapper,
- * then uses the state machine to generate the optimal command sequence.
+ * then uses the state manager to generate the optimal command sequence.
  * 
  * @return Reference to vector of commands needed for the state transition
  */
@@ -140,14 +140,14 @@ bool WoleixClimate::enqueue_commands_()
     target_state.fan_speed = StateMapper::esphome_to_woleix_fan_mode(fan_mode.value());
     target_state.temperature = target_temperature;
     
-    // Generate command sequence via state machine
-    const std::vector<WoleixCommand>& commands = WoleixStateMachine::move_to(target_state);
+    // Generate command sequence via state manager
+    const std::vector<WoleixCommand>& commands = WoleixStateManager::move_to(target_state);
 
     return command_queue_->enqueue(commands);
 }
 
 /**
- * Update internal ESPHome state based on the current state machine state.
+ * Update internal ESPHome state based on the current state manager state.
  * 
  * Synchronizes the climate controller's state (mode, temperature, fan_mode)
  * with the internal state machine after command transmission. Uses StateMapper

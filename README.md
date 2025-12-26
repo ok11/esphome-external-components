@@ -14,19 +14,19 @@ esphome-external-components/
 │           ├── climate_ir_woleix.h         # C++ header file
 │           ├── climate_ir_woleix.cpp       # C++ implementation
 │           ├── woleix_constants.h          # Constants definition
-│           ├── woleix_state_machine.h      # State machine header
-│           ├── woleix_state_machine.cpp    # State machine implementation
+│           ├── woleix_state_manager.h      # State manager header
+│           ├── woleix_state_manager.cpp    # State manager implementation
 │           ├── woleix_state_mapper.h       # State mapper header
 │           ├── woleix_state_mapper.cpp     # State mapper implementation
-│           ├── woleix_comm.h               # Communication header
-│           ├── woleix_comm.cpp             # Communication implementation
+│           ├── woleix_protocol_handler.h   # Protocol handler header
+│           ├── woleix_protocol_handler.cpp # Protocol handler implementation
 │           └── LICENSE                     # Component license
 ├── tests/
 │   ├── unit/                               # C++ unit tests
 │   │   ├── climate_ir_woleix_test.cpp      # Climate component tests
-│   │   ├── woleix_state_machine_test.cpp   # State machine tests
+│   │   ├── woleix_state_manager_test.cpp   # State manager tests
 │   │   ├── woleix_state_mapper_test.cpp    # State mapper tests
-│   │   ├── woleix_comm_test.cpp            # Communication tests
+│   │   ├── woleix_protocol_handler_test.cpp # Protocol handler tests
 │   │   ├── CMakeLists.txt                  # Test build configuration
 │   │   ├── run_tests.sh                    # Test execution script
 │   │   ├── generate_coverage.sh            # Coverage report generator
@@ -71,11 +71,11 @@ The climate_ir_woleix component consists of five main parts:
 - Implements ESPHome's Climate interface by extending ClimateIR
 - Handles user interactions and overall state management
 - Integrates with temperature/humidity sensors (temperature required, humidity optional)
-- Coordinates IR command transmission using WoleixTransmitter
-- Uses WoleixStateMachine to manage state transitions and command generation
+- Coordinates IR command transmission using WoleixProtocolHandler
+- Uses WoleixStateManager to manage state transitions and command generation
 - Utilizes StateMapper for converting between ESPHome and Woleix-specific states
 
-### 2. State Machine (`woleix_state_machine.h/cpp`)
+### 2. State Manager (`woleix_state_manager.h/cpp`)
 
 - Manages internal AC state (power, mode, temperature, fan speed)
 - Generates optimal command sequences for state transitions
@@ -84,12 +84,12 @@ The climate_ir_woleix component consists of five main parts:
 - Uses WoleixCommandFactory to create IR commands
 - Provides methods for state transitions and retrieving current state
 
-### 3. Communication Layer (`woleix_comm.h/cpp`)
+### 3. Protocol Handler (`woleix_protocol_handler.h/cpp`)
 
 - **WoleixCommand**: Represents individual IR commands using NEC protocol
   - Encapsulates command type, NEC address (0xFB04), delay, and repeat count
   - Supports POWER, TEMP_UP, TEMP_DOWN, MODE, and FAN_SPEED commands
-- **WoleixTransmitter**: Handles IR transmission via ESPHome's RemoteTransmitterBase
+- **WoleixProtocolHandler**: Handles IR transmission via ESPHome's RemoteTransmitterBase
   - Converts WoleixCommand objects to NEC protocol format
   - Manages command delays and repeats automatically
 
@@ -117,18 +117,18 @@ sequenceDiagram
     participant ESPHome
     participant WoleixClimate
     participant StateMapper
-    participant WoleixStateMachine
-    participant WoleixCommandTransmitter
+    participant WoleixStateManager
+    participant WoleixProtocolHandler
     participant Woleix AC
 
     ESPHome->>WoleixClimate: Update climate state
     WoleixClimate->>StateMapper: Convert ESPHome state to Woleix state
     StateMapper-->>WoleixClimate: Woleix-specific state
-    WoleixClimate->>WoleixStateMachine: Set target state
-    WoleixStateMachine-->>WoleixClimate: Generated command sequence
-    WoleixClimate->>WoleixCommandTransmitter: Transmit IR commands
-    WoleixCommandTransmitter->>Woleix AC: Send IR signals
-    WoleixClimate->>WoleixStateMachine: Update internal state
+    WoleixClimate->>WoleixStateManager: Set target state
+    WoleixStateManager-->>WoleixClimate: Generated command sequence
+    WoleixClimate->>WoleixProtocolHandler: Transmit IR commands
+    WoleixProtocolHandler->>Woleix AC: Send IR signals
+    WoleixClimate->>WoleixStateManager: Update internal state
     WoleixClimate->>StateMapper: Convert Woleix state to ESPHome state
     StateMapper-->>WoleixClimate: ESPHome-compatible state
     WoleixClimate->>ESPHome: Publish updated state
@@ -159,7 +159,7 @@ The temperature control implementation sends multiple commands, one for each deg
 - Allows for precise control and feedback
 - Is consistent with the granular nature of temperature control compared to other binary or cyclic settings
 
-**State Machine Behavior:**
+**State Manager Behavior:**
 
 - Power toggle affects all other states (turning ON resets to defaults)
 - Mode cycles through COOL→DEHUM→FAN→COOL in sequence
@@ -498,9 +498,9 @@ xdg-open build/coverage/html/index.html  # Linux
 As of the latest update, all unit tests in the test suite are passing:
 
 - **28 tests** in `climate_ir_woleix_test.cpp` (Climate component tests)
-- **26 tests** in `woleix_state_machine_test.cpp` (State machine tests)
+- **26 tests** in `woleix_state_manager_test.cpp` (State manager tests)
 - **19 tests** in `woleix_state_mapper_test.cpp` (State mapper tests)
-- **12 tests** in `woleix_comm_test.cpp` (Communication tests)
+- **12 tests** in `woleix_protocol_handler_test.cpp` (Protocol handler tests)
 
 A total of 85 tests are now passing, including a recently resolved segmentation fault issue.
 
@@ -542,6 +542,9 @@ mkdir -p build && cd build
 cmake -DENABLE_COVERAGE=ON ..
 cmake --build .
 ./climate_ir_woleix_test
+./woleix_state_manager_test
+./woleix_state_mapper_test
+./woleix_protocol_handler_test
 ```
 
 See [tests/unit/README.md](tests/unit/README.md) for detailed testing documentation.
@@ -568,13 +571,13 @@ black esphome/components/climate_ir_woleix/__init__.py
 
 1. **Identify the Layer**
    - Climate interface changes → `climate_ir_woleix.h/cpp`
-   - State management/IR commands → `woleix_ac_state_machine.h/cpp`
+   - State management/IR commands → `woleix_state_manager.h/cpp`
    - Configuration options → `__init__.py` and `climate.py`
 
 2. **Update Headers and Implementation**
    - Add method declarations in `.h` files
    - Implement in corresponding `.cpp` files
-   - For state machine: add IR commands to `woleix_ac_state_machine.cpp`
+   - For state manager: add IR commands to `woleix_state_manager.cpp`
 
 3. **Update Python Configuration** (if adding user-facing options)
    - Add configuration parameters to `CONFIG_SCHEMA` in `__init__.py`
@@ -582,7 +585,7 @@ black esphome/components/climate_ir_woleix/__init__.py
 
 4. **Write Tests**
    - Climate interface tests → `tests/unit/climate_ir_woleix_test.cpp`
-   - State machine tests → `tests/unit/woleix_ac_state_machine_test.cpp`
+   - State manager tests → `tests/unit/woleix_state_manager_test.cpp`
    - Aim for high coverage (current: 96.3% line coverage)
 
 5. **Test Locally**

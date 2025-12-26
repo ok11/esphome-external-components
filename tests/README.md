@@ -386,9 +386,9 @@ TEST_F(WoleixClimateTest, YourNewTest) {
 **For State Machine** - Edit `tests/unit/woleix_state_machine_test.cpp`:
 
 ```cpp
-TEST(WoleixStateMachineTest, YourNewTest) {
+TEST(WoleixStateManagerTest, YourNewTest) {
   // Setup
-  WoleixStateMachine state_machine;
+  WoleixStateManager state_manager;
   
   // Execute
   state_machine.move_to(WoleixPowerState::ON, 

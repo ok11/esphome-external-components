@@ -2,7 +2,7 @@
 
 #include "esphome/components/climate/climate_mode.h"
 
-#include "woleix_state_machine.h"
+#include "woleix_state_manager.h"
 
 namespace esphome {
 namespace climate_ir_woleix {

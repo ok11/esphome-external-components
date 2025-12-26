@@ -204,8 +204,8 @@ add_library(climate_ir_woleix STATIC
     esphome/components/climate_ir_woleix/woleix_command.h
     esphome/components/climate_ir_woleix/climate_ir_woleix.cpp
     esphome/components/climate_ir_woleix/climate_ir_woleix.h
-    esphome/components/climate_ir_woleix/woleix_state_machine.cpp
-    esphome/components/climate_ir_woleix/woleix_state_machine.h
+    esphome/components/climate_ir_woleix/woleix_state_manager.cpp
+    esphome/components/climate_ir_woleix/woleix_state_manager.h
     esphome/components/climate_ir_woleix/woleix_protocol_handler.cpp
     esphome/components/climate_ir_woleix/woleix_protocol_handler.h
     esphome/components/climate_ir_woleix/woleix_state_mapper.cpp

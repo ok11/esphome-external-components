@@ -19,7 +19,7 @@
 #include "woleix_status.h"
 #include "woleix_protocol_handler.h"
 #include "woleix_state_mapper.h"
-#include "woleix_state_machine.h"
+#include "woleix_state_manager.h"
 
 namespace esphome {
 namespace climate_ir_woleix {
@@ -34,7 +34,7 @@ using climate_ir::ClimateIR;
  * 
  * This class provides ESPHome integration for Woleix AC units via infrared
  * remote control. It implements the Climate interface and uses an internal
- * WoleixStateMachine for IR command generation and state management.
+ * WoleixStateManager for IR command generation and state management.
  * 
  * Features:
  * - Temperature control (15-30°C in COOL mode)
@@ -55,11 +55,11 @@ using climate_ir::ClimateIR;
  *     humidity_sensor: room_humidity  # optional
  * @endcode
  * 
- * @see WoleixStateMachine
+ * @see WoleixStateManager
  */
 class WoleixClimate
   : public ClimateIR,
-    public WoleixStateMachine,
+    public WoleixStateManager,
     public WoleixProtocolHandler,
     protected WoleixCommandQueueProducer,
     protected WoleixStatusObserver
@@ -68,7 +68,7 @@ public:
     /**
      * Default constructor.
      * 
-     * Creates a new WoleixClimate instance with its own internal state machine and protocol handler.
+     * Creates a new WoleixClimate instance with its own internal state manager and protocol handler.
      */
     WoleixClimate();
 
@@ -104,11 +104,11 @@ public:
     void set_humidity_sensor(sensor::Sensor* humidity_sensor) { humidity_sensor_ = humidity_sensor; }
 
     /**
-     * Reset the state machine to default values.
+     * Reset the state manager to default values.
      * 
-     * Calls the reset() method of the internal state machine.
+     * Calls the reset() method of the internal state manager.
      * Note: This may not explicitly set all values to defaults,
-     * but relies on the state machine's reset implementation.
+     * but relies on the state manager's reset implementation.
      * Does not transmit any IR commands.
      */
     virtual void reset_state();
@@ -195,7 +195,7 @@ protected:
     virtual void update_state_();
 
     std::unique_ptr<WoleixCommandQueue> command_queue_;         /**< Command queue for asynchronous execution */
-//    std::shared_ptr<WoleixStateMachine> state_machine_;         /**< State machine for command generation and state management */
+//    std::shared_ptr<WoleixStateManager> state_manager_;         /**< State manager for command generation and state management */
 //    std::shared_ptr<WoleixProtocolHandler> protocol_handler_;   /**< Protocol handler for sending IR commands */
 
     sensor::Sensor* humidity_sensor_{nullptr};  /**< Optional humidity sensor */

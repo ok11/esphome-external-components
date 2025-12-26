@@ -44,7 +44,7 @@ target_include_directories(esphome_mocks INTERFACE
 # Add the component source files
 set(COMPONENT_SOURCES
   ../../esphome/components/climate_ir_woleix/climate_ir_woleix.cpp
-  ../../esphome/components/climate_ir_woleix/woleix_state_machine.cpp
+  ../../esphome/components/climate_ir_woleix/woleix_state_manager.cpp
   ../../esphome/components/climate_ir_woleix/woleix_state_mapper.cpp
   ../../esphome/components/climate_ir_woleix/woleix_protocol_handler.cpp
 )
@@ -56,11 +56,11 @@ add_executable(
   ${COMPONENT_SOURCES}
 )
 
-# Create test executable for state machine
+# Create test executable for state manager
 add_executable(
-  woleix_state_machine_test
-  woleix_state_machine_test.cpp
-  ../../esphome/components/climate_ir_woleix/woleix_state_machine.cpp
+  woleix_state_manager_test
+  woleix_state_manager_test.cpp
+  ../../esphome/components/climate_ir_woleix/woleix_state_manager.cpp
 )
 
 # Create test executable for state mapper
@@ -104,9 +104,9 @@ target_include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome/components/climate_ir_woleix
 )
 
-# Set include directories for state machine test
+# Set include directories for state manager test
 target_include_directories(
-  woleix_state_machine_test
+  woleix_state_manager_test
   BEFORE PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/mocks
   ${CMAKE_CURRENT_SOURCE_DIR}/../../esphome
@@ -166,7 +166,7 @@ target_link_libraries(
 )
 
 target_link_libraries(
-  woleix_state_machine_test
+  woleix_state_manager_test
   GTest::gtest_main
   GTest::gmock_main
   esphome_mocks
@@ -210,7 +210,7 @@ target_link_libraries(
 # Enable testing
 include(GoogleTest)
 gtest_discover_tests(climate_ir_woleix_test)
-gtest_discover_tests(woleix_state_machine_test)
+gtest_discover_tests(woleix_state_manager_test)
 gtest_discover_tests(woleix_state_mapper_test)
 gtest_discover_tests(woleix_protocol_handler_test)
 gtest_discover_tests(woleix_commands_test)

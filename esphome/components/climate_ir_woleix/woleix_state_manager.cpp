@@ -5,7 +5,7 @@
 
 #include "esphome/core/log.h"
 
-#include "woleix_state_machine.h"
+#include "woleix_state_manager.h"
 
 namespace esphome {
 namespace climate_ir_woleix {
@@ -25,13 +25,13 @@ static constexpr std::array<WoleixMode, 3> MODE_SWITCH_SEQUENCE =
 
 static constexpr float TEMP_EPSILON = 0.5f; 
 
-WoleixStateMachine::WoleixStateMachine()
+WoleixStateManager::WoleixStateManager()
   : command_factory_(std::make_unique<WoleixCommandFactory>(ADDRESS_NEC)) 
 {
     reset();
 }
 
-void WoleixStateMachine::setup()
+void WoleixStateManager::setup()
 {
     // command_queue_ = command_queue;
 }
@@ -52,11 +52,11 @@ void WoleixStateMachine::setup()
  * 
  * Side effect: fills in the command queue with commnds in the right order
  */
-const std::vector<WoleixCommand>& WoleixStateMachine::move_to(const WoleixInternalState& target_state)
+const std::vector<WoleixCommand>& WoleixStateManager::move_to(const WoleixInternalState& target_state)
 {
     // if (!command_queue_)
     // {
-    //     ESP_LOGE(TAG, "WoleixStateMachine not initialized with command queue");
+    //     ESP_LOGE(TAG, "WoleixStateManager not initialized with command queue");
     //     return;
     // }
 
@@ -107,12 +107,12 @@ const std::vector<WoleixCommand>& WoleixStateMachine::move_to(const WoleixIntern
  * 
  * Note: This does not generate any IR commands; it only resets internal tracking.
  */
-void WoleixStateMachine::reset()
+void WoleixStateManager::reset()
 {
     current_state_ = WoleixInternalState();  // Reset to defaults
     commands_.clear();
 
-    ESP_LOGD(TAG, "State machine reset to defaults: ON, COOL, 25°C, LOW fan");
+    ESP_LOGD(TAG, "State manager reset to defaults: ON, COOL, 25°C, LOW fan");
 }
 
 /**
@@ -123,7 +123,7 @@ void WoleixStateMachine::reset()
  * 
  * @param target_power Desired power state
  */
-void WoleixStateMachine::generate_power_commands_(WoleixPowerState target_power)
+void WoleixStateManager::generate_power_commands_(WoleixPowerState target_power)
 {
     if (current_state_.power != target_power)
     {
@@ -146,7 +146,7 @@ void WoleixStateMachine::generate_power_commands_(WoleixPowerState target_power)
  * 
  * @param target_mode Desired operating mode
  */
-void WoleixStateMachine::generate_mode_commands_(WoleixMode target_mode)
+void WoleixStateManager::generate_mode_commands_(WoleixMode target_mode)
 {
     if (current_state_.mode != target_mode) 
     {
@@ -174,7 +174,7 @@ void WoleixStateMachine::generate_mode_commands_(WoleixMode target_mode)
  * 
  * @param target_temp Desired temperature in Celsius
  */
-void WoleixStateMachine::generate_temperature_commands_(float target_temp)
+void WoleixStateManager::generate_temperature_commands_(float target_temp)
 {
     // Temperature is only adjustable in COOL mode
     if (current_state_.mode == WoleixMode::COOL)
@@ -211,7 +211,7 @@ void WoleixStateMachine::generate_temperature_commands_(float target_temp)
  * 
  * @param target_fan Desired fan speed
  */
-void WoleixStateMachine::generate_fan_commands_(WoleixFanSpeed target_fan)
+void WoleixStateManager::generate_fan_commands_(WoleixFanSpeed target_fan)
 {
     if (current_state_.fan_speed != target_fan)
     {
@@ -235,7 +235,7 @@ void WoleixStateMachine::generate_fan_commands_(WoleixFanSpeed target_fan)
  * @param to_mode Target operating mode
  * @return Number of MODE button presses needed (0-2)
  */
-int WoleixStateMachine::calculate_mode_steps_(WoleixMode from_mode, WoleixMode to_mode)
+int WoleixStateManager::calculate_mode_steps_(WoleixMode from_mode, WoleixMode to_mode)
 {
     auto from_it = std::ranges::find(MODE_SWITCH_SEQUENCE, from_mode);
     auto to_it = std::ranges::find(MODE_SWITCH_SEQUENCE, to_mode);
@@ -280,7 +280,7 @@ int WoleixStateMachine::calculate_mode_steps_(WoleixMode from_mode, WoleixMode t
  * 
  * @param command Command to add to the queue
  */
-void WoleixStateMachine::enqueue_command_(const WoleixCommand& command)
+void WoleixStateManager::enqueue_command_(const WoleixCommand& command)
 {
     commands_.push_back(command);
 }
