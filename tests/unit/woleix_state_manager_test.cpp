@@ -8,6 +8,11 @@
 using namespace esphome::climate_ir_woleix;
 using esphome::climate_ir_woleix::WoleixInternalState;
 
+using testing::_;
+using testing::Return;
+using testing::AtLeast;
+using testing::Invoke;
+
 // Custom GMock matcher for checking WoleixCommand type
 MATCHER_P(IsCommandType, expected_type, "")
 {
@@ -38,7 +43,10 @@ public:
         current_state_.fan_speed = state.fan_speed;
     }
 
+    MOCK_METHOD(void, report, (const WoleixStatus&), (override));
     using WoleixStateManager::move_to;
+    using WoleixStateManager::calculate_mode_steps_;
+
 };
 
 // Test fixture for WoleixStateManager
@@ -963,6 +971,55 @@ TEST_F(WoleixStateManagerTest, EmptyCommandsAfterNoChange)
 // ============================================================================
 // Test: Edge Cases
 // ============================================================================
+
+/**
+ * Test: Invalid mode transition handling
+ * 
+ * This test verifies that the calculate_mode_steps_ function correctly handles
+ * an invalid target mode by returning the maximum number of mode steps (3).
+ * This simulates the behavior when an unexpected mode is encountered.
+ */
+TEST_F(WoleixStateManagerTest, TransitionToInvalidModeHandling)
+{
+    uint8_t mode_val = 99;
+    // Use an invalid mode as the target (cast to WoleixMode)
+    WoleixMode invalid_mode = static_cast<WoleixMode>(mode_val);
+
+    EXPECT_CALL(*mock_state_manager, report(_))
+        .Times(3)
+        .WillRepeatedly(Invoke([mode_val](const WoleixStatus& s)
+        {
+            EXPECT_EQ(s.get_severity(), WoleixStatus::Severity::WX_SEVERITY_ERROR);
+            EXPECT_EQ(s.get_category(), WoleixCategory::StateManager::WX_CATEGORY_INVALID_MODE);
+            EXPECT_THAT(s.get_message().c_str(), testing::HasSubstr(std::to_string(mode_val)));
+        }));
+
+    // Test from each valid mode to the invalid mode
+    EXPECT_EQ(mock_state_manager->calculate_mode_steps_(WoleixMode::COOL, invalid_mode), 0);
+    EXPECT_EQ(mock_state_manager->calculate_mode_steps_(WoleixMode::DEHUM, invalid_mode), 0);
+    EXPECT_EQ(mock_state_manager->calculate_mode_steps_(WoleixMode::FAN, invalid_mode), 0);
+}
+
+TEST_F(WoleixStateManagerTest, TransitionFromInvalidModeHandling)
+{
+    uint8_t mode_val = 99;
+    // Use an invalid mode as the target (cast to WoleixMode)
+    WoleixMode invalid_mode = static_cast<WoleixMode>(mode_val);
+
+    EXPECT_CALL(*mock_state_manager, report(_))
+        .Times(3)
+        .WillRepeatedly(Invoke([mode_val](const WoleixStatus& s)
+        {
+            EXPECT_EQ(s.get_severity(), WoleixStatus::Severity::WX_SEVERITY_ERROR);
+            EXPECT_EQ(s.get_category(), WoleixCategory::StateManager::WX_CATEGORY_INVALID_MODE);
+            EXPECT_THAT(s.get_message().c_str(), testing::HasSubstr(std::to_string(mode_val)));
+        }));
+
+    // Test from each valid mode to the invalid mode
+    EXPECT_EQ(mock_state_manager->calculate_mode_steps_(invalid_mode, WoleixMode::COOL), 0);
+    EXPECT_EQ(mock_state_manager->calculate_mode_steps_(invalid_mode, WoleixMode::DEHUM), 0);
+    EXPECT_EQ(mock_state_manager->calculate_mode_steps_(invalid_mode, WoleixMode::FAN), 0);
+}
 
 /**
  * Test: Fractional temperatures are rounded correctly

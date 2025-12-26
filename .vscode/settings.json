@@ -17,5 +17,16 @@
     "coverage-gutters.coverageFileNames": [
         "coverage_filtered.info"
     ],
+    "coverage-gutters.coverageReportFileName": "coverage/html/index.html",
+    "coverage-gutters.ignoredPathGlobs": "**/.esphome/**",
+    "coverage-gutters.showLineCoverage": true,
+    "coverage-gutters.showRulerCoverage": true,
+    "coverage-gutters.showGutterCoverage": true,
+    "coverage-gutters.highlightdark": "rgba(45, 121, 10, 0.2)",
+    "coverage-gutters.highlightlight": "rgba(45, 121, 10, 0.2)",
+    "coverage-gutters.partialHighlightDark": "rgba(226, 151, 4, 0.2)",
+    "coverage-gutters.partialHighlightLight": "rgba(226, 151, 4, 0.2)",
+    "coverage-gutters.noHighlightDark": "rgba(209, 4, 4, 0.2)",
+    "coverage-gutters.noHighlightLight": "rgba(209, 4, 4, 0.2)",
     "testMate.cpp.test.executables": "build/**/*test*"
 }

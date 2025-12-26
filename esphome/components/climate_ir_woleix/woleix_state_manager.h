@@ -243,7 +243,7 @@ public:
      * 
      * @note This returns the tracked state, not the actual AC unit state
      */
-    const WoleixInternalState& get_state() const { return current_state_; }
+    virtual const WoleixInternalState& get_state() const { return current_state_; }
 
 protected:
 

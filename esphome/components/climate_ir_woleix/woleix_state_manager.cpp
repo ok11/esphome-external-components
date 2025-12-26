@@ -246,7 +246,7 @@ int WoleixStateManager::calculate_mode_steps_(WoleixMode from_mode, WoleixMode t
         (
             WoleixStatus
             (
-                WoleixStatus::Severity::WX_SEVERITY_WARNING,
+                WoleixStatus::Severity::WX_SEVERITY_ERROR,
                 WoleixCategory::StateManager::WX_CATEGORY_INVALID_MODE,
                 std::format
                 (

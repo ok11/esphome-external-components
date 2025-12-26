@@ -31,6 +31,14 @@ using climate::ClimateFanMode;
 using climate::ClimateTraits;
 using climate_ir::ClimateIR;
 
+namespace WoleixCategory::Core
+{
+    inline constexpr auto WX_CATEGORY_ENQUEING_ON_HOLD = 
+        Category::make(CategoryId::Core, 1, "Core.EnqueingOnHold");
+    inline constexpr auto WX_CATEGORY_ENQUEING_FAILED = 
+        Category::make(CategoryId::Core, 2, "Core.EnqueingFailed");
+}
+
 /**
  * Climate IR controller for Woleix air conditioners.
  * 
@@ -125,15 +133,15 @@ public:
 protected:
 
     /**
-     * @brief Observe and handle status updates from Woleix components.
+     * @brief Report status updates from Woleix components.
      * 
-     * This method is called when a status update is received. It logs the status
+     * This method logs the status
      * message with appropriate severity and sets error or warning states as needed.
      * 
      * @param reporter The reporter that generated the status update.
      * @param status The status update to be handled.
      */
-    void observe(const WoleixStatusReporter& reporter, const WoleixStatus& status) override
+    virtual void report_status(const WoleixStatus& status)
     {
         if (status.get_severity() == WoleixStatus::Severity::WX_SEVERITY_ERROR)
         {
@@ -153,6 +161,20 @@ protected:
         {
             ESP_LOGD(TAG, "Debug (%s): %s", status.get_category().name, status.get_message().c_str());
         }
+    }
+
+    /**
+     * @brief Observe and handle status updates from Woleix components.
+     * 
+     * This method is called when a status update is received. It logs the status
+     * message with appropriate severity and sets error or warning states as needed.
+     * 
+     * @param reporter The reporter that generated the status update.
+     * @param status The status update to be handled.
+     */
+    void observe(const WoleixStatusReporter& reporter, const WoleixStatus& status) override
+    {
+        report_status(status);
     }
 
     /**

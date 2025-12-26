@@ -38,8 +38,8 @@ lcov --capture \
 # Filter out system headers, test files, and external dependencies
 # Keep only the component source files
 lcov --extract coverage/coverage.info \
-    '*/esphome/components/climate_ir_woleix/climate_ir_woleix.cpp' \
-    '*/esphome/components/climate_ir_woleix/climate_ir_woleix.h' \
+    '*/esphome/components/climate_ir_woleix/*.cpp' \
+    '*/esphome/components/climate_ir_woleix/*.h' \
     --output-file coverage/coverage_filtered.info \
     --rc branch_coverage=1 \
     --ignore-errors inconsistent,inconsistent \

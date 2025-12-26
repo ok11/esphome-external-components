@@ -21,9 +21,10 @@ echo "=== Running Tests ==="
 echo ""
 
 # Run tests
-./climate_ir_woleix_test
-./woleix_ac_state_machine_test
-./state_mapper_test
+
+for f in *_test; do
+    [ -f "$f" ] && [ -x "$f" ] && ./"$f"
+done
 
 echo ""
 echo "=== Tests Complete ==="

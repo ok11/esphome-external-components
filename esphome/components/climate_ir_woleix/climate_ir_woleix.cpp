@@ -139,7 +139,7 @@ bool WoleixClimate::enqueue_commands_()
  */
 void WoleixClimate::update_state_()
 {
-    // Sync internal state with state machine
+    // Sync internal state with state manager
     auto current_state = get_state();
     mode = StateMapper::woleix_to_esphome_power(current_state.power) 
         ? StateMapper::woleix_to_esphome_mode(current_state.mode)
@@ -162,7 +162,15 @@ void WoleixClimate::transmit_state()
 {
     if (on_hold_)
     {
-        ESP_LOGW(TAG, "Transmission on hold due to full command queue");
+        report_status
+        (
+            WoleixStatus
+            (
+                WoleixStatus::Severity::WX_SEVERITY_WARNING,
+                WoleixCategory::Core::WX_CATEGORY_ENQUEING_ON_HOLD,
+                "Transmission on hold due to nearly full command queue"
+            )
+        );
     }
     else
     {
@@ -170,7 +178,15 @@ void WoleixClimate::transmit_state()
             static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));
 
         if (!enqueue_commands_())
-            ESP_LOGE(TAG, "Failed state transmission");
+            report_status
+            (
+                WoleixStatus
+                (
+                    WoleixStatus::Severity::WX_SEVERITY_ERROR,
+                    WoleixCategory::Core::WX_CATEGORY_ENQUEING_FAILED,
+                    "Transmission failed due to full command queue"
+                )
+            );
     }
     ESP_LOGD(TAG, "Reporting back state - Mode: %d, Temp: %.1f, Fan: %d",
         static_cast<int>(mode), target_temperature, static_cast<int>(fan_mode.value()));

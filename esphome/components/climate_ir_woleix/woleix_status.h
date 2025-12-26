@@ -17,6 +17,8 @@ namespace CategoryId
     inline constexpr uint16_t CommandQueue = 1;     ///< Command queue category
     inline constexpr uint16_t StateManager = 2;     ///< State manager category
     inline constexpr uint16_t ProtocolHandler = 3;  ///< Protocol handler category
+
+    inline constexpr uint16_t Testing = 99;
 }
 
 /**
