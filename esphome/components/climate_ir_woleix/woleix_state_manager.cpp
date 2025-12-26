@@ -28,12 +28,17 @@ static constexpr float TEMP_EPSILON = 0.5f;
 WoleixStateManager::WoleixStateManager()
   : command_factory_(std::make_unique<WoleixCommandFactory>(ADDRESS_NEC)) 
 {
-    reset();
 }
 
+/**
+ * @brief Set up the WoleixStateManager.
+ * 
+ * This method is called during the initialization of the WoleixStateManager.
+ * Currently, it's a placeholder for potential future setup operations.
+ */
 void WoleixStateManager::setup()
 {
-    // command_queue_ = command_queue;
+    reset();
 }
 /**
  * Calculate and generate the command sequence needed to reach target state.
@@ -54,12 +59,6 @@ void WoleixStateManager::setup()
  */
 const std::vector<WoleixCommand>& WoleixStateManager::move_to(const WoleixInternalState& target_state)
 {
-    // if (!command_queue_)
-    // {
-    //     ESP_LOGE(TAG, "WoleixStateManager not initialized with command queue");
-    //     return;
-    // }
-
     commands_.clear();
 
     WoleixPowerState power = target_state.power;
@@ -257,8 +256,6 @@ int WoleixStateManager::calculate_mode_steps_(WoleixMode from_mode, WoleixMode t
                 )
             )
         );
-        // ESP_LOGW(TAG, "Invalid mode in sequence: from=%d, to=%d", 
-        //     static_cast<int>(from_mode), static_cast<int>(to_mode));
         return 0;
     }
     

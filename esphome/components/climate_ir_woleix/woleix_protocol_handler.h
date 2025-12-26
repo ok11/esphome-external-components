@@ -76,19 +76,22 @@ public:
     virtual ~WoleixProtocolHandler() { cleanup_(); } 
 
     /**
-     * Execute commands synchronously (from caller's perspective).
+     * @brief Set up the protocol handler with a command queue.
      * 
-     * Internally handles async timing for temperature setting mode,
-     * but returns immediately. The caller doesn't need to wait or
-     * handle completion - state machine has already updated.
+     * This method initializes the protocol handler with a command queue,
+     * registers itself as a consumer of the queue, and starts processing
+     * commands if the queue is not empty.
      * 
-     * @param commands Commands to execute
+     * @param command_queue Pointer to the WoleixCommandQueue to use
      */
     void setup(WoleixCommandQueue* command_queue);
 
     /**
-     * Reset protocol state (e.g., after AC power cycle).
-     * Cancels pending operations and resets to IDLE.
+     * @brief Reset the protocol handler to its initial state.
+     * 
+     * This method cancels any pending operations, clears the command queue,
+     * and resets the temperature protocol state to IDLE. It should be called
+     * after an AC power cycle or when a full reset is needed.
      */
     void reset();
 
@@ -175,6 +178,12 @@ protected:
      */
     static bool is_temp_command_(const WoleixCommand& cmd);
 
+    /**
+     * @brief Clean up resources used by the protocol handler.
+     * 
+     * This method unregisters the handler as a consumer from the command queue
+     * and cancels any pending timeouts.
+     */
     void cleanup_()
     {
         command_queue_->unregister_consumer(this);
@@ -182,7 +191,13 @@ protected:
         cancel_timeout_(TIMEOUT_NEXT_COMMAND);
     }
 
-    void on_command() override
+    /**
+     * @brief Callback method triggered when a new command is enqueued.
+     * 
+     * This method schedules the processing of the next command immediately
+     * after a new command is added to the queue.
+     */
+    void on_command_enqueued() override
     {
         set_timeout_(TIMEOUT_NEXT_COMMAND, 0, [this]() { process_next_command_(); }); 
     }
@@ -191,6 +206,7 @@ private:
 
     // Command queue for async execution
     WoleixCommandQueue* command_queue_;
+    
     RemoteTransmitterBase* transmitter_;
     TimeoutSetter set_timeout_;
     TimeoutCanceller cancel_timeout_;

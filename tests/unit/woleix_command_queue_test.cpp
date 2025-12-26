@@ -17,17 +17,17 @@ using ::testing::AtLeast;
 class MockWoleixCommandQueueProducer : public WoleixCommandQueueProducer
 {
 public:
-    MOCK_METHOD(void, on_high_watermark, (), (override));
-    MOCK_METHOD(void, on_low_watermark, (), (override));
-    MOCK_METHOD(void, on_full, (), (override));
-    MOCK_METHOD(void, on_empty, (), (override));
+    MOCK_METHOD(void, on_queue_at_high_watermark, (), (override));
+    MOCK_METHOD(void, on_queue_at_low_watermark, (), (override));
+    MOCK_METHOD(void, on_queue_full, (), (override));
+    MOCK_METHOD(void, on_queue_empty, (), (override));
 };
 
 // Consumer notification tests
 class MockWoleixCommandQueueConsumer : public WoleixCommandQueueConsumer
 {
 public:
-    MOCK_METHOD(void, on_command, (), (override));
+    MOCK_METHOD(void, on_command_enqueued, (), (override));
 };
 
 
@@ -150,7 +150,7 @@ TEST_F(WoleixCommandQueueTest, GetCommandAtInvalidIndex)
 
 TEST_F(WoleixCommandQueueTest, ProducersNotifiedWhenQueueAtHighWatermark)
 {
-    EXPECT_CALL(*mock_producer, on_high_watermark).Times(2);
+    EXPECT_CALL(*mock_producer, on_queue_at_high_watermark).Times(2);
 
     // Enqueue 14 commands (78% of max_capacity)
     for (int i = 0; i < 14; ++i)
@@ -177,7 +177,7 @@ TEST_F(WoleixCommandQueueTest, ProducersNotifiedWhenQueueAtLowWatermark)
         mock_queue->enqueue(cmd);
     }
 
-    EXPECT_CALL(*mock_producer, on_low_watermark).Times(3);
+    EXPECT_CALL(*mock_producer, on_queue_at_low_watermark).Times(3);
 
     // Dequeue 3 commands
     for (int i = 0; i < 3; ++i)
@@ -190,7 +190,7 @@ TEST_F(WoleixCommandQueueTest, ConsumersNotifiedOnEnquedCommand)
 {
     WoleixCommand cmd(WoleixCommand::Type::TEMP_UP, 0xFB04);
 
-    EXPECT_CALL(*mock_consumer, on_command).Times(1);
+    EXPECT_CALL(*mock_consumer, on_command_enqueued).Times(1);
 
     mock_queue->enqueue(cmd);
 }

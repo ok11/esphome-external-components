@@ -17,6 +17,13 @@ using esphome::climate::ClimateFanMode;
 using esphome::climate::ClimateFeature;
 using esphome::climate::ClimateTraits;
 
+/**
+ * @brief Construct a new WoleixClimate object.
+ * 
+ * Initializes the climate controller with the Woleix-specific temperature range,
+ * creates a command queue, and sets up the state manager and protocol handler.
+ * It also registers itself as a producer for the command queue and resets the state.
+ */
 WoleixClimate::WoleixClimate()
   : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX),
     command_queue_(std::make_unique<WoleixCommandQueue>(QUEUE_MAX_CAPACITY)),
@@ -36,29 +43,6 @@ WoleixClimate::WoleixClimate()
     command_queue_->register_producer(this);
     reset_state();
 }
-
-// /**
-//  * Constructor accepting state manager and transmitter.
-//  * 
-//  * Initializes the climate controller with default settings and creates
-//  * internal state manager and protocol handler instances.
-//  */
-// WoleixClimate::WoleixClimate(std::unique_ptr<WoleixCommandQueue> command_queue)
-//   : ClimateIR(WOLEIX_TEMP_MIN, WOLEIX_TEMP_MAX),
-//     command_queue_(std::move(command_queue)),
-//     WoleixStateManager(command_queue_.get()),
-//     WoleixProtocolHandler
-//     (
-//         command_queue_.get(),
-//         [this](const std::string& name, uint32_t delay_ms, std::function<void()> callback) {
-//             this->set_timeout(name, delay_ms, std::move(callback));
-//         },
-//         [this](const std::string& name) {
-//             this->cancel_timeout(name);
-//         }
-//     )
-// {
-// }
 
 /**
  * Reset the state manager to default values.

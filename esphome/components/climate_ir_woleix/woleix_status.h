@@ -8,14 +8,20 @@ namespace esphome
 namespace climate_ir_woleix
 {
 
+/**
+ * @brief Namespace containing category IDs for different components of the Woleix system.
+ */
 namespace CategoryId
 {
-    inline constexpr uint16_t Core = 0;
-    inline constexpr uint16_t CommandQueue = 1;
-    inline constexpr uint16_t StateManager = 2;
-    inline constexpr uint16_t ProtocolHandler = 3;
+    inline constexpr uint16_t Core = 0;             ///< Core component category
+    inline constexpr uint16_t CommandQueue = 1;     ///< Command queue category
+    inline constexpr uint16_t StateManager = 2;     ///< State manager category
+    inline constexpr uint16_t ProtocolHandler = 3;  ///< Protocol handler category
 }
 
+/**
+ * @brief Represents a category for status messages.
+ */
 struct Category
 {
     uint32_t value;
@@ -32,17 +38,29 @@ struct Category
     constexpr bool operator==(Category other) const { return value == other.value; }
 };
 
+/**
+ * @brief Represents a status message in the Woleix system.
+ */
 class WoleixStatus
 {
 public:
+    /**
+     * @brief Enumeration of severity levels for status messages.
+     */
     enum class Severity
     {
-        WX_SEVERITY_ERROR,
-        WX_SEVERITY_WARNING,
-        WX_SEVERITY_INFO,
-        WX_SEVERITY_DEBUG
+        WX_SEVERITY_ERROR,    ///< Error severity
+        WX_SEVERITY_WARNING,  ///< Warning severity
+        WX_SEVERITY_INFO,     ///< Information severity
+        WX_SEVERITY_DEBUG     ///< Debug severity
     };
 
+    /**
+     * @brief Constructs a WoleixStatus object.
+     * @param severity The severity level of the status.
+     * @param category The category of the status.
+     * @param message The message content of the status.
+     */
     WoleixStatus(Severity severity, Category category, std::string message)
         : severity_(severity), category_(category), message_(message)
     {}
@@ -63,12 +81,23 @@ protected:
 
 class WoleixStatusReporter;
 
+/**
+ * @brief Interface for objects that observe status changes.
+ */
 class WoleixStatusObserver
 {
 public:
+    /**
+     * @brief Method called when a new status is reported.
+     * @param reporter The reporter that generated the status.
+     * @param status The new status that was reported.
+     */
     virtual void observe(const WoleixStatusReporter& reporter, const WoleixStatus& status) = 0;
 };
 
+/**
+ * @brief Class responsible for reporting status changes to observers.
+ */
 class WoleixStatusReporter
 {
 public:

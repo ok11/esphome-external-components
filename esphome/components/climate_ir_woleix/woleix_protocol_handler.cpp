@@ -16,13 +16,18 @@ namespace climate_ir_woleix
 using remote_base::NECData;
 using remote_base::NECProtocol;
 
+/**
+ * Setup the protocol handler with a command queue.
+ * 
+ * @param command_queue Pointer to the command queue to use
+ */
 void WoleixProtocolHandler::setup(WoleixCommandQueue* command_queue)
 {
     if (command_queue)
     {
         command_queue_ = command_queue;
         command_queue_->register_consumer(this);
-        if (command_queue_->length() > 0) on_command();
+        if (command_queue_->length() > 0) on_command_enqueued();
     }
     else
     {
@@ -35,10 +40,15 @@ void WoleixProtocolHandler::setup(WoleixCommandQueue* command_queue)
                 "Invalid (null) command queue received during setup"
             )
         );
-//        ESP_LOGE(TAG, "Null command queue passed");
     }
 }
 
+/**
+ * Process the next command in the queue.
+ * 
+ * This method handles the execution of commands, managing the temperature
+ * setting mode and regular commands appropriately.
+ */
 void WoleixProtocolHandler::process_next_command_()
 {
     if (!command_queue_)
@@ -52,7 +62,6 @@ void WoleixProtocolHandler::process_next_command_()
                 "Command queue not set during processing"
             )
         );
-//        ESP_LOGW(TAG, "Command queue not (yet) set in protocol handler, waiting...");
     }
     if (command_queue_->is_empty())
     {
@@ -79,6 +88,14 @@ void WoleixProtocolHandler::process_next_command_()
     }
 }
 
+/**
+ * Handle a temperature-related command.
+ * 
+ * This method manages the temperature setting mode and executes
+ * temperature commands accordingly.
+ * 
+ * @param cmd The temperature command to handle
+ */
 void WoleixProtocolHandler::handle_temp_command_(const WoleixCommand& cmd)
 {
     switch (temp_state_)
@@ -118,6 +135,14 @@ void WoleixProtocolHandler::enter_setting_mode_(const WoleixCommand& cmd)
         [this]() { process_next_command_(); });
 }
 
+/**
+ * Handle a regular (non-temperature) command.
+ * 
+ * This method transmits the command and schedules the next command
+ * processing after a delay.
+ * 
+ * @param cmd The regular command to handle
+ */
 void WoleixProtocolHandler::handle_regular_command_(const WoleixCommand& cmd)
 {
     ESP_LOGD(TAG, "Sending regular command");
@@ -141,6 +166,12 @@ void WoleixProtocolHandler::on_setting_mode_timeout_()
     temp_state_ = TempProtocolState::IDLE;
 }
 
+/**
+ * Reset the protocol handler to its initial state.
+ * 
+ * This method cancels any pending timeouts, resets the temperature
+ * setting mode, and clears the completion callback.
+ */
 void WoleixProtocolHandler::reset()
 {
     ESP_LOGD(TAG, "Resetting protocol handler");

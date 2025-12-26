@@ -2,6 +2,90 @@
 
 Custom ESPHome component for controlling Woleix air conditioners via infrared remote control.
 
+## The Goals
+
+Well, actually my goal was of course to automate a pretty dumb mobile AC device I bought last summer to cool down a new room in the house. Actually, a temporary solution. Still, I found it an interesting task. With the time, the list of goals has been extended:
+
+- Automate the Woleix AC via ESPHome/HA
+- Learn the new standards of C++ (as I programmed C++ last time around 2003)
+- Create a base for myself in case I want to create some other ESPHome external component (I have quite a couple of ESP8266/ESP32 lying around, so the chances are high)
+- Try out vibe coding (results below) :)
+
+This goal extension is the main reason for some overengineering that you will find in the code, I just wanted tp try out things. Feel free to simplify them as much as you want if you take the code as a basis ;).
+
+## The Approach
+
+I love unit testing with good coverage and an ability to debug things that go wrong. So, my goal was to come out with an approiach (a process and tools) that let me do things locally as much as I can.
+
+Roughly, I maintain the latest state of ESPHome/PlatformIO as a compilation basis (core, components, libraries) and use it to build the project locally. After that I apply a set of unit tests to verify the internal logic of the implementation. 
+
+If everything goes fine, I check the complieability of test configs inside an ESPHome container.
+
+If ok, I judge the firmware as production-ready and flash.
+
+## The Tools
+
+I wanted a toolset that lets me do heavy lifting locally, without flashing the firmware every time. To achive that I use `GTest` and `GMock`. Tons of magic happens in `CMake` as well.
+
+Be aware: the price for that is proper mocking. The header files and the entities themselves are heavily mocked. On one hand side, it is in the nature of unite tests, on the other hand it is additional (and not very small) effort.
+
+Well, I resolved this tradeoff as I resolved, and that's the result.
+
+Another aspect of tooling is portability. I have two laptops: a MacBook Pro and a Windows-based ASUS.
+
+On the ASUS I run WSL2 and do compilation there. I do not use native Windows. Getting C++ toolchains there is a pain wherever and I just did not want to go through this. So, MacOS and WSL are supportd, Windows not.
+
+## Design Decisions
+
+Below is a pure technical description, up to 80% vibe coded (generated per the codebase). But here I would like to share some fundamental things that may be necessary to understand the design.
+
+### Design Challenge: Synchronous ESPHome, anynchronous Woleix AC IR
+
+I recognized early that the IR control protocol of the Woleix is somehow unusual. Even when just playing around with the native remote, I found out that (strangely enough) the first press of `Temp+` or `Temp-` button does not change the temperature, it just lets the LED panel blinking and only subsequent presses make the temperature updates, but only if they take place while the LED is blinking, i.e. within 5 seconds. It is a protocol quirk, which requires asynchronicity.
+
+At the same time, ESPHome `ClimateIR` itself is completely synchronous and optimistic. It pushes the state change (mode, temperature etc.) and does not care about switching the actual physical device, assuming optimistically that it eventually will reach the state. 
+
+### Design Decision: Command Queue
+
+Not really a completely unusual decision -- I decoupled the synchronous and asynchronous worklds by a queue. The `Climate` part fills in the queue synchronously, the `Protocol Handler` shovels it out respecting the IR protocol (delays etc.)
+
+### Design Challenge: State Management
+
+Well, this led to another question. In the beginning, I managed the internal Woleix AC state in a `State Manager` that also calculated the IR command chain (transitions in a state machine) that moved from the current state to the target state. Looking at the protocol quirk above, it this "Temperature setting" state a part of the entire state machine (and has to be modeled in the `State Manager`), or not?
+
+### Design Decision: Separate Device State from Protocol State
+
+I decided to keep the logical state (mode, fan speed, temperature) in the `State Manager`, moving the temporal protocol quirks to the `Protocol Handler` (it is how it emerged, initially it was just a dump transmitter).
+
+### Design Challenge: Polling vs. Observer
+
+In general, it would be easier to implement stuff based on polling, e.g. the `Protocol Handler` looks into the `Command Queue` to get the next commant to handle. But as ESPHome is normally single-threaded (that's at least my current understanding), polling is not an optimal solution.
+
+### Design Decision: Observer is the Way
+
+As you see in the code, I use `Observer` pretty much everywhere, from status reporting (well, this is a bit overengineered part) down to the command queue management.
+
+### Design Challenge: State Reconciliation
+
+Woleix AC IR does not support a back channel, so in the `ClimateIR` you do not know, whether the device is in the same state as your software thinks it is. Meaning, a state drift may happen.
+The only way I found so far to reconcile is to cut off the power for some time, after which the device comes deterministically to a defauls state.
+
+### Design Decision: External Button
+
+So far I soldered an external button on the PCB, but it may be of course somewhere. The thing is, it should control a smart socket that connects the device to the power and switches it off for 30 sec to reconcile the state. A bad solution, I know, but the only one working for now. I have a couple of ideas on that, possibly they will be realized later. 
+
+## Vibe Coding Results
+
+I identified two sweet spots for vibe coding in my projects:
+
+- unit tests generation
+- documenting the codebase
+- code review
+
+I do not let LLMs mess with my productive coding, except for reviewing. The main problem of vibe coding agents (I use `Cline` with `Claude Soinnet 4.5`, but also earlier tried out `Github Co-pilot`) is their "fall-forward" approach. Even when made a wrong decision (which they do), they are not able to roll back, but try to make things working. The result is that the code is unmanageable after 4-5 iterations.
+
+It can well be that I just was not able to come up with right prompts...
+
 ## 📁 Project Structure
 
 ```text
@@ -502,7 +586,7 @@ As of the latest update, all unit tests in the test suite are passing:
 - **19 tests** in `woleix_state_mapper_test.cpp` (State mapper tests)
 - **12 tests** in `woleix_protocol_handler_test.cpp` (Protocol handler tests)
 
-A total of 85 tests are now passing, including a recently resolved segmentation fault issue.
+A total of 85 tests are now passing, with all previously reported issues resolved.
 
 These tests cover:
 
@@ -586,9 +670,15 @@ black esphome/components/climate_ir_woleix/__init__.py
 4. **Write Tests**
    - Climate interface tests → `tests/unit/climate_ir_woleix_test.cpp`
    - State manager tests → `tests/unit/woleix_state_manager_test.cpp`
-   - Aim for high coverage (current: 96.3% line coverage)
+   - State mapper tests → `tests/unit/woleix_state_mapper_test.cpp`
+   - Protocol handler tests → `tests/unit/woleix_protocol_handler_test.cpp`
+   - Aim for high coverage (current: >95% line coverage)
 
-5. **Test Locally**
+5. **Update Documentation**
+   - Update inline comments in header and implementation files
+   - Update README.md if necessary
+
+6. **Test Locally**
 
    ```bash
    # Run unit tests
@@ -603,6 +693,11 @@ black esphome/components/climate_ir_woleix/__init__.py
    # Test with real ESPHome config
    esphome compile your-config.yaml
    ```
+
+7. **Code Review**
+   - Ensure all changes are documented
+   - Verify test coverage
+   - Check for code style consistency
 
 ## 🐛 Troubleshooting
 

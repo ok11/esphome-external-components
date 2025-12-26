@@ -21,8 +21,10 @@
 #include "woleix_state_mapper.h"
 #include "woleix_state_manager.h"
 
-namespace esphome {
-namespace climate_ir_woleix {
+namespace esphome
+{
+namespace climate_ir_woleix
+{
 
 using climate::ClimateMode;
 using climate::ClimateFanMode;
@@ -122,6 +124,15 @@ public:
 
 protected:
 
+    /**
+     * @brief Observe and handle status updates from Woleix components.
+     * 
+     * This method is called when a status update is received. It logs the status
+     * message with appropriate severity and sets error or warning states as needed.
+     * 
+     * @param reporter The reporter that generated the status update.
+     * @param status The status update to be handled.
+     */
     void observe(const WoleixStatusReporter& reporter, const WoleixStatus& status) override
     {
         if (status.get_severity() == WoleixStatus::Severity::WX_SEVERITY_ERROR)
@@ -144,26 +155,46 @@ protected:
         }
     }
 
-    void on_high_watermark() override
+    /**
+     * @brief Handler for when the command queue reaches its high watermark.
+     * 
+     * Sets a warning status and puts the climate controller on hold.
+     */
+    void on_queue_at_high_watermark() override
     {
         ESP_LOGW(TAG, "Queue at its high watermark (%d)", command_queue_->length());
         status_set_warning("Queue.AtHighWatermark");
         on_hold_ = true;
     }
 
-    void on_low_watermark() override
+    /**
+     * @brief Handler for when the command queue reaches its low watermark.
+     * 
+     * Releases the hold on the climate controller.
+     */
+    void on_queue_at_low_watermark() override
     {
-        ESP_LOGI(TAG, "Queue at its high watermark (%d)", command_queue_->length());
+        ESP_LOGI(TAG, "Queue at its low watermark (%d)", command_queue_->length());
         on_hold_ = false;
     }
 
-    void on_full() override
+    /**
+     * @brief Handler for when the command queue becomes full.
+     * 
+     * Sets an error status.
+     */
+    void on_queue_full() override
     {
         ESP_LOGE(TAG, "Queue full");
         status_set_error("Queue.Full");
     }
 
-    void on_empty() override
+    /**
+     * @brief Handler for when the command queue becomes empty.
+     * 
+     * Logs an informational message.
+     */
+    void on_queue_empty() override
     {
         ESP_LOGI(TAG, "Queue empty");
     }
@@ -195,11 +226,9 @@ protected:
     virtual void update_state_();
 
     std::unique_ptr<WoleixCommandQueue> command_queue_;         /**< Command queue for asynchronous execution */
-//    std::shared_ptr<WoleixStateManager> state_manager_;         /**< State manager for command generation and state management */
-//    std::shared_ptr<WoleixProtocolHandler> protocol_handler_;   /**< Protocol handler for sending IR commands */
 
     sensor::Sensor* humidity_sensor_{nullptr};  /**< Optional humidity sensor */
-    bool on_hold_{false};                     /**< Flag indicating if command transmission is on hold */
+    bool on_hold_{false};                       /**< Flag indicating if command transmission is on hold */
 };
 
 }  // namespace climate_ir_woleix

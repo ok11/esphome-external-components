@@ -603,17 +603,6 @@ TEST_F(WoleixClimateTest, CompleteStateChangeSequence)
     mock_climate->run_until_empty();
 }
 
-// TEST_F(WoleixClimateTest, CarrierFrequencySetCorrectly) {
-//   mock_climate->mode = ClimateMode::CLIMATE_MODE_COOL;
-//   mock_climate->target_temperature = 22.0f;
-//   mock_climate->call_transmit_state();
-  
-//   // All transmitted data should have correct carrier frequency
-//   for (const auto& data : transmitted_data) {
-//     EXPECT_EQ(data.get_carrier_frequency(), 38030);
-//   }
-// }
-
 // ============================================================================
 // Test: Temperature Bounds
 // ============================================================================
@@ -863,17 +852,6 @@ TEST_F(WoleixClimateTest, FanSpeedOnlyTransmittedInFanMode)
     mock_climate->call_transmit_state();
     mock_climate->run_until_empty();
 }
-
-// ============================================================================
-// Test: Control Function
-// ============================================================================
-
-/**
- * Test: Control function handles mode changes correctly
- *
- * Validates that the control() function correctly updates the internal state
- * when a mode change is requested, and triggers transmit_state().
- */
 
 // ============================================================================
 // Test: Improved State Synchronization

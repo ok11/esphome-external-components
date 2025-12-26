@@ -99,73 +99,61 @@ protected:
     uint32_t repeat_count_{1};  /**< Number of times to repeat the command */
 };
 
-namespace StatusCategory::Queue
-{
-    inline constexpr auto AT_HIGH_WATERMARK = 
-        Category::make(CategoryId::CommandQueue, 1, "CommandQueue.AtHighWatermark");
-    inline constexpr auto AT_LOW_WATERMARK = 
-        Category::make(CategoryId::CommandQueue, 2, "CommandQueue.AtLowWatermark");
-    inline constexpr auto EMPTY = 
-        Category::make(CategoryId::CommandQueue, 3, "CommandQueue.Empty");
-    inline constexpr auto FULL = 
-        Category::make(CategoryId::CommandQueue, 4, "CommandQueue.Full");
-    inline constexpr auto COMMAND_ENQUEUED = 
-        Category::make(CategoryId::CommandQueue, 5, "CommandQueue.CommandEnqueued");
-}
-
-const WoleixStatus WX_STATUS_QUEUE_AT_HIGH_WATERMARK = WoleixStatus
-(
-    WoleixStatus::Severity::WX_SEVERITY_WARNING,
-    StatusCategory::Queue::AT_HIGH_WATERMARK,
-    "The command queue is at high watermark"
-);
-
-const WoleixStatus WX_STATUS_QUEUE_AT_LOW_WATERMARK = WoleixStatus
-(
-    WoleixStatus::Severity::WX_SEVERITY_INFO,
-    StatusCategory::Queue::AT_LOW_WATERMARK,
-    "The command queue is at low watermark"
-);
-
-const WoleixStatus WX_STATUS_QUEUE_EMPTY = WoleixStatus
-(
-    WoleixStatus::Severity::WX_SEVERITY_INFO,
-    StatusCategory::Queue::EMPTY,
-    "The command queue is empty"
-);
-
-const WoleixStatus WX_STATUS_QUEUE_FULL = WoleixStatus
-(
-    WoleixStatus::Severity::WX_SEVERITY_ERROR,
-    StatusCategory::Queue::FULL,
-    "The command queue is full"
-);
-
-const WoleixStatus WX_STATUS_QUEUE_COMMAND_ENQUEUED = WoleixStatus
-(
-    WoleixStatus::Severity::WX_SEVERITY_INFO,
-    StatusCategory::Queue::COMMAND_ENQUEUED,
-    "A command is enqueued into the command queue"
-);
-
 static constexpr float QUEUE_HIGH_WATERMARK = 0.8f;
 static constexpr float QUEUE_LOW_WATERMARK = 0.2f;
 
+/**
+ * @brief Interface for classes that produce commands for the WoleixCommandQueue.
+ * 
+ * This interface defines methods that are called when the queue reaches certain states,
+ * allowing producers to react accordingly.
+ */
 class WoleixCommandQueueProducer
 {
 public:
-    virtual void on_high_watermark() = 0;
-    virtual void on_low_watermark() = 0;
-    virtual void on_full() = 0;
-    virtual void on_empty() = 0;
+    /**
+     * @brief Called when the queue reaches its high watermark.
+     */
+    virtual void on_queue_at_high_watermark() = 0;
+
+    /**
+     * @brief Called when the queue reaches its low watermark.
+     */
+    virtual void on_queue_at_low_watermark() = 0;
+
+    /**
+     * @brief Called when the queue becomes full.
+     */
+    virtual void on_queue_full() = 0;
+
+    /**
+     * @brief Called when the queue becomes empty.
+     */
+    virtual void on_queue_empty() = 0;
 };
 
+/**
+ * @brief Interface for classes that consume commands from the WoleixCommandQueue.
+ * 
+ * This interface defines a method that is called when a new command is enqueued,
+ * allowing consumers to react to new commands.
+ */
 class WoleixCommandQueueConsumer
 {
 public:
-    virtual void on_command() = 0;
+    /**
+     * @brief Called when a new command is enqueued.
+     */
+    virtual void on_command_enqueued() = 0;
 };
 
+/**
+ * @brief A queue for managing WoleixCommand objects.
+ * 
+ * This class implements a queue with a maximum capacity for WoleixCommand objects.
+ * It provides methods for enqueueing and dequeueing commands, as well as notifying
+ * producers and consumers about the queue's state.
+ */
 class WoleixCommandQueue
 {
 public:
@@ -195,19 +183,19 @@ public:
     {
         if (queue_->size() == max_capacity_)
         {
-            on_full();
+            on_queue_full();
             return false;
         }
         else if (queue_->size() > max_capacity_ * QUEUE_HIGH_WATERMARK)
         {
-            on_high_watermark();
+            on_queue_at_high_watermark();
         }
 
         queue_->push_back(command);
 
         if (queue_->size() == 1)
         {
-            on_command();
+            on_command_enqueued();
         }
         return true;
     }
@@ -215,19 +203,19 @@ public:
     {
         if (max_capacity_ - queue_->size() - commands.size() < 0)
         {
-            on_full();
+            on_queue_full();
             return false;
         }
         else if (max_capacity_ * QUEUE_HIGH_WATERMARK - queue_->size()  - commands.size() < 0)
         {
-            on_high_watermark();
+            on_queue_at_high_watermark();
         }
 
         queue_->insert(queue_->end(), commands.begin(), commands.end());
 
         if (queue_->size() == commands.size())
         {
-            on_command();
+            on_command_enqueued();
         }
         return true;
     }
@@ -245,54 +233,54 @@ public:
         }
         if (queue_->size() < max_capacity_ * QUEUE_LOW_WATERMARK)
         {
-            on_low_watermark();
+            on_queue_at_low_watermark();
         }
 
         queue_->pop_front();
         
         if (queue_->empty())
         {
-            on_empty();
+            on_queue_empty();
         }
     }
 
-    void on_high_watermark() const
+    void on_queue_at_high_watermark() const
     {
         for (const auto& producer : producers_)
         {
-            producer->on_high_watermark();
+            producer->on_queue_at_high_watermark();
         }
     }
 
-    void on_low_watermark() const
+    void on_queue_at_low_watermark() const
     {
         for (const auto& producer : producers_)
         {
-            producer->on_low_watermark();
+            producer->on_queue_at_low_watermark();
         }
     }
 
-    void on_empty() const
+    void on_queue_empty() const
     {
         for (const auto& producer : producers_)
         {
-            producer->on_empty();
+            producer->on_queue_empty();
         }
     }
 
-    void on_full() const
+    void on_queue_full() const
     {
         for (const auto& producer : producers_)
         {
-            producer->on_full();
+            producer->on_queue_full();
         }
     }
 
-    void on_command() const
+    void on_command_enqueued() const
     {
         for (const auto& consumer : consumers_)
         {
-            consumer->on_command();
+            consumer->on_command_enqueued();
         }
     }
 

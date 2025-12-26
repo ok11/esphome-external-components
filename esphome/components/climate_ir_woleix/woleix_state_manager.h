@@ -52,10 +52,10 @@ struct WoleixInternalState {
     WoleixFanSpeed fan_speed;       /**< Fan speed (LOW/HIGH) */
 
     /**
-        * Default constructor initializes to device defaults.
-        * 
-        * Sets: power=ON, mode=COOL, temperature=25.0°C, fan_speed=LOW
-        */
+    * Default constructor initializes to device defaults.
+    * 
+    * Sets: power=ON, mode=COOL, temperature=25.0°C, fan_speed=LOW
+    */
     WoleixInternalState()
       : WoleixInternalState
         (
@@ -82,30 +82,83 @@ struct WoleixInternalState {
     }
 };
 
+/**
+ * @brief Builder class for creating WoleixInternalState objects.
+ * 
+ * This class provides a fluent interface for constructing WoleixInternalState
+ * objects, allowing for easy and readable state creation.
+ */
 class WoleixInternalStateBuilder
 {
 public:
+    /**
+     * @brief Set the power state.
+     * @param p The power state to set.
+     * @return Reference to this builder for method chaining.
+     */
     WoleixInternalStateBuilder& power(WoleixPowerState p) { state_.power = p; return *this; }
+
+    /**
+     * @brief Set the operating mode.
+     * @param m The mode to set.
+     * @return Reference to this builder for method chaining.
+     */
     WoleixInternalStateBuilder& mode(WoleixMode m) { state_.mode = m; return *this; }
+
+    /**
+     * @brief Set the temperature.
+     * @param t The temperature to set in Celsius.
+     * @return Reference to this builder for method chaining.
+     */
     WoleixInternalStateBuilder& temperature(float t) { state_.temperature = t; return *this; }
+
+    /**
+     * @brief Set the fan speed.
+     * @param f The fan speed to set.
+     * @return Reference to this builder for method chaining.
+     */
     WoleixInternalStateBuilder& fan(WoleixFanSpeed f) { state_.fan_speed = f; return *this; }
+
+    /**
+     * @brief Build and return the constructed WoleixInternalState.
+     * @return The fully constructed WoleixInternalState object.
+     */
     WoleixInternalState build() { return state_; }
+
 private:
     WoleixInternalState state_;
 };
 
+/**
+ * @brief Factory class for creating WoleixCommand objects.
+ * 
+ * This class encapsulates the creation logic for WoleixCommand objects,
+ * ensuring that all commands are created with the correct address.
+ */
 class WoleixCommandFactory
 {
 public:
+    /**
+     * @brief Construct a new WoleixCommandFactory.
+     * @param address The address to use for all created commands.
+     */
     WoleixCommandFactory(uint16_t address) : address_(address) {}
+
     virtual ~WoleixCommandFactory() = default;
 
+    /**
+     * @brief Create a new WoleixCommand.
+     * @param type The type of command to create.
+     * @param repeats The number of times to repeat the command (default is 1).
+     * @return A new WoleixCommand object.
+     */
     virtual WoleixCommand create(WoleixCommand::Type type, uint32_t repeats = 1) const
     {
         return WoleixCommand(type, address_, repeats);
     }
+
 private:
-    uint16_t address_;
+    uint16_t address_;  /**< The address used for all created commands */
 };
 
 namespace WoleixCategory::StateManager
@@ -246,24 +299,10 @@ protected:
      */
     void enqueue_command_(const WoleixCommand& command);
 
-
-    // void hold()
-    // {
-    //     on_hold_ = true;
-    // }
-
-    // void resume()
-    // {
-    //     on_hold_ = false;
-    // }
     WoleixInternalState current_state_;  /**< Current tracked state of the AC unit */
     std::unique_ptr<WoleixCommandFactory> command_factory_{nullptr};  /**< Factory for creating IR commands */
 
-//    WoleixCommandQueue* command_queue_;
-
     std::vector<WoleixCommand> commands_;
-    
-//    bool on_hold_{false};
 };
 
 }  // namespace climate_ir_woleix

@@ -9,19 +9,6 @@ using namespace esphome::climate_ir_woleix;
 using namespace esphome::climate;
 
 // ============================================================================
-// Test Fixture
-// ============================================================================
-
-class StateMapperTest : public testing::Test
-{
-protected:
-    void SetUp() override
-    {
-        // No setup needed for static methods
-    }
-};
-
-// ============================================================================
 // Test: Mode Mapping (Woleix -> ESPHome)
 // ============================================================================
 
@@ -30,7 +17,7 @@ protected:
  * 
  * Validates that Woleix COOL mode maps to ESPHome CLIMATE_MODE_COOL.
  */
-TEST_F(StateMapperTest, WoleixCoolMapsToEspHomeCool)
+TEST(StateMapperTest, WoleixCoolMapsToEspHomeCool)
 {
     auto mode = StateMapper::woleix_to_esphome_mode(WoleixMode::COOL);
     EXPECT_EQ(mode, ClimateMode::CLIMATE_MODE_COOL);
@@ -41,7 +28,7 @@ TEST_F(StateMapperTest, WoleixCoolMapsToEspHomeCool)
  * 
  * Validates that Woleix DEHUM mode maps to ESPHome CLIMATE_MODE_DRY.
  */
-TEST_F(StateMapperTest, WoleixDehumMapsToEspHomeDry)
+TEST(StateMapperTest, WoleixDehumMapsToEspHomeDry)
 {
     auto mode = StateMapper::woleix_to_esphome_mode(WoleixMode::DEHUM);
     EXPECT_EQ(mode, ClimateMode::CLIMATE_MODE_DRY);
@@ -52,7 +39,7 @@ TEST_F(StateMapperTest, WoleixDehumMapsToEspHomeDry)
  * 
  * Validates that Woleix FAN mode maps to ESPHome CLIMATE_MODE_FAN_ONLY.
  */
-TEST_F(StateMapperTest, WoleixFanMapsToEspHomeFanOnly)
+TEST(StateMapperTest, WoleixFanMapsToEspHomeFanOnly)
 {
     auto mode = StateMapper::woleix_to_esphome_mode(WoleixMode::FAN);
     EXPECT_EQ(mode, ClimateMode::CLIMATE_MODE_FAN_ONLY);
@@ -67,7 +54,7 @@ TEST_F(StateMapperTest, WoleixFanMapsToEspHomeFanOnly)
  * 
  * Validates that ESPHome CLIMATE_MODE_COOL maps to Woleix COOL mode.
  */
-TEST_F(StateMapperTest, EspHomeCoolMapsToWoleixCool)
+TEST(StateMapperTest, EspHomeCoolMapsToWoleixCool)
 {
     auto mode = StateMapper::esphome_to_woleix_mode(ClimateMode::CLIMATE_MODE_COOL);
     EXPECT_EQ(mode, WoleixMode::COOL);
@@ -78,7 +65,7 @@ TEST_F(StateMapperTest, EspHomeCoolMapsToWoleixCool)
  * 
  * Validates that ESPHome CLIMATE_MODE_DRY maps to Woleix DEHUM mode.
  */
-TEST_F(StateMapperTest, EspHomeDryMapsToWoleixDehum)
+TEST(StateMapperTest, EspHomeDryMapsToWoleixDehum)
 {
     auto mode = StateMapper::esphome_to_woleix_mode(ClimateMode::CLIMATE_MODE_DRY);
     EXPECT_EQ(mode, WoleixMode::DEHUM);
@@ -89,7 +76,7 @@ TEST_F(StateMapperTest, EspHomeDryMapsToWoleixDehum)
  * 
  * Validates that ESPHome CLIMATE_MODE_FAN_ONLY maps to Woleix FAN mode.
  */
-TEST_F(StateMapperTest, EspHomeFanOnlyMapsToWoleixFan)
+TEST(StateMapperTest, EspHomeFanOnlyMapsToWoleixFan)
 {
     auto mode = StateMapper::esphome_to_woleix_mode(ClimateMode::CLIMATE_MODE_FAN_ONLY);
     EXPECT_EQ(mode, WoleixMode::FAN);
@@ -101,7 +88,7 @@ TEST_F(StateMapperTest, EspHomeFanOnlyMapsToWoleixFan)
  * Validates that unsupported ESPHome climate modes (like AUTO, HEAT, etc.)
  * default to Woleix COOL mode.
  */
-TEST_F(StateMapperTest, UnsupportedEspHomeModesDefaultToCool)
+TEST(StateMapperTest, UnsupportedEspHomeModesDefaultToCool)
 {
     auto mode_auto = StateMapper::esphome_to_woleix_mode(ClimateMode::CLIMATE_MODE_AUTO);
     EXPECT_EQ(mode_auto, WoleixMode::COOL);
@@ -122,7 +109,7 @@ TEST_F(StateMapperTest, UnsupportedEspHomeModesDefaultToCool)
  * 
  * Validates that Woleix LOW fan speed maps to ESPHome CLIMATE_FAN_LOW.
  */
-TEST_F(StateMapperTest, WoleixLowFanMapsToEspHomeLow)
+TEST(StateMapperTest, WoleixLowFanMapsToEspHomeLow)
 {
     auto fan_mode = StateMapper::woleix_to_esphome_fan_mode(WoleixFanSpeed::LOW);
     EXPECT_EQ(fan_mode, ClimateFanMode::CLIMATE_FAN_LOW);
@@ -133,7 +120,7 @@ TEST_F(StateMapperTest, WoleixLowFanMapsToEspHomeLow)
  * 
  * Validates that Woleix HIGH fan speed maps to ESPHome CLIMATE_FAN_HIGH.
  */
-TEST_F(StateMapperTest, WoleixHighFanMapsToEspHomeHigh) {
+TEST(StateMapperTest, WoleixHighFanMapsToEspHomeHigh) {
     auto fan_mode = StateMapper::woleix_to_esphome_fan_mode(WoleixFanSpeed::HIGH);
     EXPECT_EQ(fan_mode, ClimateFanMode::CLIMATE_FAN_HIGH);
 }
@@ -147,7 +134,7 @@ TEST_F(StateMapperTest, WoleixHighFanMapsToEspHomeHigh) {
  * 
  * Validates that ESPHome CLIMATE_FAN_LOW maps to Woleix LOW fan speed.
  */
-TEST_F(StateMapperTest, EspHomeLowFanMapsToWoleixLow)
+TEST(StateMapperTest, EspHomeLowFanMapsToWoleixLow)
 {
     auto fan_speed = StateMapper::esphome_to_woleix_fan_mode(ClimateFanMode::CLIMATE_FAN_LOW);
     EXPECT_EQ(fan_speed, WoleixFanSpeed::LOW);
@@ -158,7 +145,7 @@ TEST_F(StateMapperTest, EspHomeLowFanMapsToWoleixLow)
  * 
  * Validates that ESPHome CLIMATE_FAN_HIGH maps to Woleix HIGH fan speed.
  */
-TEST_F(StateMapperTest, EspHomeHighFanMapsToWoleixHigh)
+TEST(StateMapperTest, EspHomeHighFanMapsToWoleixHigh)
 {
     auto fan_speed = StateMapper::esphome_to_woleix_fan_mode(ClimateFanMode::CLIMATE_FAN_HIGH);
     EXPECT_EQ(fan_speed, WoleixFanSpeed::HIGH);
@@ -170,7 +157,7 @@ TEST_F(StateMapperTest, EspHomeHighFanMapsToWoleixHigh)
  * Validates that unsupported ESPHome fan modes (like AUTO, MEDIUM, etc.)
  * default to Woleix LOW fan speed.
  */
-TEST_F(StateMapperTest, UnsupportedEspHomeFanModesDefaultToLow)
+TEST(StateMapperTest, UnsupportedEspHomeFanModesDefaultToLow)
 {
     auto fan_auto = StateMapper::esphome_to_woleix_fan_mode(ClimateFanMode::CLIMATE_FAN_AUTO);
     EXPECT_EQ(fan_auto, WoleixFanSpeed::LOW);
@@ -194,7 +181,7 @@ TEST_F(StateMapperTest, UnsupportedEspHomeFanModesDefaultToLow)
  * 
  * Validates that Woleix ON power state maps to boolean true for ESPHome.
  */
-TEST_F(StateMapperTest, WoleixOnPowerMapsToTrue)
+TEST(StateMapperTest, WoleixOnPowerMapsToTrue)
 {
     bool power = StateMapper::woleix_to_esphome_power(WoleixPowerState::ON);
     EXPECT_TRUE(power);
@@ -205,7 +192,7 @@ TEST_F(StateMapperTest, WoleixOnPowerMapsToTrue)
  * 
  * Validates that Woleix OFF power state maps to boolean false for ESPHome.
  */
-TEST_F(StateMapperTest, WoleixOffPowerMapsToFalse)
+TEST(StateMapperTest, WoleixOffPowerMapsToFalse)
 {
     bool power = StateMapper::woleix_to_esphome_power(WoleixPowerState::OFF);
     EXPECT_FALSE(power);
@@ -220,7 +207,7 @@ TEST_F(StateMapperTest, WoleixOffPowerMapsToFalse)
  * 
  * Validates that ESPHome boolean true maps to Woleix ON power state.
  */
-TEST_F(StateMapperTest, EspHomeTruePowerMapsToWoleixOn)
+TEST(StateMapperTest, EspHomeTruePowerMapsToWoleixOn)
 {
     auto power = StateMapper::esphome_to_woleix_power(true);
     EXPECT_EQ(power, WoleixPowerState::ON);
@@ -231,7 +218,7 @@ TEST_F(StateMapperTest, EspHomeTruePowerMapsToWoleixOn)
  * 
  * Validates that ESPHome boolean false maps to Woleix OFF power state.
  */
-TEST_F(StateMapperTest, EspHomeFalsePowerMapsToWoleixOff)
+TEST(StateMapperTest, EspHomeFalsePowerMapsToWoleixOff)
 {
     auto power = StateMapper::esphome_to_woleix_power(false);
     EXPECT_EQ(power, WoleixPowerState::OFF);
@@ -247,7 +234,7 @@ TEST_F(StateMapperTest, EspHomeFalsePowerMapsToWoleixOff)
  * Validates that converting a mode from Woleix to ESPHome and back
  * results in the original Woleix mode.
  */
-TEST_F(StateMapperTest, ModeConversionsAreReversible)
+TEST(StateMapperTest, ModeConversionsAreReversible)
 {
     // COOL
     auto cool_esphome = StateMapper::woleix_to_esphome_mode(WoleixMode::COOL);
@@ -271,7 +258,7 @@ TEST_F(StateMapperTest, ModeConversionsAreReversible)
  * Validates that converting a fan speed from Woleix to ESPHome and back
  * results in the original Woleix fan speed.
  */
-TEST_F(StateMapperTest, FanSpeedConversionsAreReversible)
+TEST(StateMapperTest, FanSpeedConversionsAreReversible)
 {
     // LOW
     auto low_esphome = StateMapper::woleix_to_esphome_fan_mode(WoleixFanSpeed::LOW);
@@ -290,7 +277,7 @@ TEST_F(StateMapperTest, FanSpeedConversionsAreReversible)
  * Validates that converting a power state from Woleix to ESPHome and back
  * results in the original Woleix power state.
  */
-TEST_F(StateMapperTest, PowerStateConversionsAreReversible)
+TEST(StateMapperTest, PowerStateConversionsAreReversible)
 {
     // ON
     auto on_esphome = StateMapper::woleix_to_esphome_power(WoleixPowerState::ON);
