@@ -63,7 +63,7 @@ void WoleixProtocolHandler::process_next_command_()
             )
         );
     }
-    if (command_queue_->is_empty())
+    else if (command_queue_->is_empty())
     {
         // All commands processed
         ESP_LOGD(TAG, "All commands executed");

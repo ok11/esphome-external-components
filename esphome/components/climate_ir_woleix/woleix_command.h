@@ -201,12 +201,12 @@ public:
     }
     bool enqueue(const std::vector<WoleixCommand>& commands)
     {
-        if (max_capacity_ - queue_->size() - commands.size() < 0)
+        if (queue_->size() + commands.size() > max_capacity_)
         {
             on_queue_full();
             return false;
         }
-        else if (max_capacity_ * QUEUE_HIGH_WATERMARK - queue_->size()  - commands.size() < 0)
+        else if (queue_->size() + commands.size() >= max_capacity_ * QUEUE_HIGH_WATERMARK)
         {
             on_queue_at_high_watermark();
         }
@@ -231,7 +231,7 @@ public:
         {
             throw std::out_of_range("Dequeue called on empty WoleixCommandQueue");
         }
-        if (queue_->size() < max_capacity_ * QUEUE_LOW_WATERMARK)
+        if (queue_->size() <= max_capacity_ * QUEUE_LOW_WATERMARK)
         {
             on_queue_at_low_watermark();
         }

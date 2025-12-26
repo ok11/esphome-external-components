@@ -251,8 +251,8 @@ int WoleixStateManager::calculate_mode_steps_(WoleixMode from_mode, WoleixMode t
                 std::format
                 (
                     "Invalid mode in sequence: from={}, to={}", 
-                    "static_cast<uint8_t>(from_mode)", 
-                    "static_cast<uint8_t>(to_mode)"
+                    static_cast<uint8_t>(from_mode), 
+                    static_cast<uint8_t>(to_mode)
                 )
             )
         );

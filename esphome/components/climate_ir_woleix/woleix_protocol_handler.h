@@ -186,7 +186,8 @@ protected:
      */
     void cleanup_()
     {
-        command_queue_->unregister_consumer(this);
+        if (command_queue_)
+            command_queue_->unregister_consumer(this);
         cancel_timeout_(TIMEOUT_SETTING_MODE);
         cancel_timeout_(TIMEOUT_NEXT_COMMAND);
     }

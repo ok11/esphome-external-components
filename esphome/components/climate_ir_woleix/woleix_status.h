@@ -87,6 +87,7 @@ class WoleixStatusReporter;
 class WoleixStatusObserver
 {
 public:
+    virtual ~WoleixStatusObserver() = default;
     /**
      * @brief Method called when a new status is reported.
      * @param reporter The reporter that generated the status.
@@ -101,6 +102,7 @@ public:
 class WoleixStatusReporter
 {
 public:
+    virtual ~WoleixStatusReporter() = default;
     virtual void register_observer(WoleixStatusObserver* observer)
     {
         observers_.push_back(observer);
