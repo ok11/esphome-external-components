@@ -43,9 +43,9 @@ tests/
 **Test Files:**
 
 - `climate_ir_woleix_test.cpp` - 28 tests for climate component (main controller)
-- `woleix_state_machine_test.cpp` - 26 tests for state machine (command generation)
+- `woleix_state_manager_test.cpp` - 26 tests for state manager (command generation)
 - `woleix_state_mapper_test.cpp` - 19 tests for state mapper (ESPHome↔Woleix conversions)
-- `woleix_comm_test.cpp` - 12 tests for communication layer (NEC protocol transmission)
+- `woleix_protocol_handler_test.cpp` - 12 tests for protocol handler (NEC protocol transmission)
 - **Total: 85 unit tests**
 
 **Characteristics:**
@@ -55,7 +55,7 @@ tests/
 - Use Google Test framework with Google Mock for mocking
 - No external dependencies (beyond C++ compiler & Google Test)
 - Perfect for TDD and rapid development cycles
-- **96.3% line coverage, 95.7% function coverage**
+- **>95% line coverage, >95% function coverage**
 - Test NEC protocol command generation and IR transmission logic
 
 **When to use:**
@@ -383,7 +383,7 @@ TEST_F(WoleixClimateTest, YourNewTest) {
 }
 ```
 
-**For State Machine** - Edit `tests/unit/woleix_state_machine_test.cpp`:
+**For State Manager** - Edit `tests/unit/woleix_state_manager_test.cpp`:
 
 ```cpp
 TEST(WoleixStateManagerTest, YourNewTest) {
@@ -391,13 +391,13 @@ TEST(WoleixStateManagerTest, YourNewTest) {
   WoleixStateManager state_manager;
   
   // Execute
-  state_machine.move_to(WoleixPowerState::ON, 
-                                 WoleixMode::COOL, 
-                                 25.0f, 
-                                 WoleixFanSpeed::LOW);
+  state_manager.move_to(WoleixInternalState(WoleixPowerState::ON, 
+                                            WoleixMode::COOL, 
+                                            25.0f, 
+                                            WoleixFanSpeed::LOW));
   
   // Verify
-  auto commands = state_machine.get_commands();
+  const auto& commands = state_manager.get_commands();
   EXPECT_EQ(commands.size(), expected_count);
 }
 ```
@@ -417,21 +417,23 @@ TEST(StateMapperTest, YourNewTest) {
 }
 ```
 
-**For Communication** - Edit `tests/unit/woleix_comm_test.cpp`:
+**For Protocol Handler** - Edit `tests/unit/woleix_protocol_handler_test.cpp`:
 
 ```cpp
-TEST(WoleixTransmitterTest, YourNewTest) {
+TEST(WoleixProtocolHandlerTest, YourNewTest) {
   // Setup
   MockRemoteTransmitterBase mock_transmitter;
-  WoleixTransmitter transmitter(&mock_transmitter);
-  WoleixCommand command(WoleixCommand::Type::POWER, ADDRESS_NEC, 0, 1);
+  WoleixProtocolHandler handler([](const std::string&, uint32_t, std::function<void()>){},
+                                [](const std::string&){});
+  handler.set_transmitter(&mock_transmitter);
+  WoleixCommand command(WoleixCommand::Type::POWER, ADDRESS_NEC, 1);
   
   // Expectations - verify NEC protocol transmission
   EXPECT_CALL(mock_transmitter, transmit(testing::_))
       .Times(1);
   
   // Execute
-  transmitter.transmit_(command);
+  handler.transmit_(command);
   
   // Verify is handled by the EXPECT_CALL
 }
@@ -494,10 +496,10 @@ The test runner will automatically discover and compile all `.yaml` files in `te
 
 ## Test Coverage Details
 
-### Current Coverage (as of v0.2.4)
+### Current Coverage (as of latest update)
 
-- **Line Coverage**: 96.3%
-- **Function Coverage**: 95.7%
+- **Line Coverage**: >95%
+- **Function Coverage**: >95%
 - **Total Tests**: 85 passing tests
 
 ### Coverage by Component
@@ -505,9 +507,9 @@ The test runner will automatically discover and compile all `.yaml` files in `te
 | Component | Tests | Focus Areas |
 | --------- | ----- | ----------- |
 | Climate Component | 28 | State synchronization, sensor integration, command transmission |
-| State Machine | 26 | Command generation, state transitions, mode cycling |
+| State Manager | 26 | Command generation, state transitions, mode cycling |
 | State Mapper | 19 | Bidirectional state conversions (ESPHome↔Woleix) |
-| Communication | 12 | NEC protocol transmission, command delays, repeats |
+| Protocol Handler | 12 | NEC protocol transmission, command delays, repeats |
 
 ### What's Tested
 
