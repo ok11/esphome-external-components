@@ -8,7 +8,7 @@ This directory contains comprehensive tests for the climate_ir_woleix ESPHome ex
 tests/
 ├── unit/                               # Fast, isolated unit tests
 │   ├── climate_ir_woleix_test.cpp      # Climate component tests (28 tests)
-│   ├── woleix_state_machine_test.cpp   # State machine tests (26 tests)
+│   ├── woleix_state_manager_test.cpp   # State manager tests (26 tests)
 │   ├── woleix_state_mapper_test.cpp    # State mapper tests (19 tests)
 │   ├── woleix_comm_test.cpp            # Communication tests (12 tests)
 │   ├── CMakeLists.txt
