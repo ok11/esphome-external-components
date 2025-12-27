@@ -5,6 +5,11 @@
 
 using namespace esphome::climate_ir_woleix;
 
+using testing::_;
+using testing::Return;
+using testing::AtLeast;
+using testing::Invoke;
+
 // Test Category Creation and Comparison
 TEST(WoleixStatusTest, CategoryCreationAndComparison)
 {

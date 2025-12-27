@@ -30,7 +30,6 @@ TEST(WoleixNecCommandTest, ConstructionAndGetters)
     
     EXPECT_EQ(cmd.get_type(), WoleixCommand::Type::POWER);
     EXPECT_EQ(cmd.get_address(), 0x00FF);
-//    EXPECT_EQ(cmd.get_delay_ms(), 200);
     EXPECT_EQ(cmd.get_repeat_count(), 1);
     EXPECT_EQ(cmd.get_command(), POWER_NEC);
 }

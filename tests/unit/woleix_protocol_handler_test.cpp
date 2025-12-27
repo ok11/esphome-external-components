@@ -11,6 +11,11 @@
 using namespace esphome::climate_ir_woleix;
 using namespace esphome::remote_base;
 
+using testing::_;
+using testing::Return;
+using testing::AtLeast;
+using testing::Invoke;
+
 class MockRemoteTransmitter : public RemoteTransmitterBase
 {
 public:
@@ -58,6 +63,13 @@ public:
     {
         return is_in_temp_setting_mode_();
     }
+
+    void call_transmit(const WoleixCommand& cmd)
+    {
+        transmit_(cmd);
+    }
+
+    MOCK_METHOD(void, report, (const WoleixStatus&));
 };
 
 
@@ -389,6 +401,20 @@ TEST_F(ProtocolHandlerTest, LargeTemperatureChange)
     
     EXPECT_EQ(mock_transmitter->transmit_count(), 16);  // n+1 = 15+1
     EXPECT_TRUE(mock_protocol_handler->is_in_setting_mode());
+}
+
+TEST_F(ProtocolHandlerTest, TransmitterNotSet)
+{
+    mock_protocol_handler->set_transmitter(nullptr);
+
+    EXPECT_CALL(*mock_protocol_handler, report(_))
+        .Times(1)
+        .WillOnce(Invoke([](const WoleixStatus& status) {
+            EXPECT_EQ(status.get_severity(), WoleixStatus::Severity::WX_SEVERITY_ERROR);
+            EXPECT_EQ(status.get_category(), WoleixCategory::ProtocolHandler::WX_CATEGORY_TRANSMITTER_NOT_SET);
+        }));
+    
+    mock_protocol_handler->call_transmit(WoleixCommand(WoleixCommand::Type::POWER, 0xFFFF));
 }
 
 TEST_F(ProtocolHandlerTest, MixedTempUpAndDown)

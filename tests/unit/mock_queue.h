@@ -1,5 +1,5 @@
 #pragma once
-
+#include <optional>
 #include "woleix_command.h"
 
 using esphome::climate_ir_woleix::WoleixCommand;
@@ -23,5 +23,9 @@ public:
         );
     }
 
-    const WoleixCommand& get(int index) const { return queue_->at(index); }
+    std::optional<WoleixCommand> get(int index) const 
+    {
+        if (index >= queue_->size()) return {};
+        return queue_->at(index);
+    }
 };

@@ -1077,7 +1077,7 @@ TEST_F(WoleixClimateTest, TransmitStateOnHoldTrue)
     EXPECT_CALL(*mock_climate, report_status(testing::_))
         .WillOnce
         (
-            testing::Invoke
+            Invoke
             (
                 [](const WoleixStatus& status)
                 {
@@ -1108,7 +1108,7 @@ TEST_F(WoleixClimateTest, EnqueueCommandsFailure)
     EXPECT_CALL(*mock_climate, report_status(testing::_))
         .WillOnce
         (
-            testing::Invoke
+            Invoke
             (
                 [](const WoleixStatus& status)
                 {
@@ -1172,7 +1172,7 @@ TEST_F(WoleixClimateTest, ObserveMethodTest)
     // Set up expectations
     EXPECT_CALL(*mock_climate, report_status(testing::_))
         .Times(1)
-        .WillOnce(testing::Invoke([&mock_status](const WoleixStatus& status) {
+        .WillOnce(Invoke([&mock_status](const WoleixStatus& status) {
             EXPECT_EQ(status.get_severity(), mock_status.get_severity());
             EXPECT_EQ(status.get_category(), mock_status.get_category());
         }));

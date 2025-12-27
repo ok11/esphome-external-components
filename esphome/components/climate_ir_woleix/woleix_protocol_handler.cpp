@@ -73,9 +73,22 @@ void WoleixProtocolHandler::process_next_command_()
             on_complete_ = nullptr;
         }
     }
+    else if (!command_queue_->get().has_value())
+    {
+        report
+        (
+            WoleixStatus
+            (
+                WoleixStatus::Severity::WX_SEVERITY_ERROR,
+                WoleixCategory::ProtocolHandler::WX_CATEGORY_FAILED_GET_COMMAND,
+                "Failed getting command from (non-empty) command queue"
+            )
+
+        );
+    }
     else
     {
-        const auto& cmd = command_queue_->get();
+        const auto& cmd = command_queue_->get().value();
     
         if (is_temp_command_(cmd))
         {
@@ -202,29 +215,40 @@ void WoleixProtocolHandler::transmit_(const WoleixCommand& command)
 {
     if (!transmitter_)
     {
-        ESP_LOGE(TAG, "Transmitter not set, cannot send command");
-        return;
+        report
+        (
+            WoleixStatus
+            (
+                WoleixStatus::Severity::WX_SEVERITY_ERROR,
+                WoleixCategory::ProtocolHandler::WX_CATEGORY_TRANSMITTER_NOT_SET,
+                "Transmitter is not set"
+            )
+
+        );
     }
-    NECData nec_data;
-    nec_data.address = command.get_address();
-    nec_data.command = command.get_command();
-    nec_data.command_repeats = 1; 
+    else
+    {
+        NECData nec_data;
+        nec_data.address = command.get_address();
+        nec_data.command = command.get_command();
+        nec_data.command_repeats = 1; 
 
-    ESP_LOGD
-    (
-        TAG,
-        "Transmitting NEC command: " 
-            "address=%#04x, "
-            "code=%#04x, "
-            "repeats=%u, "
-            "send_times=%u",
-        nec_data.address,
-        nec_data.command,
-        nec_data.command_repeats,
-        command.get_repeat_count()
-    );
+        ESP_LOGD
+        (
+            TAG,
+            "Transmitting NEC command: " 
+                "address=%#04x, "
+                "code=%#04x, "
+                "repeats=%u, "
+                "send_times=%u",
+            nec_data.address,
+            nec_data.command,
+            nec_data.command_repeats,
+            command.get_repeat_count()
+        );
 
-    transmitter_->transmit<NECProtocol>(nec_data, command.get_repeat_count(), 0);
+        transmitter_->transmit<NECProtocol>(nec_data, command.get_repeat_count(), 0);
+    }
 }
 
 }  // namespace climate_ir_woleix

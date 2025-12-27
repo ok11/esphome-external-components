@@ -23,6 +23,10 @@ namespace WoleixCategory::ProtocolHandler
         Category::make(CategoryId::ProtocolHandler, 1, "ProtocolHandler.InvalidCommandQueue");
     inline constexpr auto WX_CATEGORY_COMMAND_QUEUE_NOT_SET = 
         Category::make(CategoryId::ProtocolHandler, 2, "ProtocolHandler.CommandQueueNotSet");
+    inline constexpr auto WX_CATEGORY_FAILED_GET_COMMAND = 
+        Category::make(CategoryId::ProtocolHandler, 3, "ProtocolHandler.FailedGetCommand");
+    inline constexpr auto WX_CATEGORY_TRANSMITTER_NOT_SET = 
+        Category::make(CategoryId::ProtocolHandler, 4, "ProtocolHandler.TransmitterNotSet");
 }
 
 /**

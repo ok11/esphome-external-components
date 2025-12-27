@@ -10,6 +10,7 @@
 #include "mock_queue.h"
 
 using namespace esphome::climate_ir_woleix;
+
 using ::testing::_;
 using ::testing::AtLeast;
 
@@ -97,21 +98,13 @@ TEST_F(WoleixCommandQueueTest, DequeueFromNonEmptyQueue)
 TEST_F(WoleixCommandQueueTest, DequeueFromEmptyQueue)
 {
     ASSERT_TRUE(mock_queue->is_empty());
-    EXPECT_THROW
-    (
-        mock_queue->dequeue(),
-        std::out_of_range
-    );
+    EXPECT_FALSE(mock_queue->dequeue());
 }
 
 TEST_F(WoleixCommandQueueTest, GetCommandFromEmptyQueue)
 {
     ASSERT_TRUE(mock_queue->is_empty());
-    EXPECT_THROW
-    (
-        mock_queue->get(),
-        std::out_of_range
-    );
+    EXPECT_FALSE(mock_queue->get().has_value());
 }
 
 // Reset operation test
@@ -136,8 +129,10 @@ TEST_F(WoleixCommandQueueTest, GetCommandAtValidIndex)
     mock_queue->enqueue(cmd1);
     mock_queue->enqueue(cmd2);
 
-    EXPECT_EQ(mock_queue->get(0).get_type(), WoleixCommand::Type::POWER);
-    EXPECT_EQ(mock_queue->get(1).get_type(), WoleixCommand::Type::TEMP_UP);
+    EXPECT_TRUE(mock_queue->get(0).has_value());
+    EXPECT_TRUE(mock_queue->get(1).has_value());
+    EXPECT_EQ(mock_queue->get(0).value().get_type(), WoleixCommand::Type::POWER);
+    EXPECT_EQ(mock_queue->get(1).value().get_type(), WoleixCommand::Type::TEMP_UP);
 }
 
 TEST_F(WoleixCommandQueueTest, GetCommandAtInvalidIndex)
@@ -145,7 +140,7 @@ TEST_F(WoleixCommandQueueTest, GetCommandAtInvalidIndex)
     WoleixCommand cmd(WoleixCommand::Type::POWER, 0xFB04);
     mock_queue->enqueue(cmd);
 
-    EXPECT_THROW(mock_queue->get(1), std::out_of_range);
+    EXPECT_FALSE(mock_queue->get(1).has_value());
 }
 
 TEST_F(WoleixCommandQueueTest, ProducersNotifiedWhenQueueAtHighWatermark)

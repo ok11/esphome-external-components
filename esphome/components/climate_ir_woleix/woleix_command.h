@@ -5,6 +5,7 @@
 #include <deque>
 #include <numeric>
 #include <set>
+#include <optional>
 
 #include "woleix_constants.h"
 #include "woleix_status.h"
@@ -220,17 +221,15 @@ public:
         return true;
     }
 
-    const WoleixCommand& get() const
+    std::optional<WoleixCommand> get() const
     {
-        if (queue_->empty()) throw std::out_of_range("Next called on empty WoleixCommandQueue");
+        if (queue_->empty()) return {};
         return queue_->front();
     }
-    void dequeue()
+
+    bool dequeue()
     {
-        if (queue_->empty())
-        {
-            throw std::out_of_range("Dequeue called on empty WoleixCommandQueue");
-        }
+        if (queue_->empty()) return false;
         if (queue_->size() <= max_capacity_ * QUEUE_LOW_WATERMARK)
         {
             on_queue_at_low_watermark();
@@ -242,6 +241,7 @@ public:
         {
             on_queue_empty();
         }
+        return true;
     }
 
     void on_queue_at_high_watermark() const
