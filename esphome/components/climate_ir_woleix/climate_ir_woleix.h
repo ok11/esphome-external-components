@@ -8,6 +8,7 @@
 #include <deque>
 
 #include "esphome/core/optional.h"
+#include "esphome/core/log.h"
 
 #include "esphome/components/climate/climate_mode.h"
 #include "esphome/components/climate_ir/climate_ir.h"
@@ -145,13 +146,15 @@ protected:
     {
         if (status.get_severity() == WoleixStatus::Severity::WX_SEVERITY_ERROR)
         {
-            ESP_LOGE(TAG, "Error (%s): %s", status.get_category().name, status.get_message().c_str());
-            status_set_error(status.get_message().c_str());
+            auto msg = status.get_message();
+            ESP_LOGE(TAG, "Error (%s): %s", status.get_category().name, msg.c_str());
+            status_set_error();
         }
         if (status.get_severity() == WoleixStatus::Severity::WX_SEVERITY_WARNING)
         {
-            ESP_LOGW(TAG, "Warning (%s): %s", status.get_category().name, status.get_message().c_str());
-            status_set_warning(status.get_message().c_str());
+            auto msg = status.get_message();
+            ESP_LOGW(TAG, "Warning (%s): %s", status.get_category().name, msg.c_str());
+            status_set_warning();
         }
         if (status.get_severity() == WoleixStatus::Severity::WX_SEVERITY_INFO)
         {
@@ -185,7 +188,7 @@ protected:
     void on_queue_at_high_watermark() override
     {
         ESP_LOGW(TAG, "Queue at its high watermark (%d)", command_queue_->length());
-        status_set_warning("Queue.AtHighWatermark");
+        status_set_warning(LOG_STR("Queue.AtHighWatermark"));
         on_hold_ = true;
     }
 
@@ -208,7 +211,7 @@ protected:
     void on_queue_full() override
     {
         ESP_LOGE(TAG, "Queue full");
-        status_set_error("Queue.Full");
+        status_set_error(LOG_STR("Queue.Full"));
     }
 
     /**

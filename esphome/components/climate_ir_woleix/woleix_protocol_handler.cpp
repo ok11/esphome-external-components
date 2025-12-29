@@ -88,7 +88,7 @@ void WoleixProtocolHandler::process_next_command_()
     }
     else
     {
-        const auto& cmd = command_queue_->get().value();
+        auto cmd = command_queue_->get().value();
     
         if (is_temp_command_(cmd))
         {

@@ -1,6 +1,7 @@
 services:
   esphome:
     image: esphome/esphome:${ESPHOME_TAG:-latest}
+    pull_policy: always
     container_name: esphome-test
     volumes:
       - type: bind
